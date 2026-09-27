@@ -354,7 +354,7 @@ export class Kart {
         this.pos.x -= (dx / d) * push * wa * 2;
         this.pos.z -= (dz / d) * push * wa * 2;
         this.speed *= 0.985;
-        if (o.punching) { this.applySpinout(0.7); }
+        if (o.punching && this.applySpinout(0.7)) this.hitBy = o;
       }
     }
 

@@ -141,6 +141,7 @@ export class Race {
     this.items.update(dt, this.karts, p);
     for (const ev of this.items.events) {
       if (ev.type === 'hit') {
+        if (ev.victim.ai && ev.victim !== p) ev.victim.ai.onHit(ev.by);
         if (ev.victim.isPlayer) { this.audio.sfx('hit'); this.audio.voice('hit'); this.onEvent({ type: 'shake', power: 1 }); }
         else if (ev.by === p) { this.audio.voice('hitother'); this.audio.sfx('hit'); }
       } else if (ev.type === 'blind') { this.audio.sfx('flash'); this.onEvent({ type: 'blind' }); }
