@@ -1,0 +1,55 @@
+{
+  "note": "Ogni voce mappa un file locale (relativo a public/assets) all'URL Higgsfield da cui scaricarlo. Esegui `npm run assets` per scaricare tutto. Il gioco funziona anche senza questi file: usa modelli e texture procedurali come segnaposto finché non trova i file.",
+  "files": {
+    "characters/monna.png":      "https://d2ol7oe51mr4n9.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/246f6015-78ad-4764-8f3f-cabfb0a06c60.png",
+    "characters/bacco.png":      "https://d2ol7oe51mr4n9.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/794ea36f-b577-46d2-bab9-fd8431eb988f.png",
+    "characters/perla.png":      "https://d2ol7oe51mr4n9.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/1ce8f835-b263-4fc0-923d-d3577f203389.png",
+    "characters/viandante.png":  "https://d2ol7oe51mr4n9.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/bd2067d0-87d1-4353-a321-f67f34df82c5.png",
+    "characters/divoratore.png": "https://d2ol7oe51mr4n9.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/38e9f641-8878-40cb-921b-d75651935fef.png",
+    "characters/panciotto.png":  "https://d2ol7oe51mr4n9.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/453366d0-09a9-4d0a-80c1-74ee82b3deb8.png",
+
+    "characters/monna.glb":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_090005_31a5e403-5d96-4b72-b77c-6a4a5e84061a.glb",
+    "characters/bacco.glb":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_090054_2008c9d0-447a-415a-a58c-0f3722e65e6e.glb",
+    "characters/viandante.glb":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_090100_b0097d8e-9b43-4ecd-9b38-66db55580b5b.glb",
+    "characters/panciotto.glb":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_090107_75b1eaaf-bc10-40ad-a0f3-43dd77a21aa0.glb",
+    "characters/divoratore.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_090113_053b1b0c-972e-49ea-b259-573072fcb1e3.glb",
+    "characters/perla.glb":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_090120_7c23fdbe-a68b-416e-afa6-8efed190e97c.glb",
+
+    "props/valvo-go.glb":        "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131739_39815fc2-a195-44d6-a405-b7a05c790e5f.glb",
+    "props/autovettore.glb":     "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131742_8e7b8186-aa84-45ff-aa45-508e1f1ffa88.glb",
+    "props/tavola-calda.glb":    "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131745_d76a7460-b211-493c-bcd0-34c115d02615.glb",
+    "props/blindato.glb":        "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131748_bed5fdcd-4741-4692-8a8e-26fc0f4edb1f.glb",
+    "props/oremo-giovane.glb":   "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131751_75ac0187-0aab-4145-a74b-f0ce43eca2e0.glb",
+    "props/oremo-anziano.glb":   "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131754_2f504bf1-525c-4bc0-9050-26cff5ab198e.glb",
+
+    "tracks/omega65/sky.png":     "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130412_49829c75-6ebb-461a-8799-cebf1dc8c5a2.png",
+    "tracks/omega65/preview.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130412_26cdfbd6-380c-4c70-b442-327d2fd5460f.png",
+    "tracks/niaboc/sky.png":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130412_458e69fd-650d-4c68-b764-61dc6383256a.png",
+    "tracks/niaboc/preview.png":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130412_eb102084-75a2-4e8e-9251-b20e85b8466b.png",
+    "tracks/retah/sky.png":       "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130411_652b9111-09d4-4a91-a06b-89d160488ee6.png",
+    "tracks/retah/preview.png":   "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130411_3c1ee637-5815-4821-83b0-01a89bd63762.png",
+    "tracks/canair/sky.png":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130412_aeab3a5d-9d4b-477a-9b70-2e252310fa8e.png",
+    "tracks/canair/preview.png":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_130412_803adf20-d589-4902-92c0-33b4ef2c9e2e.png",
+
+    "ui/logo.png":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131829_9286b0f4-3c8d-4eab-9862-ace09289283c.png",
+    "ui/title.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131830_518c445b-4f3a-4df1-9a5d-aa1066a5d978.png",
+
+    "items/missile.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131829_7a176cbf-2e3a-4ab1-87a9-2731b47eb8e0.png",
+    "items/cannone.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131829_42de5214-0d77-49d8-a002-2971220dc45f.png",
+    "items/grappoli.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131829_a354aa85-df5c-44cf-993f-3198a90be48e.png",
+    "items/perla.png":   "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131829_b652527f-2bf3-47a9-b36b-8ef8e6a21558.png",
+    "items/nebbia.png":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131829_93fafcc0-3869-48e1-84a5-666102c79dfd.png",
+    "items/pugno.png":   "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_131914_f2ed6e9e-080d-4696-bcd8-61f27d6e0abf.png",
+
+    "audio/voice/start.wav":    "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_132934_f557586d-6b41-4ae7-ac87-d2a98f4da4fd.wav",
+    "audio/voice/lastlap.wav":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_132935_89cbb622-564b-47ab-9d0c-458bf8bb2cef.wav",
+    "audio/voice/hit.wav":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_132935_6a24fac4-77ea-4ebe-8b65-9e67335da553.wav",
+    "audio/voice/win.wav":      "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_132935_74e2a195-6e6b-4b65-a765-04cbddac3a8b.wav",
+    "audio/voice/hitother.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_132934_81c7ce14-6a65-432a-ac3f-efc87a834c9d.wav",
+    "audio/voice/welcome.wav":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_132935_2764b04c-09d1-4e21-a643-1325b8345aed.wav",
+
+    "video/intro.mp4":  "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_134540_9caf8733-bd29-4132-8b6c-3dfb4c45f4e2.mp4",
+    "video/finale.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_134534_13146240-cac9-4341-8b5e-81b8ecbefe3a.mp4",
+    "video/griglia.mp4": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260926_134155_1d913053-5156-46b6-8318-39568bff8367.mp4"
+  }
+}

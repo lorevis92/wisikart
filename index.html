@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>WisiKart</title>
+  <meta name="description" content="WisiKart — il kart racer del WiSiVERSE. Sei Whiskey, due circuiti, una fuga." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%235b8cf0'/%3E%3Cpath d='M14 40q18 18 36 0q-18 6-36 0z' fill='%23fff'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./src/ui/style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- BOOT -->
+  <section id="screen-boot" class="screen active">
+    <div class="boot-inner">
+      <div class="logo-block" id="boot-logo"><span class="wordmark">WisiKart</span></div>
+      <div class="boot-bar"><div id="boot-progress"></div></div>
+      <p id="boot-text">Carico il WiSiVERSE…</p>
+      <button id="boot-start" class="btn primary hidden">Entra in pista</button>
+    </div>
+  </section>
+
+  <!-- TITOLO + MENU -->
+  <section id="screen-title" class="screen">
+    <video id="title-video" muted loop playsinline class="bg-video"></video>
+    <div class="title-bg" id="title-bg"></div>
+    <div class="title-inner">
+      <div class="logo-block big" id="title-logo"><span class="wordmark">WisiKart</span><span class="sub">Coppa della Fuga</span></div>
+      <nav class="menu" id="main-menu">
+        <button class="btn menu-item" data-action="gp">Gran Premio<small>Due gare, una sola fuga</small></button>
+        <button class="btn menu-item" data-action="single">Corsa singola<small>Scegli pista e personaggio</small></button>
+        <button class="btn menu-item" data-action="time">Prova a tempo<small>Solo tu e il cronometro</small></button>
+        <button class="btn menu-item" data-action="options">Opzioni</button>
+        <button class="btn menu-item" data-action="credits">Crediti</button>
+      </nav>
+      <p class="hint" id="title-hint">Frecce o WASD per muoverti · Spazio per derapare · Maiusc per l'oggetto</p>
+    </div>
+  </section>
+
+  <!-- PERSONAGGI -->
+  <section id="screen-chars" class="screen">
+    <header class="screen-head">
+      <button class="btn ghost back" data-back>Indietro</button>
+      <h2>Chi guida?</h2>
+      <span class="head-note" id="chars-mode"></span>
+    </header>
+    <div class="char-grid" id="char-grid"></div>
+    <aside class="char-detail" id="char-detail"></aside>
+    <footer class="screen-foot"><button class="btn primary" id="chars-confirm">Conferma</button></footer>
+  </section>
+
+  <!-- PISTE -->
+  <section id="screen-tracks" class="screen">
+    <header class="screen-head">
+      <button class="btn ghost back" data-back>Indietro</button>
+      <h2>Dove si corre?</h2>
+      <span class="head-note" id="tracks-mode"></span>
+    </header>
+    <div class="track-grid" id="track-grid"></div>
+    <footer class="screen-foot"><button class="btn primary" id="tracks-confirm">Via alla gara</button></footer>
+  </section>
+
+  <!-- CARICAMENTO -->
+  <section id="screen-loading" class="screen">
+    <div class="loading-inner">
+      <img id="loading-preview" alt="" />
+      <h2 id="loading-name"></h2>
+      <p id="loading-sub"></p>
+      <p id="loading-status">Costruisco la pista…</p>
+    </div>
+  </section>
+
+  <!-- HUD -->
+  <section id="screen-hud" class="screen hud">
+    <div class="hud-top">
+      <div class="hud-lap"><span id="hud-lap">1</span><small>/<span id="hud-laps">3</span> giro</small></div>
+      <div class="hud-item" id="hud-item"><div class="item-face" id="hud-item-face"></div></div>
+      <div class="hud-time" id="hud-time">0:00.00</div>
+    </div>
+    <div class="hud-center" id="hud-center"></div>
+    <div class="hud-notice" id="hud-notice"></div>
+    <div class="hud-bottom">
+      <div class="hud-pos"><span id="hud-pos">6</span><small id="hud-pos-suffix">°</small></div>
+      <div class="hud-speed"><span id="hud-speed">0</span><small>km/h</small><div class="drift-bar"><div id="drift-fill"></div></div></div>
+      <canvas id="minimap" width="220" height="220"></canvas>
+    </div>
+    <div class="fx-blind" id="fx-blind"></div>
+    <div class="fx-fog" id="fx-fog"></div>
+    <div class="touch" id="touch">
+      <div class="touch-left">
+        <button class="tbtn" data-touch="left">◀</button>
+        <button class="tbtn" data-touch="right">▶</button>
+      </div>
+      <div class="touch-right">
+        <button class="tbtn small" data-touch="item">Oggetto</button>
+        <button class="tbtn" data-touch="drift">Derapa</button>
+        <button class="tbtn accel" data-touch="accel">Gas</button>
+      </div>
+      <button class="tbtn pause" data-touch="pause">II</button>
+    </div>
+  </section>
+
+  <!-- PAUSA -->
+  <section id="screen-pause" class="screen overlay">
+    <div class="panel">
+      <h2>Pausa</h2>
+      <button class="btn primary" data-pause="resume">Riprendi</button>
+      <button class="btn" data-pause="restart">Ricomincia la gara</button>
+      <button class="btn ghost" data-pause="quit">Torna al menu</button>
+    </div>
+  </section>
+
+  <!-- RISULTATI -->
+  <section id="screen-results" class="screen">
+    <video id="results-video" muted loop playsinline class="bg-video"></video>
+    <div class="results-inner">
+      <h2 id="results-title">Gara finita</h2>
+      <p id="results-sub"></p>
+      <ol class="results-list" id="results-list"></ol>
+      <div class="results-laps" id="results-laps"></div>
+      <div class="results-actions" id="results-actions"></div>
+    </div>
+  </section>
+
+  <!-- OPZIONI -->
+  <section id="screen-options" class="screen">
+    <header class="screen-head">
+      <button class="btn ghost back" data-back>Indietro</button>
+      <h2>Opzioni</h2>
+    </header>
+    <div class="options-body">
+      <label>Musica <input type="range" id="opt-music" min="0" max="1" step="0.05" value="0.6" /></label>
+      <label>Effetti <input type="range" id="opt-sfx" min="0" max="1" step="0.05" value="0.8" /></label>
+      <label>Voce di Emma <input type="range" id="opt-voice" min="0" max="1" step="0.05" value="1" /></label>
+      <label>Difficoltà
+        <select id="opt-diff">
+          <option value="0.85">Tranquilla</option>
+          <option value="1" selected>Normale</option>
+          <option value="1.12">Cattiva</option>
+        </select>
+      </label>
+      <label>Qualità grafica
+        <select id="opt-quality">
+          <option value="high" selected>Alta</option>
+          <option value="medium">Media</option>
+          <option value="low">Bassa</option>
+        </select>
+      </label>
+      <div class="controls-legend">
+        <h3>Comandi</h3>
+        <p><b>Frecce / WASD</b> guida · <b>Spazio</b> derapata (tieni premuto in curva, rilascia per il turbo) · <b>Maiusc / E</b> usa l'oggetto · <b>C</b> guarda indietro · <b>Esc</b> pausa</p>
+        <p>Su telefono e tablet compaiono i tasti sullo schermo. Funziona anche il gamepad.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CREDITI -->
+  <section id="screen-credits" class="screen">
+    <header class="screen-head">
+      <button class="btn ghost back" data-back>Indietro</button>
+      <h2>Crediti</h2>
+    </header>
+    <div class="credits-body">
+      <p><b>WisiKart</b> è un gioco del WiSiVERSE.</p>
+      <p>Personaggi, mondo e storia: Lorenzo — dai quadri della serie <i>Whiskey</i> e dal romanzo di Whiskey.</p>
+      <p>I sei piloti: La Monna Whiskey, il Bacco, Whiskey con l'orecchino di perla, Whiskey viandante, Whiskey che divora i figli, Whiskey col panciotto.</p>
+      <p>Emma, la voce del navigatore Logego Space Drive, non guiderà al posto tuo.</p>
+      <p class="tiny">Motore: three.js · Musica ed effetti generati in tempo reale · Illustrazioni, modelli 3D e voce prodotti con Higgsfield.</p>
+    </div>
+  </section>
+
+  <div id="toast"></div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

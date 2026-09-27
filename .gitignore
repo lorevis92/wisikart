@@ -1,0 +1,8 @@
+node_modules
+dist
+.DS_Store
+public/assets/**/*.png
+public/assets/**/*.glb
+public/assets/**/*.wav
+public/assets/**/*.mp4
+!public/assets/manifest.json
