@@ -52,11 +52,11 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 
 /* ---------- titolo ---------- */
 #screen-title { justify-content: flex-end; align-items: center; padding-bottom: calc(28px + var(--safe-b)); }
-.bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s; z-index: -2; }
+.bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s; z-index: 0; pointer-events: none; }
 .bg-video.on { opacity: 1; }
-.title-bg { position: absolute; inset: 0; z-index: -3; background-size: cover; background-position: center; }
+.title-bg { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; }
 .title-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,18,48,0.1) 30%, rgba(14,18,48,0.85) 100%); }
-.title-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; max-width: 980px; margin: 0 auto; }
+.title-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; max-width: 980px; margin: 0 auto; }
 .menu { display: flex; flex-direction: column; gap: 10px; width: min(420px, 100%); }
 .screen-head, .screen-foot { position: relative; }
 .menu-item { position: relative; padding-left: 28px; }
@@ -105,6 +105,12 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .loading-inner { text-align: center; width: min(720px, 92vw); }
 #loading-preview { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 22px; background: #0a0c22; }
 #loading-preview[src=""] { display: none; }
+.loading-media { position: relative; border-radius: 22px; overflow: hidden; }
+.loading-media #loading-preview { display: block; }
+.loading-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #0a0c22; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+.loading-video.on { opacity: 1; }
+.loading-media:has(#loading-preview[src=""]) { aspect-ratio: 16 / 9; background: #0a0c22; }
+#loading-skip { margin-top: 10px; }
 .loading-inner h2 { margin: 18px 0 4px; font-size: 34px; }
 .loading-inner p { margin: 0; opacity: 0.75; }
 #loading-status { margin-top: 18px; color: var(--mint); }
@@ -154,7 +160,7 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 
 /* ---------- risultati ---------- */
 #screen-results { align-items: center; justify-content: center; background: radial-gradient(900px 500px at 50% 0%, #3a2f8a 0%, var(--navy) 65%); }
-.results-inner { position: relative; width: min(760px, 94vw); background: rgba(10,12,34,0.72); border-radius: 26px; padding: 24px 26px; max-height: 92vh; overflow: auto; }
+.results-inner { position: relative; z-index: 1; width: min(760px, 94vw); background: rgba(10,12,34,0.72); border-radius: 26px; padding: 24px 26px; max-height: 92vh; overflow: auto; }
 .results-inner h2 { margin: 0; font-size: 40px; }
 #results-sub { margin: 2px 0 14px; opacity: 0.8; }
 .results-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

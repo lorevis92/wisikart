@@ -31,6 +31,42 @@ export class UI {
     this.focus = { list: [], index: 0, cols: 1 };
   }
 
+  /**
+   * Avvia un video di sfondo senza pre-controlli HEAD: lo mostra appena ha un frame
+   * (loadeddata/playing), chiama onFail se il file manca o non si decodifica, e se
+   * l'autoplay viene bloccato riprova al primo tocco/tasto.
+   */
+  playVideo(v, url, { onFail, onEnd } = {}) {
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    v.preload = 'auto';
+    v.classList.remove('on');
+    const reveal = () => v.classList.add('on');
+    v.onloadeddata = reveal;
+    v.onplaying = reveal;
+    v.onerror = () => { v.classList.remove('on'); v.removeAttribute('src'); if (onFail) onFail(); };
+    v.onended = onEnd || null;
+    if (!v.getAttribute('src') || !v.src.endsWith(url)) { v.src = url; v.load(); }
+    else if (v.readyState >= 2) reveal();
+    const tryPlay = () => v.play().catch((err) => {
+      if (err && err.name === 'NotAllowedError') {
+        const retry = () => { v.play().catch(() => {}); };
+        window.addEventListener('pointerdown', retry, { once: true });
+        window.addEventListener('keydown', retry, { once: true });
+      }
+    });
+    tryPlay();
+  }
+
+  stopVideo(v) {
+    v.pause();
+    v.classList.remove('on');
+    v.onloadeddata = v.onplaying = v.onerror = v.onended = null;
+    v.removeAttribute('src');
+    v.load();
+  }
+
   overlay(name, on) {
     const el = $(`#screen-${name}`);
     if (el) el.classList.toggle('active', on);
@@ -102,16 +138,9 @@ export class UI {
     const items = [...document.querySelectorAll('#main-menu .menu-item')];
     this.setFocusList(items);
     const v = $('#title-video');
-    if (!v.dataset.tried) {
-      v.dataset.tried = '1';
-      if (await Assets.exists('assets/video/intro.mp4')) {
-        v.src = 'assets/video/intro.mp4';
-        v.addEventListener('canplay', () => v.classList.add('on'), { once: true });
-        v.play().catch(() => {});
-      } else if (await Assets.exists('assets/ui/title.png')) {
-        $('#title-bg').style.backgroundImage = 'url(assets/ui/title.png)';
-      }
-    } else v.play().catch(() => {});
+    this.playVideo(v, 'assets/video/intro.mp4', {
+      onFail: () => Assets.exists('assets/ui/title.png').then((ok) => { if (ok) $('#title-bg').style.backgroundImage = 'url(assets/ui/title.png)'; })
+    });
     $('#title-hint').textContent = this.game.input.isTouch ? 'Tocca per scegliere. In gara usa i tasti sullo schermo.' : "Frecce o WASD per muoverti · Spazio per derapare · Maiusc per l'oggetto";
   }
 
@@ -185,6 +214,7 @@ export class UI {
   }
 
   // ---------- caricamento ----------
+  /** Mostra la schermata di caricamento; ritorna una promessa che si risolve quando la presentazione dei piloti finisce (o viene saltata). */
   loading(track) {
     this.show('loading');
     const img = $('#loading-preview');
@@ -193,6 +223,26 @@ export class UI {
     $('#loading-name').textContent = track.name;
     $('#loading-sub').textContent = track.subtitle;
     $('#loading-status').textContent = 'Costruisco la pista…';
+    const v = $('#loading-video');
+    $('#loading-skip').classList.remove('hidden');
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('keydown', finish);
+        window.removeEventListener('pointerdown', finish);
+        this.stopVideo(v);
+        $('#loading-skip').classList.add('hidden');
+        resolve();
+      };
+      this.playVideo(v, 'assets/video/griglia.mp4', { onFail: finish, onEnd: finish });
+      window.addEventListener('keydown', finish);
+      window.addEventListener('pointerdown', finish);
+    });
+  }
+  loadingDone() {
+    this.stopVideo($('#loading-video'));
   }
   loadingStatus(t) { $('#loading-status').textContent = t; }
 
@@ -338,12 +388,8 @@ export class UI {
     });
     this.setFocusList(btns);
     const v = $('#results-video');
-    v.classList.remove('on');
-    if (mode === 'gp' && gp && gp.finished && gp.standings[0].character.id === playerChar.id && (await Assets.exists('assets/video/finale.mp4'))) {
-      v.src = 'assets/video/finale.mp4';
-      v.addEventListener('canplay', () => v.classList.add('on'), { once: true });
-      v.play().catch(() => {});
-    } else { v.pause(); v.removeAttribute('src'); }
+    if (mode === 'gp' && gp && gp.finished) this.playVideo(v, 'assets/video/finale.mp4');
+    else this.stopVideo(v);
   }
 
   // ---------- opzioni ----------

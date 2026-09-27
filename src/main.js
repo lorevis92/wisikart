@@ -161,7 +161,7 @@ class Game {
   async startRace(trackDef) {
     this.state = 'loading';
     this.audio.stopMusic();
-    this.ui.loading(trackDef);
+    const intro = this.ui.loading(trackDef);
     if (this.race) { this.race.dispose(); this.race = null; }
     this.scene.clear();
     const race = new Race({
@@ -170,6 +170,10 @@ class Game {
       onEvent: (e) => this.onRaceEvent(e)
     });
     await race.load((t) => this.ui.loadingStatus(t));
+    // la gara parte quando la presentazione dei piloti (griglia.mp4) finisce o viene saltata
+    this.ui.loadingStatus('Pista pronta. I piloti si stanno sistemando…');
+    await intro;
+    this.ui.loadingDone();
     this.race = race;
     this._setupComposer(trackDef);
     this.ui.hudStart(race.track);

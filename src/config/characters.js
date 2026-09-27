@@ -1,6 +1,6 @@
 // I sei Whiskey del WiSiVERSE. Le statistiche vanno da 1 a 5.
 // `model` e `portrait` puntano a public/assets: se il file manca, il gioco usa un modello procedurale.
-// `modelRotY` corregge l'orientamento del GLB (i modelli Meshy a volte guardano verso -Z).
+// I GLB guardano già verso +Z (il davanti del kart): `modelRotY` (radianti) serve solo per un modello girato male, es. Math.PI.
 export const CHARACTERS = [
   {
     id: 'monna',
@@ -11,7 +11,6 @@ export const CHARACTERS = [
     item: 'perla',
     portrait: 'assets/characters/monna.png',
     model: 'assets/characters/monna.glb',
-    modelRotY: Math.PI,
     look: { hair: 'long', hat: 'none' }
   },
   {
@@ -23,7 +22,6 @@ export const CHARACTERS = [
     item: 'grappoli',
     portrait: 'assets/characters/bacco.png',
     model: 'assets/characters/bacco.glb',
-    modelRotY: Math.PI,
     look: { hair: 'wild', hat: 'vine' }
   },
   {
@@ -35,7 +33,6 @@ export const CHARACTERS = [
     item: 'perla',
     portrait: 'assets/characters/perla.png',
     model: 'assets/characters/perla.glb',
-    modelRotY: Math.PI,
     look: { hair: 'none', hat: 'turban' }
   },
   {
@@ -47,7 +44,6 @@ export const CHARACTERS = [
     item: 'nebbia',
     portrait: 'assets/characters/viandante.png',
     model: 'assets/characters/viandante.glb',
-    modelRotY: Math.PI,
     look: { hair: 'curly', hat: 'none' }
   },
   {
@@ -59,7 +55,6 @@ export const CHARACTERS = [
     item: 'pugno',
     portrait: 'assets/characters/divoratore.png',
     model: 'assets/characters/divoratore.glb',
-    modelRotY: Math.PI,
     scale: 1.25,
     look: { hair: 'shaggy', hat: 'none' }
   },
@@ -72,7 +67,6 @@ export const CHARACTERS = [
     item: 'missile',
     portrait: 'assets/characters/panciotto.png',
     model: 'assets/characters/panciotto.glb',
-    modelRotY: Math.PI,
     look: { hair: 'long', hat: 'brim' }
   }
 ];

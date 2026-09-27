@@ -17,6 +17,7 @@ export class AudioEngine {
     this.musicGain = null;
     this.sfxGain = null;
     this.voiceGain = null;
+    this.engineGain = null;
     this.volumes = { music: 0.6, sfx: 0.8, voice: 1 };
     this.voices = {};
     this.theme = null;
@@ -38,6 +39,9 @@ export class AudioEngine {
     this.musicGain.connect(this.master);
     this.sfxGain.connect(this.master);
     this.voiceGain.connect(this.master);
+    this.engineGain = this.ctx.createGain();
+    this.engineGain.gain.value = 0.5;
+    this.engineGain.connect(this.sfxGain);
     this.setVolumes(this.volumes);
     const comp = this.ctx.createDynamicsCompressor();
     this.master.disconnect();
@@ -204,30 +208,33 @@ export class AudioEngine {
     }
   }
 
+  // Motore: triangolo + sub sinusoidale, lowpass chiuso. Passa da engineGain → sfxGain,
+  // quindi lo slider "Effetti" lo regola (a zero lo spegne).
   startEngine() {
     if (!this.ctx || this.engine) return;
     const o = this.ctx.createOscillator();
-    o.type = 'sawtooth';
+    o.type = 'triangle';
     const o2 = this.ctx.createOscillator();
-    o2.type = 'square';
+    o2.type = 'sine';
     const f = this.ctx.createBiquadFilter();
     f.type = 'lowpass';
-    f.frequency.value = 500;
+    f.frequency.value = 220;
+    f.Q.value = 0.5;
     const g = this.ctx.createGain();
     g.gain.value = 0.0;
-    o.connect(f); o2.connect(f); f.connect(g); g.connect(this.sfxGain);
+    o.connect(f); o2.connect(f); f.connect(g); g.connect(this.engineGain);
     o.start(); o2.start();
     this.engine = { o, o2, f, g };
   }
 
   updateEngine(speedRatio, boosting) {
     if (!this.engine) return;
-    const e = this.engine;
-    const base = 55 + speedRatio * 160 + (boosting ? 40 : 0);
-    e.o.frequency.setTargetAtTime(base, this.ctx.currentTime, 0.08);
-    e.o2.frequency.setTargetAtTime(base * 0.5, this.ctx.currentTime, 0.08);
-    e.f.frequency.setTargetAtTime(300 + speedRatio * 1400, this.ctx.currentTime, 0.1);
-    e.g.gain.setTargetAtTime(0.05 + speedRatio * 0.08, this.ctx.currentTime, 0.1);
+    const e = this.engine, t = this.ctx.currentTime;
+    const base = 50 + speedRatio * 110 + (boosting ? 25 : 0);
+    e.o.frequency.setTargetAtTime(base, t, 0.12);
+    e.o2.frequency.setTargetAtTime(base * 0.5, t, 0.12);
+    e.f.frequency.setTargetAtTime(180 + speedRatio * 420, t, 0.15);
+    e.g.gain.setTargetAtTime(0.012 + speedRatio * 0.018, t, 0.15);
   }
 
   stopEngine() {
