@@ -44,7 +44,8 @@ Tutti sotto `public/assets/`. Il file `public/assets/manifest.json` elenca ogni 
 | `ui/logo.png`, `ui/title.png` | logo e sfondo del titolo | boot e schermata iniziale |
 | `items/*.png` | icone oggetti | HUD |
 | `audio/voice/*.wav` | 6 battute di Emma (welcome, start, lastlap, hit, hitother, win) | annunci in gara |
-| `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del titolo, finale del Gran Premio, presentazione dei piloti al caricamento |
+| `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del titolo, finale del Gran Premio, griglia di partenza di Omega 65 |
+| `tracks/<id>/griglia.mp4` | video della griglia di partenza (Niaboc, Canair, Retah) | schermata di caricamento della pista |
 
 Se un modello GLB guarda dalla parte sbagliata, cambia `modelRotY` in `src/config/characters.js` (valori tipici: `0`, `Math.PI`, `±Math.PI/2`). L'altezza dei modelli viene normalizzata automaticamente.
 

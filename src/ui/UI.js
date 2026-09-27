@@ -267,9 +267,11 @@ export class UI {
         $('#loading-skip').classList.add('hidden');
         resolve();
       };
-      this.playVideo(v, 'assets/video/griglia.mp4', { onFail: finish, onEnd: finish });
       window.addEventListener('keydown', finish);
       window.addEventListener('pointerdown', finish);
+      // ogni pista ha la sua griglia di partenza; senza video resta l'anteprima statica
+      if (track.grid) this.playVideo(v, track.grid, { onFail: finish, onEnd: finish });
+      else finish();
     });
   }
   loadingDone() {

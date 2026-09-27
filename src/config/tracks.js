@@ -2,6 +2,7 @@
 // `props` posiziona elementi lungo la pista: t = frazione del giro (0..1), side = distanza laterale
 // (negativa a sinistra, positiva a destra), oppure coordinate assolute con `at`.
 // Se il GLB indicato in `model` manca, viene usato un modello procedurale con lo stesso nome.
+// `grid` è il video della griglia di partenza mostrato durante il caricamento (se manca resta l'anteprima).
 // `faceTrack` gira il fronte dell'oggetto verso la pista, `alignTrack` lo allinea alla direzione di marcia
 // (per gli archi che scavalcano la carreggiata).
 // `world` (solo tema open, tutto opzionale) regola lo scenario; senza, vale il paesaggio di Canair:
@@ -24,6 +25,7 @@ export const TRACKS = [
     laps: 3,
     sky: 'assets/tracks/omega65/sky.png',
     preview: 'assets/tracks/omega65/preview.png',
+    grid: 'assets/video/griglia.mp4',
     palette: {
       road: '#23243a',
       roadLine: '#8fb3ff',
@@ -60,6 +62,7 @@ export const TRACKS = [
     laps: 3,
     sky: 'assets/tracks/canair/sky.png',
     preview: 'assets/tracks/canair/preview.png',
+    grid: 'assets/tracks/canair/griglia.mp4',
     palette: {
       road: '#5c5652',
       roadLine: '#f3e7c8',
@@ -102,6 +105,7 @@ export const TRACKS = [
     laps: 3,
     sky: 'assets/tracks/niaboc/sky.png',
     preview: 'assets/tracks/niaboc/preview.png',
+    grid: 'assets/tracks/niaboc/griglia.mp4',
     palette: {
       road: '#262a3d',
       roadLine: '#c9b8ff',
@@ -154,6 +158,7 @@ export const TRACKS = [
     laps: 3,
     sky: 'assets/tracks/retah/sky.png',
     preview: 'assets/tracks/retah/preview.png',
+    grid: 'assets/tracks/retah/griglia.mp4',
     palette: {
       road: '#a08d74',
       roadLine: '#fff1d6',
