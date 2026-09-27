@@ -1,5 +1,5 @@
 import { CHARACTERS } from '../config/characters.js';
-import { TRACKS, POINTS_TABLE } from '../config/tracks.js';
+import { TRACKS, CUPS, trackById, POINTS_TABLE } from '../config/tracks.js';
 import { ITEMS } from '../config/items.js';
 import { faceTexture } from '../core/Textures.js';
 import { Assets } from '../core/AssetLoader.js';
@@ -147,7 +147,7 @@ export class UI {
   // ---------- personaggi ----------
   characters(mode, onPick) {
     this.show('chars');
-    $('#chars-mode').textContent = mode === 'gp' ? 'Gran Premio · Coppa della Fuga' : mode === 'time' ? 'Prova a tempo' : 'Corsa singola';
+    $('#chars-mode').textContent = mode === 'gp' ? 'Gran Premio' : mode === 'time' ? 'Prova a tempo' : 'Corsa singola';
     const grid = $('#char-grid');
     grid.innerHTML = '';
     const cards = CHARACTERS.map((c) => {
@@ -189,7 +189,9 @@ export class UI {
   // ---------- piste ----------
   tracks(mode, onPick, bests = {}) {
     this.show('tracks');
+    $('#tracks-title').textContent = 'Dove si corre?';
     $('#tracks-mode').textContent = mode === 'time' ? 'Prova a tempo' : 'Corsa singola';
+    $('#tracks-confirm').textContent = 'Via alla gara';
     const grid = $('#track-grid');
     grid.innerHTML = '';
     const playable = TRACKS.filter((t) => !t.locked);
@@ -211,6 +213,35 @@ export class UI {
     }
     this.setFocusList(cards, 2);
     $('#tracks-confirm').onclick = () => onPick(playable[this.focus.index]);
+  }
+
+  // ---------- coppe (Gran Premio) ----------
+  /** Stessa griglia a card delle piste: anteprima della prima pista, elenco delle gare sotto. */
+  cups(onPick) {
+    this.show('tracks');
+    $('#tracks-title').textContent = 'Quale coppa?';
+    $('#tracks-mode').textContent = 'Gran Premio';
+    $('#tracks-confirm').textContent = 'Si parte';
+    const grid = $('#track-grid');
+    grid.innerHTML = '';
+    const cards = CUPS.map((cup) => {
+      const first = trackById[cup.tracks[0]];
+      const list = cup.tracks.map((id, i) => `<li>${i + 1}. ${trackById[id].short || trackById[id].name}</li>`).join('');
+      const card = document.createElement('div');
+      card.className = 'track-card cup-card';
+      card.innerHTML = `<div class="preview"><span class="cup-count">${cup.tracks.length} gare</span></div><div class="meta"><b>${cup.name}</b><span>${cup.desc}</span><ol class="cup-tracks">${list}</ol></div>`;
+      const prev = card.querySelector('.preview');
+      Assets.exists(first.preview).then((ok) => { if (ok) prev.style.backgroundImage = `url(${first.preview})`; else prev.style.background = `linear-gradient(135deg, ${first.palette?.fog || '#223'} 0%, ${first.palette?.road || '#446'} 100%)`; });
+      card.addEventListener('click', () => {
+        const i = cards.indexOf(card);
+        if (this.focus.index === i) onPick(cup);
+        else { this.focus.index = i; this._applyFocus(); this.game.audio.sfx('move'); }
+      });
+      grid.appendChild(card);
+      return card;
+    });
+    this.setFocusList(cards, 2);
+    $('#tracks-confirm').onclick = () => onPick(CUPS[this.focus.index]);
   }
 
   // ---------- caricamento ----------
@@ -358,7 +389,7 @@ export class UI {
     const title = mode === 'time' ? 'Prova completata' : me.rank === 1 ? 'Vittoria!' : me.rank <= 3 ? 'Sul podio!' : 'Gara finita';
     $('#results-title').textContent = title;
     let sub = '';
-    if (mode === 'gp' && gp) sub = gp.finished ? (gp.standings[0].character.id === playerChar.id ? 'Hai vinto la Coppa della Fuga. Emma fa finta di non essere colpita.' : `Coppa finita: ${gp.standings[0].character.name} porta a casa il trofeo.`) : `Gara ${gp.raceIndex + 1} di ${gp.tracks.length} · ${me.rank === 1 ? 'Emma: "Non è stato merito mio, ma quasi."' : 'Emma: "Si può fare meglio. Lo dico con affetto."'}`;
+    if (mode === 'gp' && gp) sub = gp.finished ? (gp.standings[0].character.id === playerChar.id ? `Hai vinto la ${gp.cup.name}. Emma fa finta di non essere colpita.` : `${gp.cup.name} finita: ${gp.standings[0].character.name} porta a casa il trofeo.`) : `${gp.cup.name} · gara ${gp.raceIndex + 1} di ${gp.tracks.length} · ${me.rank === 1 ? 'Emma: "Non è stato merito mio, ma quasi."' : 'Emma: "Si può fare meglio. Lo dico con affetto."'}`;
     else if (mode === 'time') sub = isNewBest ? 'Nuovo miglior giro! Emma non commenta, quindi è impressionata.' : 'Emma: "Il cronometro non mente. Purtroppo."';
     else sub = me.rank === 1 ? 'Emma: "Complimenti. Anche se, diciamocelo, non è stato merito mio."' : me.rank <= 3 ? 'Emma: "Podio. Va bene, ma il primo posto era lì."' : 'Emma: "Ti ho visto. Ho visto tutto."';
     $('#results-sub').textContent = sub;
@@ -368,11 +399,19 @@ export class UI {
     for (const r of rows) {
       const li = document.createElement('li');
       if (r.isPlayer) li.classList.add('me');
-      const pts = mode === 'gp' ? (r.total ? `${r.pts} pt` : `+${POINTS_TABLE[r.rank - 1] || 0} pt`) : '';
-      li.innerHTML = `<span class="rank">${r.rank}°</span><span class="dot" style="background-color:${r.character.colors.primary}"></span><span class="nm">${r.character.name}</span><span class="tm">${r.total ? '' : fmt(r.time)}</span><span class="pts">${pts}</span>`;
+      // Gran Premio: a metà coppa punti della gara + totale; alla fine i punti gara per gara
+      const pts = mode === 'gp' && gp ? (r.total ? `${r.pts} pt` : `+${POINTS_TABLE[r.rank - 1] || 0} · ${gp.points[r.character.id]} pt`) : '';
+      const tm = r.total ? `<span class="per">${gp.history.map((h) => `<i>${h[r.character.id] || 0}</i>`).join('')}</span>` : fmt(r.time);
+      li.innerHTML = `<span class="rank">${r.rank}°</span><span class="dot" style="background-color:${r.character.colors.primary}"></span><span class="nm">${r.character.name}</span><span class="tm">${tm}</span><span class="pts">${pts}</span>`;
       const dot = li.querySelector('.dot');
       Assets.exists(r.character.portrait).then((ok) => { if (ok) dot.style.backgroundImage = `url(${r.character.portrait})`; });
       list.appendChild(li);
+    }
+    if (mode === 'gp' && gp && gp.finished) {
+      const head = document.createElement('li');
+      head.className = 'head';
+      head.innerHTML = `<span></span><span></span><span class="nm">Classifica finale</span><span class="tm"><span class="per">${gp.tracks.map((id) => `<i title="${trackById[id].name}">${(trackById[id].short || trackById[id].name).slice(0, 3)}</i>`).join('')}</span></span><span class="pts">Totale</span>`;
+      list.prepend(head);
     }
     const laps = $('#results-laps');
     laps.innerHTML = lapTimes.map((t, i) => `<span>Giro ${i + 1}: ${fmt(t)}</span>`).join('') + (bestLap ? `<span>Miglior giro: <b>${fmt(bestLap)}</b></span>` : '') + (totalTime ? `<span>Totale: <b>${fmt(totalTime)}</b></span>` : '');

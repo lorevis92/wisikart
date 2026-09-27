@@ -197,3 +197,20 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 #screen-options, #screen-credits { background: rgba(14,18,48,0.82); }
+
+/* ---------- coppe ---------- */
+.cup-card .preview .cup-count { position: absolute; right: 10px; top: 10px; background: rgba(10,12,34,0.8); color: var(--gold); font-weight: 600; font-size: 14px; padding: 4px 10px; border-radius: 10px; }
+.cup-tracks { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.cup-tracks li { font-size: 13px; background: rgba(255,255,255,0.07); border-radius: 8px; padding: 3px 8px; }
+
+/* classifica del Gran Premio gara per gara */
+.results-list .per { display: inline-flex; gap: 4px; }
+.results-list .per i { font-style: normal; min-width: 30px; text-align: center; font-size: 14px; background: rgba(255,255,255,0.06); border-radius: 6px; padding: 2px 4px; }
+.results-list li.head { background: none; padding-top: 0; padding-bottom: 0; font-size: 13px; opacity: 0.75; }
+.results-list li.head .per i { background: none; font-size: 12px; }
+.results-list li.head .pts { color: inherit; font-weight: 500; }
+@media (max-width: 560px) {
+  .results-list li { grid-template-columns: 32px 32px 1fr auto; }
+  .results-list .tm { grid-column: 3 / -1; grid-row: 2; }
+  .results-list .per i { min-width: 24px; font-size: 12px; }
+}

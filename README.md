@@ -1,6 +1,22 @@
 # WisiKart
 
-Il kart racer del WiSiVERSE: sei Whiskey, due circuiti, una fuga. Gioco completo in browser (three.js + Vite): menu, Gran Premio, corsa singola, prova a tempo, opzioni, crediti, gara con oggetti, avversari IA, derapate e mini‑turbo, voce di Emma, musica generata in tempo reale.
+Il kart racer del WiSiVERSE: sei Whiskey, quattro circuiti, due coppe. Gioco completo in browser (three.js + Vite): menu, Gran Premio, corsa singola, prova a tempo, opzioni, crediti, gara con oggetti, avversari IA, derapate e mini‑turbo, voce di Emma, musica generata in tempo reale.
+
+## Circuiti
+
+| Circuito | Tema | Lunghezza | Note |
+|---|---|---|---|
+| **Spazio Vettore Omega 65** | tunnel | 3,2 km | pareti magnetiche, autovettori che fluttuano |
+| **Canair – Promontorio Utgenra** | aperto, tramonto | 2,6 km | statue di Oremo, fontana, tavola calda |
+| **Niaboc – Deposito Valvo Go** | aperto, notte | 2,4 km | città sotto le due lune: palazzi con finestre accese e neon, lampioni, deposito Valvo Go, portale al neon sopra la pista, blindato |
+| **Lago di Retah** | aperto, pianeta piatto | 2,7 km | lago calmo a sinistra della seconda metà, tavola calda con autovettori parcheggiati, blindati dei cacciatori di taglie, relitto |
+
+## Coppe (Gran Premio)
+
+Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8, 6, 4, 2, 1; a fine coppa la classifica mostra i punti gara per gara.
+
+- **Coppa della Fuga**: Omega 65 → Canair.
+- **Coppa delle Galassie Unite**: Niaboc → Omega 65 → Retah → Canair.
 
 ## Avvio rapido
 
@@ -22,13 +38,13 @@ Tutti sotto `public/assets/`. Il file `public/assets/manifest.json` elenca ogni 
 |---|---|---|
 | `characters/<id>.png` | ritratto (monna, bacco, perla, viandante, divoratore, panciotto) | selezione personaggio, risultati |
 | `characters/<id>.glb` | modello 3D personaggio + kart | in gara (se manca: kart procedurale con faccia Whiskey) |
-| `props/*.glb` | valvo-go, autovettore, tavola-calda, blindato, oremo-giovane, oremo-anziano | scenografia dei circuiti |
-| `tracks/<id>/sky.png` | cielo panoramico 16:9 | sfondo della pista aperta (Canair) |
+| `props/*.glb` | valvo-go, autovettore, tavola-calda, blindato, oremo-giovane, oremo-anziano, portale-niaboc, relitto | scenografia dei circuiti (portale-niaboc e relitto hanno ancora l'URL `TODO` nel manifest: finché manca il file si vede la versione procedurale) |
+| `tracks/<id>/sky.png` | cielo panoramico 16:9 | sfondo delle piste aperte (Canair, Niaboc, Retah) |
 | `tracks/<id>/preview.png` | anteprima | selezione pista, caricamento |
 | `ui/logo.png`, `ui/title.png` | logo e sfondo del titolo | boot e schermata iniziale |
 | `items/*.png` | icone oggetti | HUD |
 | `audio/voice/*.wav` | 6 battute di Emma (welcome, start, lastlap, hit, hitother, win) | annunci in gara |
-| `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del titolo, finale del Gran Premio |
+| `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del titolo, finale del Gran Premio, presentazione dei piloti al caricamento |
 
 Se un modello GLB guarda dalla parte sbagliata, cambia `modelRotY` in `src/config/characters.js` (valori tipici: `0`, `Math.PI`, `±Math.PI/2`). L'altezza dei modelli viene normalizzata automaticamente.
 
@@ -43,11 +59,11 @@ src/
   main.js               stato del gioco, renderer, bloom, Gran Premio, salvataggi (localStorage)
   config/characters.js  i sei piloti: statistiche, colori, oggetto preferito, asset
   config/items.js       oggetti e probabilità per posizione
-  config/tracks.js      circuiti: punti di controllo, palette, oggetti di scena, coppe
+  config/tracks.js      circuiti: punti di controllo, palette, scenario (world), oggetti di scena, coppe
   core/Textures.js      texture procedurali (asfalto, cordoli, tunnel, erba, faccia di Whiskey)
   core/AssetLoader.js   carica texture/GLB/audio con fallback se il file manca
   core/Input.js         tastiera, touch, gamepad, navigazione menu
-  track/Track.js        costruisce la pista dalla spline: strada, cordoli, tunnel o mondo aperto, scatole, pad
+  track/Track.js        costruisce la pista dalla spline: strada, cordoli, tunnel o mondo aperto (città, lampioni, lago), scatole, pad
   track/Props.js        oggetti di scena (GLB o versione procedurale)
   kart/Kart.js          fisica arcade e resa del kart
   ai/AIDriver.js        avversari
@@ -61,9 +77,10 @@ scripts/check-tracks.mjs  controlla le piste (lunghezza, raggio minimo, incroci)
 
 ## Aggiungere un circuito
 
-1. In `src/config/tracks.js` aggiungi una voce con `points` (curva chiusa), `theme` (`open` o `tunnel`), `palette`, `startT`, `itemBoxes`, `boostPads`, `props`.
-2. `node scripts/check-tracks.mjs` per verificare che non ci siano incroci e che il raggio minimo sia sopra ~25 m.
-3. Togli `locked: true`. Niaboc e Retah sono già predisposti (cielo e anteprima nel manifest).
+1. In `src/config/tracks.js` aggiungi una voce con `points` (curva chiusa), `theme` (`open` o `tunnel`), `palette`, `startT`, `itemBoxes`, `boostPads`, `props`, `music`.
+2. Per il tema aperto, l'oggetto opzionale `world` regola lo scenario (senza, vale il paesaggio di Canair): `night` (finestre accese, neon, luna), `flat` (terreno piatto), `trees`/`rocks`/`bushes`, `city` (tratti con palazzi), `neon`, `lamps`, `lake` (`{ from, to, side, reach }`), `fog`. La spiegazione completa è in testa al file.
+3. `node scripts/check-tracks.mjs` per verificare che non ci siano incroci e che il raggio minimo sia sopra ~25 m.
+4. Per metterla in una coppa, aggiungi il suo `id` a `CUPS` in fondo allo stesso file.
 
 ## Strumenti di test
 

@@ -39,6 +39,13 @@ export class Track {
     this.hazards = [];
     this.halfW = def.width / 2;
     this.isTunnel = def.theme === 'tunnel';
+    // parametri dello scenario open (vedi tracks.js); i default riproducono Canair
+    this.world = {
+      night: false, flat: false, trees: 520, rocks: 160, bushes: 0,
+      city: [[0.88, 1.0], [0.0, 0.16], [0.43, 0.53]], cityStep: 0.012, neon: 0.45,
+      lamps: false, lake: null, fog: [220, 1100],
+      ...(def.world || {})
+    };
     this.curve = new THREE.CatmullRomCurve3(
       def.points.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
       true,
@@ -138,6 +145,7 @@ export class Track {
   }
 
   terrainHeight(x, z) {
+    if (this.world.flat) return -0.3;
     _w.set(x, 0, z);
     const i = this.nearestIndex(_w);
     const s = this.samples[i];
@@ -153,7 +161,10 @@ export class Track {
     this.pal = def.palette;
     this._roadAndCurbs();
     if (this.isTunnel) this._tunnel();
-    else this._openWorld();
+    else {
+      if (this.world.lake) this._lakeMask();
+      this._openWorld();
+    }
     this._startLine();
     this._itemBoxes();
     this._boostPads();
@@ -389,7 +400,8 @@ export class Track {
     g.translate(c.x, 0, c.z);
     const arr = g.attributes.position;
     const colors = new Float32Array(arr.count * 3);
-    const grass = new THREE.Color(p.grass), rock = new THREE.Color(p.rock), sand = new THREE.Color('#d8c48c');
+    const grass = new THREE.Color(p.grass), rock = new THREE.Color(p.rock), sand = new THREE.Color(p.sand || '#d8c48c');
+    const wet = sand.clone().multiplyScalar(0.72);
     const tmp = new THREE.Color();
     for (let i = 0; i < arr.count; i++) {
       const x = arr.getX(i), z = arr.getZ(i);
@@ -399,6 +411,11 @@ export class Track {
       tmp.copy(grass);
       if (h < -4) tmp.copy(sand);
       else if (steep > 0.62) tmp.lerp(rock, (steep - 0.62) * 2.5);
+      if (this.world.flat) tmp.lerp(sand, steep * 0.5);
+      if (this.lake) {
+        const shore = this.lakeAt(x, z, 14);
+        if (shore > 0) tmp.lerp(wet, Math.min(1, shore));
+      }
       colors.set([tmp.r, tmp.g, tmp.b], i * 3);
     }
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -406,6 +423,7 @@ export class Track {
     const gt = T.grassTexture('#ffffff');
     gt.repeat.set(140, 140);
     const terrain = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: gt, vertexColors: true, roughness: 1 }));
+    if (this.world.night) terrain.material.color.setScalar(0.7);
     terrain.receiveShadow = true;
     this.group.add(terrain);
     this.terrain = terrain;
@@ -417,16 +435,190 @@ export class Track {
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set(c.x, -7, c.z);
-    this.group.add(water);
+    if (!this.world.flat) this.group.add(water);
+    if (this.lake) this._lakeMesh();
 
-    // alberi, rocce, edifici
+    // alberi, rocce, cespugli, edifici, lampioni
     this._scatter();
+    this._bushes();
     this._city();
+    if (this.world.lamps) this._lamps();
+  }
+
+  /** Distanza orizzontale dalla pista (campione più vicino). */
+  _trackDist(x, z) {
+    const j = this.nearestIndex(_w.set(x, 0, z));
+    return { idx: j, d: Math.hypot(x - this.samples[j].pos.x, z - this.samples[j].pos.z) };
+  }
+
+  /** Maschera del lago: griglia di celle d'acqua sul lato scelto, lontane da ogni tratto di pista. */
+  _lakeMask() {
+    const L = this.world.lake;
+    const cell = 6, margin = this.halfW + 14, reach = L.reach || 220;
+    const i0 = this.idxFromT(L.from), i1 = this.idxFromT(L.to);
+    const inRange = (i) => (i0 <= i1 ? i >= i0 && i <= i1 : i >= i0 || i <= i1);
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (let i = i0; i !== i1; i = (i + 1) % this.N) {
+      const s = this.samples[i];
+      for (const k of [0, 1]) {
+        const p = _v.copy(s.pos).addScaledVector(s.right, L.side * (margin + k * reach));
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+      }
+    }
+    const nx = Math.ceil((maxX - minX) / cell) + 1, nz = Math.ceil((maxZ - minZ) / cell) + 1;
+    const mask = new Uint8Array(nx * nz);
+    let count = 0;
+    for (let iz = 0; iz < nz; iz++) {
+      for (let ix = 0; ix < nx; ix++) {
+        const x = minX + ix * cell, z = minZ + iz * cell;
+        const { idx, d } = this._trackDist(x, z);
+        if (d < margin || d > reach || !inRange(idx)) continue;
+        const s = this.samples[idx];
+        const lat = (x - s.pos.x) * s.right.x + (z - s.pos.z) * s.right.z;
+        if (Math.sign(lat) !== L.side) continue;
+        mask[iz * nx + ix] = 1;
+        count++;
+      }
+    }
+    if (count) this.lake = { minX, minZ, nx, nz, cell, mask };
+  }
+
+  /** 1 se il punto è nel lago; con `pad` > 0 sfuma da 1 a 0 entro pad metri dalla riva. */
+  lakeAt(x, z, pad = 0) {
+    const L = this.lake;
+    if (!L) return 0;
+    const r = Math.ceil(pad / L.cell);
+    const cx = Math.round((x - L.minX) / L.cell), cz = Math.round((z - L.minZ) / L.cell);
+    let best = Infinity;
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const ix = cx + dx, iz = cz + dz;
+        if (ix < 0 || iz < 0 || ix >= L.nx || iz >= L.nz || !L.mask[iz * L.nx + ix]) continue;
+        best = Math.min(best, Math.hypot(dx, dz) * L.cell);
+      }
+    }
+    if (best === Infinity) return 0;
+    return pad ? 1 - best / (pad + L.cell) : 1;
+  }
+
+  _lakeMesh() {
+    const L = this.lake;
+    // maschera ammorbidita su canvas → alphaMap: riva morbida invece dei quadretti
+    const S = 4;
+    const c = document.createElement('canvas');
+    c.width = L.nx * S; c.height = L.nz * S;
+    const g = c.getContext('2d');
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, c.width, c.height);
+    g.filter = 'blur(6px)';
+    g.fillStyle = '#fff';
+    for (let iz = 0; iz < L.nz; iz++) {
+      for (let ix = 0; ix < L.nx; ix++) if (L.mask[iz * L.nx + ix]) g.fillRect(ix * S - S / 2, iz * S - S / 2, S + 1, S + 1);
+    }
+    const alpha = new THREE.CanvasTexture(c);
+    alpha.flipY = false; // riga 0 del canvas = minZ
+    const w = (L.nx - 1) * L.cell, d = (L.nz - 1) * L.cell;
+    const geo = new THREE.PlaneGeometry(w, d);
+    geo.rotateX(-Math.PI / 2);
+    // dopo la rotazione v=1 sta a -z (minZ): con flipY=false la riga 0 va a v=0, quindi inverto le v
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - uv.getY(i));
+    const m = new THREE.MeshStandardMaterial({
+      color: 0x7fb4cf, roughness: 0.04, metalness: 0.85, envMapIntensity: 1.2,
+      transparent: true, alphaMap: alpha, depthWrite: false
+    });
+    const water = new THREE.Mesh(geo, m);
+    water.position.set(L.minX + w / 2, -0.12, L.minZ + d / 2);
+    water.renderOrder = 1;
+    this.group.add(water);
+    // il lago è calmo: appena un respiro nei riflessi
+    this.dynamic.push({ update: (dt, t) => { m.roughness = 0.04 + Math.sin(t * 0.7) * 0.015; } });
+  }
+
+  _bushes() {
+    const count = this.world.bushes;
+    if (!count) return;
+    const N = this.N;
+    const g = new THREE.IcosahedronGeometry(1.2, 0);
+    const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true });
+    const bushes = new THREE.InstancedMesh(g, m, count);
+    const mt = new THREE.Matrix4(), col = new THREE.Color();
+    const seedR = (i) => hash(i * 2.3 + 11, i * 0.7 + 5);
+    let placed = 0, tries = 0;
+    while (placed < count && tries < count * 8) {
+      tries++;
+      const s = this.samples[Math.floor(seedR(tries) * N)];
+      const side = seedR(tries + 31) < 0.5 ? -1 : 1;
+      const p = _v.copy(s.pos).addScaledVector(s.right, side * (14 + seedR(tries + 17) * 110)).addScaledVector(s.tangent, (seedR(tries + 3) - 0.5) * 40);
+      if (this._trackDist(p.x, p.z).d < 13 || this.lakeAt(p.x, p.z, 4) > 0) continue;
+      const sc = 0.5 + seedR(tries + 9) * 0.9;
+      mt.makeRotationY(seedR(tries + 23) * 6.28).scale(new THREE.Vector3(sc * 1.3, sc * 0.7, sc * 1.3)).setPosition(p.x, this.terrainHeight(p.x, p.z) + 0.4 * sc, p.z);
+      bushes.setMatrixAt(placed, mt);
+      bushes.setColorAt(placed, col.setHSL(0.16 + seedR(tries + 41) * 0.08, 0.35, 0.3 + seedR(tries + 43) * 0.15));
+      placed++;
+    }
+    bushes.count = placed;
+    bushes.castShadow = true;
+    this.group.add(bushes);
+  }
+
+  /** Lampioni a luce calda appena oltre il guardrail, alternati sui due lati, con una pozza di luce sull'asfalto. */
+  _lamps() {
+    const N = this.N, step = 9;
+    const count = Math.ceil(N / step) + 1;
+    const poleG = new THREE.CylinderGeometry(0.14, 0.2, 7, 6);
+    poleG.translate(0, 3.5, 0);
+    const armG = new THREE.BoxGeometry(0.14, 0.14, 2.6);
+    armG.translate(0, 7, 1.2);
+    const headG = new THREE.SphereGeometry(0.38, 10, 8);
+    headG.translate(0, 6.85, 2.4);
+    const poleM = new THREE.MeshStandardMaterial({ color: 0x2a2a38, roughness: 0.5, metalness: 0.6 });
+    const headM = new THREE.MeshStandardMaterial({ color: 0xffe2b0, emissive: 0xffb45a, emissiveIntensity: 3 });
+    const poles = new THREE.InstancedMesh(poleG, poleM, count);
+    const arms = new THREE.InstancedMesh(armG, poleM, count);
+    const heads = new THREE.InstancedMesh(headG, headM, count);
+    // pozza di luce: disco additivo con gradiente radiale
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grd.addColorStop(0, 'rgba(255,190,110,0.55)');
+    grd.addColorStop(1, 'rgba(255,190,110,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 128, 128);
+    const poolG = new THREE.PlaneGeometry(10, 10);
+    poolG.rotateX(-Math.PI / 2);
+    const poolM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const pools = new THREE.InstancedMesh(poolG, poolM, count);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
+    const base = new THREE.Vector3();
+    let k = 0;
+    for (let i = 0, n = 0; i < N; i += step, n++) {
+      const s = this.samples[i];
+      const side = n % 2 ? 1 : -1;
+      base.copy(s.pos).addScaledVector(s.right, side * (this.wallDist + 1.2));
+      // il braccio (+Z locale) punta verso la carreggiata
+      q.setFromAxisAngle(up, Math.atan2(-side * s.right.x, -side * s.right.z));
+      m.compose(base, q, one);
+      poles.setMatrixAt(k, m);
+      arms.setMatrixAt(k, m);
+      heads.setMatrixAt(k, m);
+      base.copy(s.pos).addScaledVector(s.right, side * (this.halfW + 2.5)).addScaledVector(s.normal, 0.07);
+      m.compose(base, q.identity(), one);
+      pools.setMatrixAt(k, m);
+      k++;
+    }
+    poles.count = arms.count = heads.count = pools.count = k;
+    poles.castShadow = true;
+    pools.renderOrder = 2;
+    this.group.add(poles, arms, heads, pools);
   }
 
   _scatter() {
     const N = this.N;
-    const treeCount = 520, rockCount = 160;
+    const treeCount = this.world.trees, rockCount = this.world.rocks;
+    if (!treeCount && !rockCount) return;
     const trunkG = new THREE.CylinderGeometry(0.35, 0.5, 3, 6);
     const crownG = new THREE.ConeGeometry(2.6, 6.5, 7);
     const trunkM = new THREE.MeshStandardMaterial({ color: 0x6b4b2a, roughness: 1 });
@@ -446,7 +638,7 @@ export class Track {
       const d = 16 + seedR(tries + 7) * 90;
       const p = _v.copy(s.pos).addScaledVector(s.right, side * d).addScaledVector(s.tangent, (seedR(tries + 13) - 0.5) * 40);
       const h = this.terrainHeight(p.x, p.z);
-      if (h < -3) continue;
+      if (h < -3 || this.lakeAt(p.x, p.z, 6) > 0) continue;
       // evita altre parti di pista
       const j = this.nearestIndex(p);
       const dd = Math.hypot(p.x - this.samples[j].pos.x, p.z - this.samples[j].pos.z);
@@ -483,37 +675,67 @@ export class Track {
   }
 
   _city() {
-    // palazzi lungo la sezione di partenza e il rettilineo del centro
-    const N = this.N;
-    const winTex = T.windowsTexture();
-    const cols = ['#e9d5b0', '#d9b78f', '#c9d6c0', '#e6c9c1', '#d4d0e8'];
+    // palazzi lungo gli intervalli di `world.city` (di default: partenza e rettilineo del centro)
+    const wo = this.world;
+    if (!wo.city.length) return;
+    const night = wo.night;
+    const winTex = night ? T.windowsTexture('#2a2c44', '#ffd27a', '#1c1d2e') : T.windowsTexture();
+    // di notte le finestre accese brillano: stessa disposizione (seme fisso), solo le luci
+    const litTex = night ? T.windowsTexture('#000000', '#ffc86a', '#000000') : null;
+    const cols = night ? ['#8d8fb0', '#a095b8', '#7f93a8', '#9a8aa0', '#8a86b8'] : ['#e9d5b0', '#d9b78f', '#c9d6c0', '#e6c9c1', '#d4d0e8'];
+    const neonHues = [0.87, 0.52, 0.78, 0.95, 0.12];
+    // niente palazzi sopra gli oggetti di scena fermi (deposito, tavola calda…)
+    const keepOut = (this.def.props || []).filter((p) => p.t !== undefined && !p.spin && p.side).map((p) => {
+      const s = this.samples[this.idxFromT(p.t)];
+      return { p: s.pos.clone().addScaledVector(s.right, p.side), r: 12 * (p.scale || 1) };
+    });
     const group = new THREE.Group();
-    const ranges = [[0.88, 1.0], [0.0, 0.16], [0.43, 0.53]];
     let n = 0;
-    for (const [a, b] of ranges) {
-      for (let t = a; t < b; t += 0.012) {
+    for (const [a, b] of wo.city) {
+      for (let t = a; t < b; t += wo.cityStep) {
         for (const side of [-1, 1]) {
           const s = this.samples[this.idxFromT(t)];
           const d = 24 + hash(n, side) * 14;
-          const w = 12 + hash(n + 1, side) * 10, dpt = 12 + hash(n + 2, side) * 8, h = 12 + hash(n + 3, side) * 26;
+          const w = 12 + hash(n + 1, side) * 10, dpt = 12 + hash(n + 2, side) * 8;
+          const h = night ? 16 + hash(n + 3, side) * 40 : 12 + hash(n + 3, side) * 26;
           const p = _v.copy(s.pos).addScaledVector(s.right, side * (d + w / 2));
+          const rad = Math.hypot(w, dpt) / 2;
+          const blocked = this._trackDist(p.x, p.z).d < rad + this.halfW + 6 || keepOut.some((k) => Math.hypot(k.p.x - p.x, k.p.z - p.z) < k.r + rad);
+          if (blocked) { n++; continue; }
           const th = this.terrainHeight(p.x, p.z);
           const m = new THREE.MeshStandardMaterial({ color: cols[n % cols.length], map: winTex.clone(), roughness: 0.8 });
           m.map.repeat.set(Math.max(1, Math.round(w / 14)), Math.max(1, Math.round(h / 12)));
           m.map.needsUpdate = true;
+          if (litTex) {
+            m.emissive = new THREE.Color(0xffffff);
+            m.emissiveMap = litTex.clone();
+            m.emissiveMap.repeat.copy(m.map.repeat);
+            m.emissiveMap.needsUpdate = true;
+            m.emissiveIntensity = 0.9;
+          }
           const bx = new THREE.Mesh(new THREE.BoxGeometry(w, h, dpt), m);
           bx.position.set(p.x, th + h / 2 - 1, p.z);
           bx.rotation.y = Math.atan2(s.tangent.x, s.tangent.z);
           bx.castShadow = bx.receiveShadow = true;
           group.add(bx);
-          // insegna al neon
-          if (hash(n + 9, side) < 0.45) {
-            const sign = new THREE.Mesh(
-              new THREE.BoxGeometry(w * 0.6, 1.6, 0.4),
-              new THREE.MeshStandardMaterial({ color: 0x220a22, emissive: new THREE.Color().setHSL(hash(n + 4, side), 0.9, 0.55), emissiveIntensity: 1.8 })
-            );
+          // insegna al neon (di notte a volte anche una verticale)
+          if (hash(n + 9, side) < wo.neon) {
+            const hue = night ? neonHues[n % neonHues.length] : hash(n + 4, side);
+            const neonM = new THREE.MeshStandardMaterial({ color: 0x220a22, emissive: new THREE.Color().setHSL(hue, 0.9, 0.55), emissiveIntensity: night ? 2.6 : 1.8 });
+            const sign = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6, 1.6, 0.4), neonM);
             sign.position.set(0, h * 0.35, -side * (dpt / 2 + 0.3));
             bx.add(sign);
+            if (night && hash(n + 12, side) < 0.5) {
+              const tall = new THREE.Mesh(new THREE.BoxGeometry(0.5, Math.min(10, h * 0.4), 1.4), neonM);
+              tall.position.set((hash(n + 13, side) - 0.5) * w * 0.8, 0, -side * (dpt / 2 + 0.8));
+              bx.add(tall);
+            }
+          }
+          // luce rossa di segnalazione sul tetto
+          if (night && hash(n + 15, side) < 0.3) {
+            const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3355 }));
+            beacon.position.set(0, h / 2 + 0.4, 0);
+            bx.add(beacon);
           }
           n++;
         }
@@ -656,6 +878,7 @@ export class Track {
       const obj = await buildProp(p.model, p.scale || 1, this.pal);
       obj.position.copy(pos);
       if (p.faceTrack && s) obj.lookAt(_w.copy(pos).addScaledVector(s.right, -(p.side || 1)));
+      if (p.alignTrack && s) obj.lookAt(_w.set(pos.x + s.tangent.x, pos.y, pos.z + s.tangent.z));
       this.group.add(obj);
       if (p.spin) this.dynamic.push({ update: (dt, t) => { obj.rotation.y += dt * 0.4; obj.position.y = pos.y + Math.sin(t * 1.3) * 0.8; } });
     }
@@ -668,17 +891,19 @@ export class Track {
       return;
     }
     let tex = await Assets.texture(this.def.sky, { equirect: true });
-    if (!tex) tex = T.skyGradientTexture('#2b3a7a', '#f19a6b', '#ffd9a0');
+    if (!tex) tex = this.world.night ? T.skyGradientTexture('#05061a', '#1a1a4a', '#3a2a5a', true, true) : T.skyGradientTexture('#2b3a7a', '#f19a6b', '#ffd9a0');
     this.scene.background = tex;
     this.scene.environment = tex;
-    this.scene.fog = new THREE.Fog(this.pal.fog, 220, 1100);
+    this.scene.fog = new THREE.Fog(this.pal.fog, this.world.fog[0], this.world.fog[1]);
   }
 
   _lights() {
     const p = this.pal;
-    const hemi = new THREE.HemisphereLight(new THREE.Color(this.isTunnel ? '#cfd6ff' : p.ambient), new THREE.Color(this.isTunnel ? '#2a1a5a' : '#3b5a2c'), this.isTunnel ? 2.4 : 0.75);
+    const night = !this.isTunnel && this.world.night;
+    const hemi = new THREE.HemisphereLight(new THREE.Color(this.isTunnel ? '#cfd6ff' : p.ambient), new THREE.Color(this.isTunnel ? '#2a1a5a' : p.ground || '#3b5a2c'), this.isTunnel ? 2.4 : night ? 0.9 : 0.75);
     this.group.add(hemi);
-    const sun = new THREE.DirectionalLight(new THREE.Color(p.sun), this.isTunnel ? 1.3 : 1.9);
+    // di notte il "sole" è la luna grande, rosa: più debole
+    const sun = new THREE.DirectionalLight(new THREE.Color(p.sun), this.isTunnel ? 1.3 : night ? 0.75 : 1.9);
     sun.position.set(180, 260, -120);
     sun.castShadow = !this.isTunnel;
     sun.shadow.mapSize.set(2048, 2048);

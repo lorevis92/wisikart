@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'asse
 const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
 const entries = Object.entries(manifest.files);
 
-let ok = 0, skipped = 0, failed = 0;
+let ok = 0, skipped = 0, failed = 0, todo = 0;
 for (const [rel, url] of entries) {
   const dest = join(root, rel);
   try {
@@ -17,6 +17,12 @@ for (const [rel, url] of entries) {
     skipped++;
     continue;
   } catch {}
+  // voci segnaposto ("TODO"): il gioco usa la versione procedurale finché non c'è l'URL
+  if (!/^https?:\/\//.test(url)) {
+    console.log(`… ${rel}: URL da completare, uso il segnaposto procedurale`);
+    todo++;
+    continue;
+  }
   try {
     process.stdout.write(`↓ ${rel} ... `);
     const res = await fetch(url);
@@ -31,5 +37,5 @@ for (const [rel, url] of entries) {
     failed++;
   }
 }
-console.log(`\nScaricati: ${ok}  Già presenti: ${skipped}  Falliti: ${failed}`);
+console.log(`\nScaricati: ${ok}  Già presenti: ${skipped}  Da completare: ${todo}  Falliti: ${failed}`);
 if (failed) console.log('Per i file falliti puoi scaricarli a mano dal link nel manifest e metterli nel percorso indicato.');

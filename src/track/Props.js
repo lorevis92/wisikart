@@ -147,6 +147,74 @@ function hoverCar() {
   return shadow(g);
 }
 
+/** Arco al neon di Niaboc: due piloni e una trave curva che scavalca la pista (asse X = trasversale). */
+function portal() {
+  const g = new THREE.Group();
+  const span = 17, pillarH = 8; // piloni oltre il guardrail (wallDist ≈ 16 m)
+  const steel = mat('#2b2d45', { metalness: 0.7, roughness: 0.35 });
+  const neonPink = mat('#2a0a22', { emissive: 0xff4fc8, emissiveIntensity: 3 });
+  const neonCyan = mat('#08222a', { emissive: 0x3fe8ff, emissiveIntensity: 3 });
+  for (const s of [-1, 1]) {
+    const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.6, pillarH, 1.6), steel);
+    pillar.position.set(s * span, pillarH / 2, 0);
+    g.add(pillar);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.2, pillarH * 0.9, 1.7), s < 0 ? neonPink : neonCyan);
+    strip.position.set(s * (span - 0.85), pillarH / 2, 0);
+    g.add(strip);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.6, 2.4), steel);
+    foot.position.set(s * span, 0.3, 0);
+    g.add(foot);
+  }
+  // trave curva: mezzo toro appoggiato sui piloni
+  const beam = new THREE.Mesh(new THREE.TorusGeometry(span, 0.75, 10, 48, Math.PI), steel);
+  beam.position.y = pillarH;
+  g.add(beam);
+  for (const [z, m] of [[0.8, neonPink], [-0.8, neonCyan]]) {
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(span, 0.16, 6, 64, Math.PI), m);
+    stripe.position.set(0, pillarH, z);
+    g.add(stripe);
+  }
+  const inner = new THREE.Mesh(new THREE.TorusGeometry(span - 0.8, 0.12, 6, 64, Math.PI), neonPink);
+  inner.position.y = pillarH;
+  g.add(inner);
+  return shadow(g);
+}
+
+/** Relitto: autovettore abbandonato, inclinato e mezzo affondato nel terreno. */
+function wreck() {
+  const car = new THREE.Group();
+  const rust = mat('#8a5a3a', { metalness: 0.3, roughness: 0.9 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.9, 3.2, 6, 14), rust);
+  body.rotation.z = Math.PI / 2;
+  body.position.y = 1.2;
+  car.add(body);
+  const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.75, 14, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat('#5a6a70', { transparent: true, opacity: 0.55, roughness: 0.6 }));
+  canopy.position.set(0.4, 1.7, 0);
+  canopy.scale.set(1, 0.7, 1);
+  car.add(canopy);
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 1.4), mat('#3a3430', { roughness: 1 }));
+  plate.position.y = 0.35;
+  car.add(plate);
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.1), rust);
+  fin.position.set(-1.8, 1.9, 0);
+  fin.rotation.x = 0.5; // piegata
+  car.add(fin);
+  const dent = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5, 0), mat('#5c3b26', { flatShading: true }));
+  dent.position.set(1.6, 1.4, 0.6);
+  car.add(dent);
+  // muso piantato nella sabbia, un po' di traverso
+  car.rotation.set(0.28, 0.2, -0.38);
+  car.position.y = -0.55;
+  const g = new THREE.Group();
+  g.add(car);
+  // cumulo di sabbia intorno al punto d'impatto
+  const mound = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat('#c9a878', { roughness: 1 }));
+  mound.scale.set(1.3, 0.35, 1);
+  mound.position.set(1.8, -0.1, 0);
+  g.add(mound);
+  return shadow(g);
+}
+
 function fountain() {
   const g = new THREE.Group();
   const basin = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.5, 1, 24), mat('#b8a07a'));
@@ -171,11 +239,14 @@ const PROCEDURAL = {
   'valvo-go': () => depot(),
   blindato: () => armored(),
   autovettore: () => hoverCar(),
-  fontana: () => fountain()
+  fontana: () => fountain(),
+  'portale-niaboc': () => portal(),
+  relitto: () => wreck()
 };
 
 const HEIGHTS = {
-  'oremo-giovane': 4, 'oremo-anziano': 4, 'tavola-calda': 3.5, 'valvo-go': 7.5, blindato: 3, autovettore: 2.4, fontana: 6
+  'oremo-giovane': 4, 'oremo-anziano': 4, 'tavola-calda': 3.5, 'valvo-go': 7.5, blindato: 3, autovettore: 2.4, fontana: 6,
+  'portale-niaboc': 26, relitto: 2.2
 };
 
 export async function buildProp(name, scale = 1, pal = {}) {

@@ -116,7 +116,8 @@ class Game {
     if (this.settings.quality === 'low') return;
     const c = new EffectComposer(this.renderer);
     c.addPass(new RenderPass(this.scene, this.camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), track.theme === 'tunnel' ? 0.55 : 0.22, 0.6, track.theme === 'tunnel' ? 0.55 : 0.9);
+    const glow = track.theme === 'tunnel' || track.world?.night; // neon e lampioni: più bagliore
+    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), glow ? 0.55 : 0.22, 0.6, glow ? 0.55 : 0.9);
     c.addPass(bloom);
     c.addPass(new OutputPass());
     this.composer = c;
@@ -142,19 +143,24 @@ class Game {
   back() {
     this.audio.sfx('back');
     if (this.state === 'chars' || this.state === 'options' || this.state === 'credits') { this.state = 'title'; this.ui.title(); }
-    else if (this.state === 'tracks') { this.state = 'chars'; this.ui.characters(this.mode, (c) => this.pickCharacter(c)); }
+    else if (this.state === 'tracks' || this.state === 'cups') { this.state = 'chars'; this.ui.characters(this.mode, (c) => this.pickCharacter(c)); }
   }
 
   pickCharacter(c) {
     this.audio.sfx('select');
     this.playerChar = c;
     if (this.mode === 'gp') {
-      this.gp = { cup: CUPS[0], tracks: CUPS[0].tracks, raceIndex: 0, points: Object.fromEntries(CHARACTERS.map((x) => [x.id, 0])), finished: false };
-      this.startRace(trackById[this.gp.tracks[0]]);
+      this.state = 'cups';
+      this.ui.cups((cup) => { this.audio.sfx('select'); this.startCup(cup); });
     } else {
       this.state = 'tracks';
       this.ui.tracks(this.mode, (t) => { this.audio.sfx('select'); this.startRace(t); }, this.save.bestLaps || {});
     }
+  }
+
+  startCup(cup) {
+    this.gp = { cup, tracks: cup.tracks, raceIndex: 0, points: Object.fromEntries(CHARACTERS.map((x) => [x.id, 0])), history: [], finished: false };
+    this.startRace(trackById[this.gp.tracks[0]]);
   }
 
   // ---------- gara ----------
@@ -213,7 +219,12 @@ class Game {
     }
     const actions = [];
     if (this.mode === 'gp') {
-      for (const r of e.results) this.gp.points[r.character.id] += POINTS_TABLE[r.rank - 1] || 0;
+      const race = {};
+      for (const r of e.results) {
+        race[r.character.id] = POINTS_TABLE[r.rank - 1] || 0;
+        this.gp.points[r.character.id] += race[r.character.id];
+      }
+      this.gp.history.push(race);
       this.gp.standings = CHARACTERS.map((c) => ({ character: c, points: this.gp.points[c.id] })).sort((a, b) => b.points - a.points);
       const last = this.gp.raceIndex >= this.gp.tracks.length - 1;
       this.gp.finished = last;

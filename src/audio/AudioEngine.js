@@ -7,6 +7,10 @@ const THEMES = {
   menu: { bpm: 96, root: 57, chords: [[0, 3, 7, 10], [5, 8, 12, 15], [-2, 2, 5, 9], [3, 7, 10, 14]], lead: 'soft', drums: 'light' },
   omega: { bpm: 132, root: 52, chords: [[0, 3, 7, 10], [0, 3, 7, 10], [-4, 0, 3, 7], [-2, 2, 5, 8]], lead: 'saw', drums: 'drive' },
   canair: { bpm: 116, root: 60, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [2, 5, 9, 12], [7, 11, 14, 17]], lead: 'pluck', drums: 'bounce' },
+  // Niaboc di notte: più lento e più cupo di Omega, minore con la sesta bemolle
+  niaboc: { bpm: 104, root: 50, chords: [[0, 3, 7, 10], [-4, 0, 3, 7], [-7, -4, 0, 3], [-5, -2, 2, 5]], lead: 'saw', drums: 'bounce' },
+  // Retah: tramonto sul lago, maggiore settima come Canair ma rilassato
+  retah: { bpm: 92, root: 58, chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [5, 9, 12, 16], [2, 5, 9, 12]], lead: 'pluck', drums: 'light' },
   results: { bpm: 104, root: 57, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [2, 5, 9, 12]], lead: 'soft', drums: 'light' }
 };
 
