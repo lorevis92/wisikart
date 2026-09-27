@@ -18,6 +18,14 @@ Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8,
 - **Coppa della Fuga**: Omega 65 → Canair.
 - **Coppa delle Galassie Unite**: Niaboc → Omega 65 → Retah → Canair.
 
+## Storia
+
+Modalità separata dal kart (voce **Storia** nel menu): platform 2.5D a scorrimento laterale con Whiskey a piedi, che cammina, salta e lancia bottiglie. Il personaggio è l'ultimo scelto nel kart (altrimenti la Monna), con la stessa faccia di `faceTexture`.
+
+**Livello 1 – Stadio di Space Ball**: gradinate (file di sedili, alcune crollano; tifosi da scavalcare; sciarpe da saltare o da passarci sotto; bottiglie e secchi dagli spalti), campo (palle spaziali a pendolo, porte da passare sotto e una porta alta da cui saltare il fossato, bottigliera), tunnel degli spogliatoi (scale, grate, tre steward da evitare o stordire, cassa di bottiglie) e arena in cima con il **Tifoso Supremo**: lancia sedili a parabola (il bersaglio rosso a terra dice dove cadranno), ogni tanto uno lascia una bottiglia; servono tre bottigliate.
+
+Comandi: **Frecce / A D** cammina · **Spazio / K** salta (più lo tieni, più salti in alto) · **Su / Giù** sulle scale · **Maiusc / E / J** lancia · **Esc** pausa. HUD: vite, bottiglie, vita del boss. Le cadute nel vuoto riportano all'ultimo checkpoint; a zero vite il livello riparte da capo.
+
 ## Avvio rapido
 
 ```bash
@@ -44,6 +52,7 @@ Tutti sotto `public/assets/`. Il file `public/assets/manifest.json` elenca ogni 
 | `ui/logo.png`, `ui/title.png` | logo e sfondo del titolo | boot e schermata iniziale |
 | `items/*.png` | icone oggetti | HUD |
 | `audio/voice/*.wav` | 6 battute di Emma (welcome, start, lastlap, hit, hitother, win) | annunci in gara |
+| `story/stadio/*` | sfondi (gradinate, campo, tunnel) e modelli (tifoso, steward, bottiglia) della Storia, elencati in `public/assets/story/manifest.json` | modalità Storia |
 | `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del titolo, finale del Gran Premio, griglia di partenza di Omega 65 |
 | `tracks/<id>/griglia.mp4` | video della griglia di partenza (Niaboc, Canair, Retah) | schermata di caricamento della pista |
 
@@ -72,7 +81,11 @@ src/
   race/Race.js          conto alla rovescia, giri, classifica, telecamera, arrivo
   audio/AudioEngine.js  musica in tempo reale, effetti, motore, voci di Emma
   ui/UI.js + style.css  tutte le schermate e l'HUD
-scripts/fetch-assets.mjs  scarica gli asset del manifest
+  story/StoryMode.js    modalità Storia: scena, telecamera laterale, danni, checkpoint, boss, HUD
+  story/Player.js       Whiskey platform: fisica (coyote, salto variabile, scale) e animazioni
+  story/entities.js     sedili che crollano, tifosi, sciarpe, pendoli, steward, boss, pickup, proiettili
+  story/stadio.js       dati del livello 1 (misure pensate sulla fisica del salto)
+scripts/fetch-assets.mjs  scarica gli asset di entrambi i manifest (kart e Storia)
 scripts/check-tracks.mjs  controlla le piste (lunghezza, raggio minimo, incroci)
 ```
 

@@ -1,16 +1,22 @@
-// Scarica tutti gli asset elencati in public/assets/manifest.json.
+// Scarica tutti gli asset elencati nei manifest: public/assets/manifest.json (kart)
+// e public/assets/story/manifest.json (modalità Storia). Ogni percorso è relativo alla cartella del suo manifest.
 // Uso: npm run assets
 // I file già presenti vengono saltati. Funziona con Node 18+ (fetch nativo).
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets');
-const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
-const entries = Object.entries(manifest.files);
+const assets = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets');
+const manifests = [assets, join(assets, 'story')];
+const entries = [];
+for (const root of manifests) {
+  let manifest;
+  try { manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8')); } catch { continue; }
+  for (const [rel, url] of Object.entries(manifest.files)) entries.push([root, rel, url]);
+}
 
 let ok = 0, skipped = 0, failed = 0, todo = 0;
-for (const [rel, url] of entries) {
+for (const [root, rel, url] of entries) {
   const dest = join(root, rel);
   try {
     await stat(dest);

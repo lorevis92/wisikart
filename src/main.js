@@ -12,6 +12,10 @@ import { TRACKS, CUPS, trackById, POINTS_TABLE } from './config/tracks.js';
 import { ITEMS } from './config/items.js';
 import { Assets } from './core/AssetLoader.js';
 import { dotTexture } from './core/Textures.js';
+import { StoryMode } from './story/StoryMode.js';
+import { STADIO } from './story/stadio.js';
+
+const STORY_LEVELS = [STADIO];
 
 const SAVE_KEY = 'wisikart.save.v1';
 
@@ -39,6 +43,7 @@ class Game {
     this._resize();
     window.addEventListener('resize', () => this._resize());
     this.input.bindTouch(document.getElementById('touch'));
+    this.input.bindTouch(document.getElementById('story-touch'));
     document.querySelectorAll('#main-menu .menu-item').forEach((b) => b.addEventListener('click', () => this.menuAction(b.dataset.action)));
     document.querySelectorAll('[data-pause]').forEach((b) => b.addEventListener('click', () => this.pauseAction(b.dataset.pause)));
     document.getElementById('boot-start').addEventListener('click', () => this.enter());
@@ -60,6 +65,7 @@ class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (this.composer) this.composer.setSize(w, h);
+    if (this.story) this.story.resize(w / h);
   }
 
   async boot() {
@@ -137,6 +143,8 @@ class Game {
     if (action === 'options') {
       this.state = 'options';
       this.ui.options(this.settings, (s) => { Object.assign(this.settings, s); this.audio.setVolumes(this.settings); this._persist(); this._resize(); });
+    } else if (action === 'story') {
+      this.openStory();
     } else if (action === 'credits') {
       this.state = 'credits';
       this.ui.credits();
@@ -148,7 +156,7 @@ class Game {
 
   back() {
     this.audio.sfx('back');
-    if (this.state === 'chars' || this.state === 'options' || this.state === 'credits') { this.state = 'title'; this.ui.title(); }
+    if (this.state === 'chars' || this.state === 'options' || this.state === 'credits' || this.state === 'storymenu') { this.state = 'title'; this.ui.title(); }
     else if (this.state === 'tracks' || this.state === 'cups') { this.state = 'chars'; this.ui.characters(this.mode, (c) => this.pickCharacter(c)); }
   }
 
@@ -245,6 +253,56 @@ class Game {
     this.ui.results({ results: e.results, lapTimes: e.lapTimes, bestLap: e.bestLap, totalTime: e.totalTime, mode: this.mode, gp: this.gp, playerChar: this.playerChar, actions, isNewBest });
   }
 
+  // ---------- storia ----------
+  openStory(message = '') {
+    this.state = 'storymenu';
+    this.save.story = this.save.story || {};
+    this.ui.storyMenu(STORY_LEVELS, this.save.story, (lv) => { this.audio.sfx('select'); this.startStory(lv); }, message);
+  }
+
+  async startStory(level) {
+    this.state = 'storyload';
+    this.audio.stopMusic();
+    this.ui.storyLoading(level);
+    this._endStory();
+    // Whiskey: l'ultimo personaggio scelto nel kart, altrimenti la Monna
+    const story = new StoryMode({
+      level,
+      character: this.playerChar || CHARACTERS[0],
+      audio: this.audio,
+      onComplete: () => this._storyComplete(level),
+      onGameOver: () => this.startStory(level)
+    });
+    await story.load((t) => this.ui.loadingStatus(t));
+    this.story = story;
+    this._resize();
+    // niente tasti rimasti in memoria dal menu
+    Object.assign(this.input, { jumpPressed: false, upPressed: false, itemPressed: false, pausePressed: false });
+    this.state = 'story';
+    this.ui.storyHudStart();
+    this.audio.playTheme(level.music);
+  }
+
+  _storyComplete(level) {
+    this.save.story = { ...(this.save.story || {}), [level.id]: true };
+    this._persist();
+    this._endStory();
+    this.audio.playTheme('menu');
+    this.openStory(`Livello completato: ${level.name}. Emma: «Il capitolo 2 non c'è ancora. Goditi il momento.»`);
+  }
+
+  _endStory() {
+    if (this.story) { this.story.dispose(); this.story = null; }
+  }
+
+  storyPause(on) {
+    if (this.state !== 'story' && this.state !== 'storypaused') return;
+    this.state = on ? 'storypaused' : 'story';
+    document.querySelector('[data-pause="restart"]').textContent = on ? 'Ricomincia il livello' : 'Ricomincia la gara';
+    this.ui.pause(on);
+    if (!on) this.ui.storyHudStart(); // chiude l'overlay e rimette l'HUD
+  }
+
   toTitle() {
     this.audio.sfx('back');
     if (this.race) { this.race.dispose(); this.race = null; }
@@ -257,6 +315,17 @@ class Game {
 
   pauseAction(a) {
     this.audio.sfx('select');
+    if (this.state === 'storypaused') {
+      const level = this.story.level;
+      if (a === 'resume') this.storyPause(false);
+      else {
+        this.ui.pause(false);
+        document.querySelector('[data-pause="restart"]').textContent = 'Ricomincia la gara';
+        if (a === 'restart') this.startStory(level);
+        else { this._endStory(); this.audio.playTheme('menu'); this.openStory(); }
+      }
+      return;
+    }
     if (a === 'resume') this.togglePause(false);
     else if (a === 'restart') { this.togglePause(false); this.startRace(this.race.trackDef); }
     else if (a === 'quit') { this.togglePause(false); this.toTitle(); }
@@ -283,10 +352,15 @@ class Game {
     this.input.update();
     // navigazione menu
     const ev = this.input.consumeMenu();
-    if (this.state !== 'race' && this.state !== 'loading') {
+    if (this.state !== 'race' && this.state !== 'loading' && this.state !== 'story' && this.state !== 'storyload') {
       for (const e of ev) {
         if (e === 'ok') this.ui.activateFocus();
-        else if (e === 'back') { if (this.state === 'paused') this.togglePause(false); else this.back(); }
+        else if (e === 'back') {
+          if (this.input.pausePressed) continue; // Esc: ci pensa la pausa qui sotto, sennò riprende e ri-mette in pausa
+          if (this.state === 'paused') this.togglePause(false);
+          else if (this.state === 'storypaused') this.storyPause(false);
+          else this.back();
+        }
         else this.ui.moveFocus(e);
       }
     }
@@ -294,8 +368,18 @@ class Game {
       this.input.pausePressed = false;
       if (this.state === 'race' && this.race.state !== 'countdown') this.togglePause(true);
       else if (this.state === 'paused') this.togglePause(false);
+      else if (this.state === 'story') this.storyPause(true);
+      else if (this.state === 'storypaused') this.storyPause(false);
     }
-    if (this.state === 'race' && this.race) {
+    if (this.state === 'story' && this.story) {
+      this.story.update(dt, this.input);
+      if (this.state === 'story' && this.story) {
+        this.ui.storyHud(this.story.hud());
+        this.renderer.render(this.story.scene, this.story.camera);
+      }
+    } else if (this.state === 'storypaused' && this.story) {
+      this.renderer.render(this.story.scene, this.story.camera);
+    } else if (this.state === 'race' && this.race) {
       this.race.update(dt);
       if (this.race.state !== 'done') this.ui.hud(this.race.hud());
       if (this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera);

@@ -6,8 +6,15 @@ export class Input {
     this.drift = false;
     this.itemPressed = false;
     this.lookBack = false;
+    this._axisYPrev = 0;
     this.pausePressed = false;
-    this.touch = { left: false, right: false, accel: false, drift: false };
+    this.touch = { left: false, right: false, accel: false, drift: false, jump: false, up: false, down: false };
+    // modalità Storia (platform): assi grezzi e salto con fronte di salita
+    this.axisX = 0;
+    this.axisY = 0;
+    this.jumpHeld = false;
+    this.jumpPressed = false;
+    this.upPressed = false;
     this.isTouch = matchMedia('(pointer: coarse)').matches;
     this.menuEvents = [];
     window.addEventListener('keydown', (e) => this._key(e, true));
@@ -18,7 +25,7 @@ export class Input {
   _key(e, down) {
     const k = e.code;
     if (down && !e.repeat) {
-      if (k === 'ShiftLeft' || k === 'ShiftRight' || k === 'KeyE') this.itemPressed = true;
+      if (k === 'ShiftLeft' || k === 'ShiftRight' || k === 'KeyE' || k === 'KeyJ') this.itemPressed = true;
       if (k === 'Escape' || k === 'KeyP') this.pausePressed = true;
       // navigazione menu
       if (k === 'ArrowUp' || k === 'KeyW') this.menuEvents.push('up');
@@ -77,6 +84,25 @@ export class Input {
       if (gp.buttons[0]?.pressed) { if (!this._gpOk) this.menuEvents.push('ok'); this._gpOk = true; } else this._gpOk = false;
       if (gp.buttons[1]?.pressed) { if (!this._gpBack) this.menuEvents.push('back'); this._gpBack = true; } else this._gpBack = false;
     }
+    // platform: su/giù per le scale, salto con Spazio/K, touch o A del gamepad
+    let ay = 0;
+    if (k.has('ArrowUp') || k.has('KeyW') || this.touch.up) ay += 1;
+    if (k.has('ArrowDown') || k.has('KeyS') || this.touch.down) ay -= 1;
+    let jump = k.has('Space') || k.has('KeyK') || this.touch.jump;
+    if (gp) {
+      const ay2 = gp.axes[1] || 0;
+      if (Math.abs(ay2) > 0.5) ay -= Math.sign(ay2);
+      if (gp.buttons[12]?.pressed) ay += 1;
+      if (gp.buttons[13]?.pressed) ay -= 1;
+      if (gp.buttons[0]?.pressed) jump = true;
+    }
+    this.axisX = Math.max(-1, Math.min(1, st));
+    ay = Math.max(-1, Math.min(1, ay));
+    if (ay > 0.5 && this._axisYPrev <= 0.5) this.upPressed = true;
+    this._axisYPrev = ay;
+    this.axisY = ay;
+    if (jump && !this.jumpHeld) this.jumpPressed = true;
+    this.jumpHeld = jump;
     // smorzamento dello sterzo per la tastiera
     const target = Math.max(-1, Math.min(1, st));
     this.steer += (target - this.steer) * (target === 0 ? 0.35 : 0.22);

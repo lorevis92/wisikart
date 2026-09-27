@@ -1,0 +1,11 @@
+{
+  "note": "Asset della modalità Storia (relativi a public/assets/story). Scaricati da `npm run assets` insieme al manifest principale. Se un file manca il gioco usa la versione procedurale.",
+  "files": {
+    "stadio/gradinate.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140535_c8cd7507-8ec9-4808-ad52-eba933c76d6f.png",
+    "stadio/campo.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140536_e838d27a-3aa7-416b-a5bb-bd7eb4a2a493.png",
+    "stadio/tunnel.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140535_a4d30f1d-1ea4-4cad-9913-e984a1f4b8e8.png",
+    "stadio/tifoso.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140713_34644898-0839-451c-ba4b-71b86f86608f.glb",
+    "stadio/steward.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140722_3129d2ec-06b8-4204-97e4-17340026150f.glb",
+    "stadio/bottiglia.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140729_d6a17048-667e-47fd-b39c-f081039b4b9e.glb"
+  }
+}

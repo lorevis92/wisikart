@@ -244,6 +244,74 @@ export class UI {
     $('#tracks-confirm').onclick = () => onPick(CUPS[this.focus.index]);
   }
 
+  // ---------- storia ----------
+  /** Scelta del livello della Storia. `message` compare in alto (es. livello completato). */
+  storyMenu(levels, completed, onPlay, message = '') {
+    this.show('story');
+    const msg = $('#story-msg');
+    msg.textContent = message;
+    msg.classList.toggle('hidden', !message);
+    const grid = $('#story-grid');
+    grid.innerHTML = '';
+    const cards = [];
+    levels.forEach((lv, i) => {
+      const card = document.createElement('div');
+      card.className = 'track-card story-card';
+      card.innerHTML = `<div class="preview"><span class="cup-count">Livello ${i + 1}</span></div><div class="meta"><b>${lv.name}</b><span>${lv.subtitle}</span>${completed[lv.id] ? '<span class="status">Completato</span>' : ''}</div>`;
+      const prev = card.querySelector('.preview');
+      Assets.exists(lv.preview).then((ok) => { prev.style.background = ok ? `url(${lv.preview}) center/cover no-repeat` : 'linear-gradient(135deg, #2a1a5a, #6a2fa0)'; });
+      card.addEventListener('click', () => {
+        const k = cards.indexOf(card);
+        if (this.focus.index === k) onPlay(lv);
+        else { this.focus.index = k; this._applyFocus(); this.game.audio.sfx('move'); }
+      });
+      grid.appendChild(card);
+      cards.push(card);
+    });
+    const next = document.createElement('div');
+    next.className = 'track-card locked';
+    next.innerHTML = '<div class="preview"><div class="lock">Prossimamente</div></div><div class="meta"><b>Capitolo 2</b><span>Emma dice che è una sorpresa. Emma non sa cosa sia.</span></div>';
+    grid.appendChild(next);
+    $('#story-keys').classList.toggle('hidden', this.game.input.isTouch);
+    this.setFocusList(cards, 2);
+  }
+
+  storyLoading(level) {
+    this.show('loading');
+    const img = $('#loading-preview');
+    img.src = '';
+    Assets.exists(level.preview).then((ok) => { if (ok) img.src = level.preview; });
+    $('#loading-name').textContent = level.name;
+    $('#loading-sub').textContent = level.subtitle;
+    $('#loading-status').textContent = 'Preparo lo stadio…';
+    $('#loading-skip').classList.add('hidden');
+  }
+
+  storyHudStart() {
+    this.show('story-hud');
+    $('#story-touch').classList.toggle('on', this.game.input.isTouch);
+    $('#story-notice').classList.remove('show');
+    this._storyNotice = null;
+    this._storyLives = null;
+  }
+
+  storyHud(h) {
+    let hearts = '';
+    for (let i = 0; i < h.maxLives; i++) hearts += i < h.lives ? '♥' : '<span class="off">♥</span>';
+    if (this._storyLives !== h.lives) { $('#story-lives').innerHTML = hearts; this._storyLives = h.lives; }
+    $('#story-ammo').textContent = h.ammo;
+    $('#story-ammo-max').textContent = `/${h.maxAmmo}`;
+    const boss = $('#story-boss');
+    boss.classList.toggle('hidden', !h.boss);
+    if (h.boss) $('#story-boss-fill').style.width = `${(h.boss.hp / h.boss.max) * 100}%`;
+    const n = $('#story-notice');
+    if (h.notice !== this._storyNotice) {
+      this._storyNotice = h.notice;
+      if (h.notice) n.textContent = h.notice;
+      n.classList.toggle('show', !!h.notice);
+    }
+  }
+
   // ---------- caricamento ----------
   /** Mostra la schermata di caricamento; ritorna una promessa che si risolve quando la presentazione dei piloti finisce (o viene saltata). */
   loading(track) {

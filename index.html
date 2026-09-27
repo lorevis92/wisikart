@@ -34,6 +34,7 @@
         <button class="btn menu-item" data-action="gp">Gran Premio<small>Due gare, una sola fuga</small></button>
         <button class="btn menu-item" data-action="single">Corsa singola<small>Scegli pista e personaggio</small></button>
         <button class="btn menu-item" data-action="time">Prova a tempo<small>Solo tu e il cronometro</small></button>
+        <button class="btn menu-item" data-action="story">Storia<small>Whiskey a piedi, livello per livello</small></button>
         <button class="btn menu-item" data-action="options">Opzioni</button>
         <button class="btn menu-item" data-action="credits">Crediti</button>
       </nav>
@@ -108,6 +109,43 @@
     </div>
   </section>
 
+  <!-- STORIA: scelta del livello -->
+  <section id="screen-story" class="screen">
+    <header class="screen-head">
+      <button class="btn ghost back" data-back>Indietro</button>
+      <h2>Storia</h2>
+      <span class="head-note">Capitolo 1 · Lo stadio</span>
+    </header>
+    <p class="story-msg hidden" id="story-msg"></p>
+    <div class="track-grid" id="story-grid"></div>
+    <p class="hint story-keys" id="story-keys">Frecce / A D per muoverti · Spazio o K per saltare · Su / Giù sulle scale · Maiusc, E o J per lanciare una bottiglia · Esc pausa</p>
+  </section>
+
+  <!-- STORIA: HUD -->
+  <section id="screen-story-hud" class="screen hud story-hud">
+    <div class="hud-top">
+      <div class="story-stat"><span class="story-hearts" id="story-lives"></span></div>
+      <div class="story-boss hidden" id="story-boss"><span>Il Tifoso Supremo</span><div class="story-boss-bar"><i id="story-boss-fill"></i></div></div>
+      <div class="story-stat"><span class="story-bottle" aria-hidden="true"></span><b id="story-ammo">3</b><small id="story-ammo-max">/9</small></div>
+    </div>
+    <div class="hud-notice" id="story-notice"></div>
+    <div class="touch" id="story-touch">
+      <div class="touch-left">
+        <button class="tbtn" data-touch="left">◀</button>
+        <button class="tbtn" data-touch="right">▶</button>
+      </div>
+      <div class="touch-right">
+        <div class="story-ladder">
+          <button class="tbtn small" data-touch="up">▲</button>
+          <button class="tbtn small" data-touch="down">▼</button>
+        </div>
+        <button class="tbtn small" data-touch="item">Lancia</button>
+        <button class="tbtn accel" data-touch="jump">Salta</button>
+      </div>
+      <button class="tbtn pause" data-touch="pause">II</button>
+    </div>
+  </section>
+
   <!-- PAUSA -->
   <section id="screen-pause" class="screen overlay">
     <div class="panel">
@@ -157,6 +195,7 @@
       <div class="controls-legend">
         <h3>Comandi</h3>
         <p><b>Frecce / WASD</b> guida · <b>Spazio</b> derapata (tieni premuto in curva, rilascia per il turbo) · <b>Maiusc / E</b> usa l'oggetto · <b>C</b> guarda indietro · <b>Esc</b> pausa</p>
+        <p><b>Storia:</b> <b>Frecce / A D</b> cammina · <b>Spazio / K</b> salta (più a lungo lo tieni, più salti in alto) · <b>Su / Giù</b> sulle scale · <b>Maiusc / E / J</b> lancia una bottiglia</p>
         <p>Su telefono e tablet compaiono i tasti sullo schermo. Funziona anche il gamepad.</p>
       </div>
     </div>

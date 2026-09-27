@@ -11,6 +11,9 @@ const THEMES = {
   niaboc: { bpm: 104, root: 50, chords: [[0, 3, 7, 10], [-4, 0, 3, 7], [-7, -4, 0, 3], [-5, -2, 2, 5]], lead: 'saw', drums: 'bounce' },
   // Retah: tramonto sul lago, maggiore settima come Canair ma rilassato
   retah: { bpm: 92, root: 58, chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [5, 9, 12, 16], [2, 5, 9, 12]], lead: 'pluck', drums: 'light' },
+  // Storia: stadio allegro e saltellante, boss minore e incalzante
+  stadio: { bpm: 120, root: 55, chords: [[0, 4, 7, 11], [7, 11, 14, 17], [9, 12, 16, 19], [5, 9, 12, 16]], lead: 'pluck', drums: 'bounce' },
+  boss: { bpm: 138, root: 50, chords: [[0, 3, 7, 10], [-2, 2, 5, 9], [-4, 0, 3, 7], [-5, -1, 2, 5]], lead: 'saw', drums: 'drive' },
   results: { bpm: 104, root: 57, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [2, 5, 9, 12]], lead: 'soft', drums: 'light' }
 };
 
@@ -209,6 +212,8 @@ export class AudioEngine {
       case 'lap': [523, 659, 784].forEach((f, i) => this._osc('triangle', f, t + i * 0.09, 0.14, 0.22, d)); break;
       case 'finish': [523, 659, 784, 1046].forEach((f, i) => this._osc('triangle', f, t + i * 0.12, 0.4, 0.25, d)); break;
       case 'wall': this._noise(t, 0.15, 0.3, d, 800); break;
+      case 'jump': this._osc('triangle', 440, t, 0.06, 0.14, d); this._osc('triangle', 660, t + 0.05, 0.08, 0.12, d); break;
+      case 'break': this._noise(t, 0.18, 0.28, d, 2200); this._osc('triangle', 1400, t, 0.05, 0.08, d); break;
     }
   }
 

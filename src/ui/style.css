@@ -214,3 +214,20 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   .results-list .tm { grid-column: 3 / -1; grid-row: 2; }
   .results-list .per i { min-width: 24px; font-size: 12px; }
 }
+
+/* ---------- storia ---------- */
+.story-msg { margin: 0 0 12px; padding: 12px 16px; border-radius: 16px; background: rgba(67,224,176,0.16); border: 2px solid var(--mint); font-weight: 600; }
+.story-keys { margin-top: 12px; }
+.story-card .status { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--mint); }
+.story-hud .hud-top { align-items: center; }
+.story-stat { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 700; background: rgba(10,12,34,0.55); padding: 8px 14px; border-radius: 14px; }
+.story-stat small { font-size: 16px; opacity: 0.7; }
+.story-hearts { color: var(--coral); letter-spacing: 2px; font-size: 26px; }
+.story-hearts .off { color: rgba(255,255,255,0.18); }
+.story-bottle { width: 14px; height: 28px; border-radius: 5px 5px 4px 4px; background: linear-gradient(180deg, #7fe0a0 0 22%, #3f9a5a 22% 100%); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25); }
+.story-boss { flex: 1; max-width: 420px; text-align: center; font-weight: 600; font-size: 15px; }
+.story-boss-bar { height: 14px; margin-top: 4px; border-radius: 8px; background: rgba(10,12,34,0.7); border: 2px solid rgba(255,255,255,0.25); overflow: hidden; }
+.story-boss-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--coral), var(--gold)); transition: width 0.3s; }
+.story-hud .hud-notice { top: 22%; font-size: 24px; white-space: normal; text-align: center; width: min(92vw, 720px); }
+.story-ladder { display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 560px) { .story-stat { font-size: 20px; padding: 6px 10px; } .story-hearts { font-size: 20px; } }
