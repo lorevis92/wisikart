@@ -108,9 +108,9 @@ export const TRACKS = [
       curb: ['#9b4cff', '#f2f0ff'],
       wall: '#3a3358',
       wallGlow: '#ff6fd8',
-      fog: '#141a3d',
-      ambient: '#c7a8e8',
-      sun: '#ffb3dd',
+      fog: '#080b1e',
+      ambient: '#8a78c0',
+      sun: '#ffb8e0',
       ground: '#171630',
       grass: '#2c2c3e',
       rock: '#4a4658'
@@ -124,7 +124,7 @@ export const TRACKS = [
       cityStep: 0.011,
       neon: 0.85,
       lamps: true,
-      fog: [140, 900]
+      fog: [260, 1400]
     },
     music: 'niaboc',
     points: [

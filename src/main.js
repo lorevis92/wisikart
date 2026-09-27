@@ -116,8 +116,12 @@ class Game {
     if (this.settings.quality === 'low') return;
     const c = new EffectComposer(this.renderer);
     c.addPass(new RenderPass(this.scene, this.camera));
-    const glow = track.theme === 'tunnel' || track.world?.night; // neon e lampioni: più bagliore
-    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), glow ? 0.55 : 0.22, 0.6, glow ? 0.55 : 0.9);
+    // tunnel: bagliore diffuso; notte: bagliore forte ma soglia alta, così brillano solo neon e lampioni
+    const night = track.world?.night;
+    const strength = track.theme === 'tunnel' ? 0.55 : night ? 0.7 : 0.22;
+    const radius = night ? 0.45 : 0.6;
+    const threshold = track.theme === 'tunnel' ? 0.55 : night ? 0.85 : 0.9;
+    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), strength, radius, threshold);
     c.addPass(bloom);
     c.addPass(new OutputPass());
     this.composer = c;

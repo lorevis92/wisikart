@@ -423,7 +423,7 @@ export class Track {
     const gt = T.grassTexture('#ffffff');
     gt.repeat.set(140, 140);
     const terrain = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: gt, vertexColors: true, roughness: 1 }));
-    if (this.world.night) terrain.material.color.setScalar(0.7);
+    if (this.world.night) terrain.material.color.setScalar(0.55);
     terrain.receiveShadow = true;
     this.group.add(terrain);
     this.terrain = terrain;
@@ -894,17 +894,21 @@ export class Track {
     if (!tex) tex = this.world.night ? T.skyGradientTexture('#05061a', '#1a1a4a', '#3a2a5a', true, true) : T.skyGradientTexture('#2b3a7a', '#f19a6b', '#ffd9a0');
     this.scene.background = tex;
     this.scene.environment = tex;
+    // di notte il cielo non deve illuminare tutto di grigio: quasi niente luce d'ambiente dal cielo
+    this.scene.environmentIntensity = this.world.night ? 0.12 : 1;
     this.scene.fog = new THREE.Fog(this.pal.fog, this.world.fog[0], this.world.fog[1]);
   }
 
   _lights() {
     const p = this.pal;
     const night = !this.isTunnel && this.world.night;
-    const hemi = new THREE.HemisphereLight(new THREE.Color(this.isTunnel ? '#cfd6ff' : p.ambient), new THREE.Color(this.isTunnel ? '#2a1a5a' : p.ground || '#3b5a2c'), this.isTunnel ? 2.4 : night ? 0.9 : 0.75);
+    // di notte: poca luce diffusa (le ombre restano scure) e una luna forte e radente che scolpisce i volumi
+    const hemi = new THREE.HemisphereLight(new THREE.Color(this.isTunnel ? '#cfd6ff' : p.ambient), new THREE.Color(this.isTunnel ? '#2a1a5a' : p.ground || '#3b5a2c'), this.isTunnel ? 2.4 : night ? 0.22 : 0.75);
     this.group.add(hemi);
-    // di notte il "sole" è la luna grande, rosa: più debole
-    const sun = new THREE.DirectionalLight(new THREE.Color(p.sun), this.isTunnel ? 1.3 : night ? 0.75 : 1.9);
-    sun.position.set(180, 260, -120);
+    // di notte il "sole" è la luna grande, rosa
+    const sun = new THREE.DirectionalLight(new THREE.Color(p.sun), this.isTunnel ? 1.3 : night ? 2.1 : 1.9);
+    this.sunOffset = night ? new THREE.Vector3(220, 150, -160) : new THREE.Vector3(180, 260, -120);
+    sun.position.copy(this.sunOffset);
     sun.castShadow = !this.isTunnel;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 20;
@@ -934,7 +938,7 @@ export class Track {
     }
     if (this.tunnelTex) this.tunnelTex.offset.y -= dt * 0.12;
     if (this.sun && focus) {
-      this.sun.position.set(focus.x + 180, focus.y + 260, focus.z - 120);
+      this.sun.position.copy(focus).add(this.sunOffset);
       this.sun.target.position.copy(focus);
       this.sun.target.updateMatrixWorld();
     }
@@ -951,6 +955,7 @@ export class Track {
     });
     this.scene.background = null;
     this.scene.environment = null;
+    this.scene.environmentIntensity = 1;
     this.scene.fog = null;
   }
 }
