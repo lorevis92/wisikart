@@ -246,7 +246,7 @@ const PROCEDURAL = {
 
 const HEIGHTS = {
   'oremo-giovane': 4, 'oremo-anziano': 4, 'tavola-calda': 3.5, 'valvo-go': 7.5, blindato: 3, autovettore: 2.4, fontana: 6,
-  'portale-niaboc': 26, relitto: 2.2
+  'portale-niaboc': 32, relitto: 2.2 // portale: il GLB è 1,9 × 1,68 → ~36 m di luce, piloni oltre il guardrail
 };
 
 export async function buildProp(name, scale = 1, pal = {}) {

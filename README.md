@@ -38,7 +38,7 @@ Tutti sotto `public/assets/`. Il file `public/assets/manifest.json` elenca ogni 
 |---|---|---|
 | `characters/<id>.png` | ritratto (monna, bacco, perla, viandante, divoratore, panciotto) | selezione personaggio, risultati |
 | `characters/<id>.glb` | modello 3D personaggio + kart | in gara (se manca: kart procedurale con faccia Whiskey) |
-| `props/*.glb` | valvo-go, autovettore, tavola-calda, blindato, oremo-giovane, oremo-anziano, portale-niaboc, relitto | scenografia dei circuiti (portale-niaboc e relitto hanno ancora l'URL `TODO` nel manifest: finché manca il file si vede la versione procedurale) |
+| `props/*.glb` | valvo-go, autovettore, tavola-calda, blindato, oremo-giovane, oremo-anziano, portale-niaboc, relitto | scenografia dei circuiti |
 | `tracks/<id>/sky.png` | cielo panoramico 16:9 | sfondo delle piste aperte (Canair, Niaboc, Retah) |
 | `tracks/<id>/preview.png` | anteprima | selezione pista, caricamento |
 | `ui/logo.png`, `ui/title.png` | logo e sfondo del titolo | boot e schermata iniziale |
