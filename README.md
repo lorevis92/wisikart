@@ -20,7 +20,9 @@ Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8,
 
 ## Storia
 
-Modalità separata dal kart (voce **Storia** nel menu): platform 2.5D a scorrimento laterale con Whiskey a piedi, che cammina, salta e lancia bottiglie. Il personaggio è l'ultimo scelto nel kart (altrimenti la Monna), con la stessa faccia di `faceTexture`.
+Modalità separata dal kart (voce **Storia** nel menu), che parte dalla **mappa del pianeta** in stile Super Mario World: l'illustrazione di Niaboc (`story/niaboc/mappa.png`) con le sfide sopra, da scegliere con le frecce o con un tocco. Stadio di Space Ball (giocabile), Portale di Niaboc (chiuso finché non vinci lo stadio), Deposito Valvo Go, Vicoli notturni e Biblioteca (in arrivo). Le sfide sono in `src/story/worlds.js`.
+
+I livelli sono platform 2.5D a scorrimento laterale con Whiskey a piedi, che cammina, salta e lancia bottiglie. Il personaggio è l'ultimo scelto nel kart (altrimenti la Monna) ed è il suo vero modello `characters/<id>.glb`: al caricamento si tiene solo il personaggio dal busto in su (il kart viene scartato dalla geometria), con gambe e bacino nei suoi colori. Senza GLB si usa la versione procedurale con la faccia di `faceTexture`.
 
 **Livello 1 – Stadio di Space Ball**: gradinate (file di sedili, alcune crollano; tifosi da scavalcare; sciarpe da saltare o da passarci sotto; bottiglie e secchi dagli spalti), campo (palle spaziali a pendolo, porte da passare sotto e una porta alta da cui saltare il fossato, bottigliera), tunnel degli spogliatoi (scale, grate, tre steward da evitare o stordire, cassa di bottiglie) e arena in cima con il **Tifoso Supremo**: lancia sedili a parabola (il bersaglio rosso a terra dice dove cadranno), ogni tanto uno lascia una bottiglia; servono tre bottigliate.
 
@@ -85,6 +87,7 @@ src/
   story/Player.js       Whiskey platform: fisica (coyote, salto variabile, scale) e animazioni
   story/entities.js     sedili che crollano, tifosi, sciarpe, pendoli, steward, boss, pickup, proiettili
   story/stadio.js       dati del livello 1 (misure pensate sulla fisica del salto)
+  story/worlds.js       mappe dei pianeti: immagine e sfide (livelli, portali, bonus)
 scripts/fetch-assets.mjs  scarica gli asset di entrambi i manifest (kart e Storia)
 scripts/check-tracks.mjs  controlla le piste (lunghezza, raggio minimo, incroci)
 ```

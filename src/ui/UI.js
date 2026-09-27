@@ -12,6 +12,17 @@ const fmt = (t) => {
 };
 export { fmt };
 
+// Icone delle sfide sulla mappa della Storia (SVG in linea, colore = currentColor)
+const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+const MAP_ICONS = {
+  stadio: svg('<ellipse cx="12" cy="14" rx="9" ry="5" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="12" cy="14" rx="4.5" ry="2.2" fill="currentColor" opacity=".55"/><path d="M5 11V6M19 11V6M4 5h2M18 5h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+  portale: svg('<path d="M6 20V10a6 6 0 0 1 12 0v10" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M9 20v-9a3 3 0 0 1 6 0v9" fill="currentColor" opacity=".45"/><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+  deposito: svg('<path d="M3 20V10l6 3V10l6 3V6h3v14z" fill="currentColor" opacity=".8"/><circle cx="17" cy="4" r="1.6" fill="currentColor" opacity=".5"/>'),
+  vicoli: svg('<path d="M3 20V8h5v12M10 20V4h5v16M17 20v-9h4v9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7h1M12 10h1M5 11h1M19 14h.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+  biblioteca: svg('<path d="M4 10a8 5 0 0 1 16 0z" fill="currentColor" opacity=".8"/><path d="M5 11v7M9 11v7M15 11v7M19 11v7M3 20h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'),
+  lock: svg('<rect x="5" y="10.5" width="14" height="10" rx="2.4" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="15.5" r="1.6" fill="#1b1f3a"/>')
+};
+
 export class UI {
   constructor(game) {
     this.game = game;
@@ -244,36 +255,70 @@ export class UI {
     $('#tracks-confirm').onclick = () => onPick(CUPS[this.focus.index]);
   }
 
-  // ---------- storia ----------
-  /** Scelta del livello della Storia. `message` compare in alto (es. livello completato). */
-  storyMenu(levels, completed, onPlay, message = '') {
+  // ---------- storia: mappa del pianeta ----------
+  /**
+   * Mappa in stile Super Mario World: illustrazione del pianeta con le sfide sopra.
+   * state(node) → 'open' | 'done' | 'locked' | 'soon'; onPick(node) quando si entra in una sfida.
+   */
+  worldMap(world, { state, onPick, character, message = '' }) {
     this.show('story');
+    $('#map-title').textContent = world.name;
+    $('#map-subtitle').textContent = world.subtitle;
     const msg = $('#story-msg');
     msg.textContent = message;
     msg.classList.toggle('hidden', !message);
-    const grid = $('#story-grid');
-    grid.innerHTML = '';
-    const cards = [];
-    levels.forEach((lv, i) => {
-      const card = document.createElement('div');
-      card.className = 'track-card story-card';
-      card.innerHTML = `<div class="preview"><span class="cup-count">Livello ${i + 1}</span></div><div class="meta"><b>${lv.name}</b><span>${lv.subtitle}</span>${completed[lv.id] ? '<span class="status">Completato</span>' : ''}</div>`;
-      const prev = card.querySelector('.preview');
-      Assets.exists(lv.preview).then((ok) => { prev.style.background = ok ? `url(${lv.preview}) center/cover no-repeat` : 'linear-gradient(135deg, #2a1a5a, #6a2fa0)'; });
-      card.addEventListener('click', () => {
-        const k = cards.indexOf(card);
-        if (this.focus.index === k) onPlay(lv);
-        else { this.focus.index = k; this._applyFocus(); this.game.audio.sfx('move'); }
+    const frame = $('#map-frame'), img = $('#map-img');
+    frame.classList.remove('no-image');
+    Assets.exists(world.image).then((ok) => { if (ok) img.src = world.image; else { img.removeAttribute('src'); frame.classList.add('no-image'); } });
+    // la mappa è quadrata: lato = il minimo tra lo spazio in larghezza e in altezza
+    const fit = () => {
+      const st = $('#map-stage');
+      const side = Math.max(160, Math.min(st.clientWidth, st.clientHeight));
+      frame.style.width = frame.style.height = `${side}px`;
+    };
+    fit();
+    requestAnimationFrame(fit);
+    if (!this._mapResize) { this._mapResize = () => { if (this.current === 'story') fit(); }; window.addEventListener('resize', this._mapResize); }
+    // segnalino: la faccia del personaggio che si sposta di sfida in sfida
+    const marker = $('#map-marker');
+    marker.innerHTML = '';
+    const face = faceTexture(character.colors.skin, { blush: character.id === 'bacco', sly: character.id !== 'divoratore' });
+    const fc = document.createElement('canvas');
+    fc.width = fc.height = 128;
+    fc.getContext('2d').drawImage(face.image, 0, 0, 128, 128);
+    marker.appendChild(fc);
+    marker.style.background = character.colors.primary;
+    const labels = { open: 'Da giocare', done: 'Completato', locked: 'Chiuso', soon: 'In arrivo' };
+    const layer = $('#map-nodes');
+    layer.innerHTML = '';
+    const buttons = world.nodes.map((node) => {
+      const st = state(node);
+      const b = document.createElement('button');
+      b.className = `map-node ${st}`;
+      b.style.left = `${node.x * 100}%`;
+      b.style.top = `${node.y * 100}%`;
+      b.setAttribute('aria-label', `${node.name}: ${labels[st]}`);
+      b.innerHTML = `<span class="map-badge">${MAP_ICONS[st === 'locked' ? 'lock' : node.icon] || ''}${st === 'done' ? '<i class="map-check">✓</i>' : ''}</span><span class="map-label">${node.name}</span>`;
+      b.addEventListener('click', () => {
+        const i = buttons.indexOf(b);
+        if (this.focus.index !== i) { this.focus.index = i; this._applyFocus(); }
+        onPick(node);
       });
-      grid.appendChild(card);
-      cards.push(card);
+      layer.appendChild(b);
+      return b;
     });
-    const next = document.createElement('div');
-    next.className = 'track-card locked';
-    next.innerHTML = '<div class="preview"><div class="lock">Prossimamente</div></div><div class="meta"><b>Capitolo 2</b><span>Emma dice che è una sorpresa. Emma non sa cosa sia.</span></div>';
-    grid.appendChild(next);
+    const render = (i) => {
+      const node = world.nodes[i];
+      const st = state(node);
+      $('#map-name').textContent = node.name;
+      $('#map-state').textContent = labels[st];
+      $('#map-state').className = `map-state ${st}`;
+      $('#map-desc').textContent = st === 'locked' ? node.locked : node.desc;
+      marker.style.left = `${node.x * 100}%`;
+      marker.style.top = `${node.y * 100}%`;
+    };
     $('#story-keys').classList.toggle('hidden', this.game.input.isTouch);
-    this.setFocusList(cards, 2);
+    this.setFocusList(buttons, 1, render);
   }
 
   storyLoading(level) {

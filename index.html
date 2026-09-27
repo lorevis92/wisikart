@@ -109,16 +109,26 @@
     </div>
   </section>
 
-  <!-- STORIA: scelta del livello -->
-  <section id="screen-story" class="screen">
+  <!-- STORIA: mappa del pianeta -->
+  <section id="screen-story" class="screen story-map-screen">
     <header class="screen-head">
       <button class="btn ghost back" data-back>Indietro</button>
-      <h2>Storia</h2>
-      <span class="head-note">Capitolo 1 · Lo stadio</span>
+      <h2 id="map-title">Niaboc</h2>
+      <span class="head-note" id="map-subtitle"></span>
     </header>
     <p class="story-msg hidden" id="story-msg"></p>
-    <div class="track-grid" id="story-grid"></div>
-    <p class="hint story-keys" id="story-keys">Frecce / A D per muoverti · Spazio o K per saltare · Su / Giù sulle scale · Maiusc, E o J per lanciare una bottiglia · Esc pausa</p>
+    <div class="map-stage" id="map-stage">
+      <div class="map-frame" id="map-frame">
+        <img id="map-img" alt="" />
+        <div class="map-nodes" id="map-nodes"></div>
+        <div class="map-marker" id="map-marker"></div>
+      </div>
+    </div>
+    <div class="map-info" id="map-info">
+      <div><b id="map-name"></b><span class="map-state" id="map-state"></span></div>
+      <span id="map-desc"></span>
+    </div>
+    <p class="hint story-keys" id="story-keys">Frecce per scegliere la sfida · Invio per entrare · Nel livello: Frecce / A D cammina · Spazio o K salta · Su / Giù sulle scale · Maiusc, E o J lancia · Esc pausa</p>
   </section>
 
   <!-- STORIA: HUD -->

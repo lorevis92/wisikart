@@ -1,3 +1,10 @@
+// Se il browser non dà `code` (layout particolari, desktop remoto) si ricava dal tasto
+const KEY_FALLBACK = {
+  ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown',
+  ' ': 'Space', Spacebar: 'Space', Enter: 'Enter', Escape: 'Escape', Esc: 'Escape', Backspace: 'Backspace', Shift: 'ShiftLeft'
+};
+for (const ch of 'abcdefghijklmnopqrstuvwxyz') KEY_FALLBACK[ch] = KEY_FALLBACK[ch.toUpperCase()] = 'Key' + ch.toUpperCase();
+
 export class Input {
   constructor() {
     this.keys = new Set();
@@ -19,11 +26,47 @@ export class Input {
     this.menuEvents = [];
     window.addEventListener('keydown', (e) => this._key(e, true));
     window.addEventListener('keyup', (e) => this._key(e, false));
-    window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('blur', () => this.releaseAll());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseAll(); });
+    this._pads = new Map(); // calibrazione per gamepad: assi a riposo e tasti "armati"
+  }
+
+  /** Rilascia tutto: tasti, tasti touch, salto. Evita comandi rimasti incastrati (cambio finestra, inizio livello). */
+  releaseAll() {
+    this.keys.clear();
+    for (const k in this.touch) this.touch[k] = false;
+    this.jumpHeld = false;
+    this.jumpPressed = this.upPressed = this.itemPressed = false;
+  }
+
+  /**
+   * Gamepad ripulito: solo mappatura standard, assi misurati rispetto alla posizione a riposo
+   * (con zona morta) e tasti validi solo dopo essere stati visti rilasciati almeno una volta.
+   * Un controller starato o un dispositivo "fantasma" con un asse fermo o il tasto A sempre giù
+   * altrimenti annulla le frecce e blocca il salto.
+   */
+  _pad() {
+    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+    const raw = gps && [...gps].find((g) => g && g.connected && g.mapping === 'standard');
+    if (!raw) return null;
+    let cal = this._pads.get(raw.index);
+    if (!cal || cal.id !== raw.id) {
+      cal = { id: raw.id, rest: raw.axes.map((a) => (Math.abs(a) > 0.5 ? a : 0)), armed: raw.buttons.map((b) => !b.pressed) };
+      this._pads.set(raw.index, cal);
+    }
+    const axes = raw.axes.map((a, i) => {
+      const v = a - (cal.rest[i] || 0);
+      return Math.abs(v) < 0.25 ? 0 : Math.max(-1, Math.min(1, v));
+    });
+    const buttons = raw.buttons.map((b, i) => {
+      if (!b.pressed && (b.value || 0) < 0.1) cal.armed[i] = true;
+      return cal.armed[i] ? { pressed: b.pressed, value: b.value || 0 } : { pressed: false, value: 0 };
+    });
+    return { axes, buttons };
   }
 
   _key(e, down) {
-    const k = e.code;
+    const k = e.code && e.code !== 'Unidentified' ? e.code : KEY_FALLBACK[e.key] || e.key;
     if (down && !e.repeat) {
       if (k === 'ShiftLeft' || k === 'ShiftRight' || k === 'KeyE' || k === 'KeyJ') this.itemPressed = true;
       if (k === 'Escape' || k === 'KeyP') this.pausePressed = true;
@@ -67,11 +110,10 @@ export class Input {
     if (this.touch.right) st += 1;
     if (this.touch.drift) drift = true;
     // gamepad
-    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
-    const gp = gps && gps[0];
+    const gp = this._pad();
     if (gp) {
       const ax = gp.axes[0] || 0;
-      if (Math.abs(ax) > 0.15) st += ax;
+      if (Math.abs(ax) > 0.15 && st === 0) st += ax; // la tastiera ha la precedenza
       if (gp.buttons[0]?.pressed || (gp.buttons[7]?.value || 0) > 0.2) th = Math.max(th, gp.buttons[7]?.value || 1);
       if (gp.buttons[2]?.pressed || (gp.buttons[6]?.value || 0) > 0.2) th = -1;
       if (gp.buttons[1]?.pressed || gp.buttons[5]?.pressed) drift = true;

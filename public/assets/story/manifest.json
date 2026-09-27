@@ -1,6 +1,7 @@
 {
   "note": "Asset della modalità Storia (relativi a public/assets/story). Scaricati da `npm run assets` insieme al manifest principale. Se un file manca il gioco usa la versione procedurale.",
   "files": {
+    "niaboc/mappa.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_134156_58d34b3f-8a42-4ce7-ac2a-a9a60bae455e.png",
     "stadio/gradinate.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140535_c8cd7507-8ec9-4808-ad52-eba933c76d6f.png",
     "stadio/campo.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140536_e838d27a-3aa7-416b-a5bb-bd7eb4a2a493.png",
     "stadio/tunnel.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260927_140535_a4d30f1d-1ea4-4cad-9913-e984a1f4b8e8.png",

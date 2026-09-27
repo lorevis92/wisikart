@@ -41,7 +41,8 @@ export class StoryMode {
     const L = this.level;
     progress('Accendo i riflettori…');
     const S = 'assets/story/stadio/';
-    const [bottleStand, stewardProto, bossModel] = await Promise.all([
+    const [charModel, bottleStand, stewardProto, bossModel] = await Promise.all([
+      this.character.model ? Assets.model(this.character.model, { targetHeight: 2 }) : null,
       Assets.model(S + 'bottiglia.glb', { targetHeight: 0.55 }),
       Assets.model(S + 'steward.glb', { targetHeight: 1.9 }),
       Assets.model(S + 'tifoso.glb', { targetHeight: 3.6 })
@@ -71,7 +72,8 @@ export class StoryMode {
     this.stewards = L.stewards.map((s) => this._add(new Steward(s, stewardProto ? stewardProto.clone(true) : null)));
     this.boss = this._add(new Boss(L.boss, bossModel));
     // Whiskey
-    this.player = new Player(this.character);
+    // il vero modello del personaggio (characters/<id>.glb) dal busto in su; senza file, la versione procedurale
+    this.player = new Player(this.character, charModel);
     this.scene.add(this.player.group);
     this._respawn(true);
     progress('Pronti.');

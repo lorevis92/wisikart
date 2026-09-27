@@ -13,9 +13,7 @@ import { ITEMS } from './config/items.js';
 import { Assets } from './core/AssetLoader.js';
 import { dotTexture } from './core/Textures.js';
 import { StoryMode } from './story/StoryMode.js';
-import { STADIO } from './story/stadio.js';
-
-const STORY_LEVELS = [STADIO];
+import { WORLDS } from './story/worlds.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 
@@ -254,10 +252,23 @@ class Game {
   }
 
   // ---------- storia ----------
+  /** La Storia parte dalla mappa del pianeta (per ora Niaboc). */
   openStory(message = '') {
     this.state = 'storymenu';
     this.save.story = this.save.story || {};
-    this.ui.storyMenu(STORY_LEVELS, this.save.story, (lv) => { this.audio.sfx('select'); this.startStory(lv); }, message);
+    const done = this.save.story;
+    const world = WORLDS[0];
+    this.ui.worldMap(world, {
+      character: this.playerChar || CHARACTERS[0],
+      message,
+      state: (n) => (n.kind === 'level' ? (done[n.id] ? 'done' : 'open') : n.kind === 'gate' ? (done[n.requires] ? 'open' : 'locked') : 'soon'),
+      onPick: (n) => {
+        if (n.kind === 'level') { this.audio.sfx('select'); this.startStory(n.level); return; }
+        const locked = n.kind === 'gate' && !done[n.requires];
+        this.audio.sfx(locked ? 'back' : 'select');
+        this.ui.toast(locked ? n.locked : n.soon);
+      }
+    });
   }
 
   async startStory(level) {
@@ -276,8 +287,9 @@ class Game {
     await story.load((t) => this.ui.loadingStatus(t));
     this.story = story;
     this._resize();
-    // niente tasti rimasti in memoria dal menu
-    Object.assign(this.input, { jumpPressed: false, upPressed: false, itemPressed: false, pausePressed: false });
+    // niente comandi rimasti in memoria dal menu (tasti, touch, salto)
+    this.input.releaseAll();
+    this.input.pausePressed = false;
     this.state = 'story';
     this.ui.storyHudStart();
     this.audio.playTheme(level.music);
@@ -288,7 +300,7 @@ class Game {
     this._persist();
     this._endStory();
     this.audio.playTheme('menu');
-    this.openStory(`Livello completato: ${level.name}. Emma: «Il capitolo 2 non c'è ancora. Goditi il momento.»`);
+    this.openStory(`Livello completato: ${level.name}. Il portale di Niaboc si è aperto. Emma: «Goditi il momento, dura poco.»`);
   }
 
   _endStory() {
