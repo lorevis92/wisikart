@@ -200,7 +200,7 @@ export class AudioEngine {
       case 'beep': this._osc('square', 440, t, 0.18, 0.25, d); break;
       case 'go': this._osc('square', 880, t, 0.5, 0.3, d); break;
       case 'pickup': [660, 880, 1100, 1320].forEach((f, i) => this._osc('sine', f, t + i * 0.05, 0.08, 0.2, d)); break;
-      case 'boost': this._osc('sawtooth', 200, t, 0.5, 0.25, d); this._noise(t, 0.4, 0.2, d, 2000); break;
+      case 'boost': this.boost(); break;
       case 'drift1': this._osc('sine', 880, t, 0.1, 0.2, d); break;
       case 'drift2': this._osc('sine', 1320, t, 0.12, 0.25, d); this._osc('sine', 1760, t + 0.06, 0.12, 0.2, d); break;
       case 'hit': this._noise(t, 0.35, 0.5, d, 400); this._osc('sawtooth', 120, t, 0.35, 0.3, d); break;
@@ -210,6 +210,82 @@ export class AudioEngine {
       case 'finish': [523, 659, 784, 1046].forEach((f, i) => this._osc('triangle', f, t + i * 0.12, 0.4, 0.25, d)); break;
       case 'wall': this._noise(t, 0.15, 0.3, d, 800); break;
     }
+  }
+
+  /**
+   * Boost: "whoosh" con un accenno di synth. Glissando veloce verso l'alto (triangoli + sub
+   * sinusoidale, un filo di dente di sega filtrato per l'energia), soffio d'aria in passa-banda
+   * che sale insieme al pitch e rilascio morbido. `power` scala durata e intensità:
+   * pad ~0.8, mini-turbo blu ~0.9, arancione ~1.15, turbo da oggetto ~1.1.
+   */
+  boost(power = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const dur = 0.55 + power * 0.25; // durata totale, rilascio compreso
+    const sweep = 0.13; // salita principale del pitch
+    const f0 = 85, f1 = 300 + power * 60;
+    const out = ctx.createGain();
+    const peak = 0.2 * Math.min(1.25, power);
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.exponentialRampToValueAtTime(peak, t + 0.025);
+    out.gain.setValueAtTime(peak, t + sweep);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    out.connect(this.sfxGain);
+    const stopAt = t + dur + 0.05;
+
+    // corpo: due triangoli leggermente scordati (più largo) e un sub sinusoidale un'ottava sotto
+    const pitch = (o, mul) => {
+      o.frequency.setValueAtTime(f0 * mul, t);
+      o.frequency.exponentialRampToValueAtTime(f1 * mul, t + sweep);
+      o.frequency.exponentialRampToValueAtTime(f1 * mul * 1.18, t + dur); // continua a salire piano
+    };
+    const body = ctx.createGain();
+    body.gain.value = 0.55;
+    body.connect(out);
+    for (const [type, mul, detune, g] of [['triangle', 1, -7, 0.5], ['triangle', 1, 7, 0.5], ['sine', 0.5, 0, 0.7]]) {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.detune.value = detune;
+      pitch(o, mul);
+      const og = ctx.createGain();
+      og.gain.value = g;
+      o.connect(og); og.connect(body);
+      o.start(t); o.stop(stopAt);
+    }
+    // energia: dente di sega un'ottava sopra, poco e dietro un passa-basso che si apre e si richiude
+    const edge = ctx.createOscillator();
+    edge.type = 'sawtooth';
+    pitch(edge, 2);
+    const edgeF = ctx.createBiquadFilter();
+    edgeF.type = 'lowpass';
+    edgeF.Q.value = 2;
+    edgeF.frequency.setValueAtTime(500, t);
+    edgeF.frequency.exponentialRampToValueAtTime(2400, t + sweep);
+    edgeF.frequency.exponentialRampToValueAtTime(700, t + dur);
+    const edgeG = ctx.createGain();
+    edgeG.gain.value = 0.08;
+    edge.connect(edgeF); edgeF.connect(edgeG); edgeG.connect(out);
+    edge.start(t); edge.stop(stopAt);
+
+    // aria: rumore in passa-banda che sale col pitch e poi si allarga, come vento che ti supera
+    const len = Math.floor(ctx.sampleRate * (dur + 0.05));
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(350, t);
+    bp.frequency.exponentialRampToValueAtTime(2600, t + sweep * 1.2);
+    bp.frequency.exponentialRampToValueAtTime(1100, t + dur);
+    const air = ctx.createGain();
+    air.gain.setValueAtTime(0.0001, t);
+    air.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
+    air.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    noise.connect(bp); bp.connect(air); air.connect(out);
+    noise.start(t); noise.stop(stopAt);
   }
 
   // Motore: triangolo + sub sinusoidale, lowpass chiuso. Passa da engineGain → sfxGain,

@@ -107,7 +107,15 @@ export class Race {
         p.input.throttle = this.input.throttle;
         p.input.steer = this.input.steer;
         p.input.drift = this.input.drift;
-        if (this.input.itemPressed) { this.input.itemPressed = false; if (p.item) { this.items.use(p, this.karts); this.audio.sfx(p.item === 'missile' || p.item === 'cannone' ? 'shoot' : 'select'); } }
+        if (this.input.itemPressed) {
+          this.input.itemPressed = false;
+          const it = p.item; // letto prima dell'uso: use() lo svuota
+          if (it) {
+            this.items.use(p, this.karts);
+            if (it === 'turbo') this.audio.boost(1.1);
+            else this.audio.sfx(it === 'missile' || it === 'cannone' ? 'shoot' : 'select');
+          }
+        }
         if (this.input.lookBack !== undefined) this.lookBack = this.input.lookBack;
       }
       for (const a of this.ai) a.update(dt, this.karts, p, this);
@@ -122,8 +130,8 @@ export class Race {
       k.padHit = false;
       k.update(dt, tr, this.karts);
       if (k.isPlayer) {
-        if (k.lastDriftRelease) { this.audio.sfx(k.lastDriftRelease === 2 ? 'drift2' : 'drift1'); this.audio.sfx('boost'); k.lastDriftRelease = 0; }
-        if (k.padHit && !wasPad) this.audio.sfx('boost');
+        if (k.lastDriftRelease) { this.audio.sfx(k.lastDriftRelease === 2 ? 'drift2' : 'drift1'); this.audio.boost(k.lastDriftRelease === 2 ? 1.15 : 0.9); k.lastDriftRelease = 0; }
+        if (k.padHit && !wasPad) this.audio.boost(0.8);
         if (k.hitWall > 0.29) this.audio.sfx('wall');
         if (k.pickupEvent) { k.pickupEvent = false; this.audio.sfx('pickup'); }
       }
