@@ -11,6 +11,7 @@ import { CHARACTERS } from './config/characters.js';
 import { TRACKS, CUPS, trackById, POINTS_TABLE } from './config/tracks.js';
 import { ITEMS } from './config/items.js';
 import { Assets } from './core/AssetLoader.js';
+import { dotTexture } from './core/Textures.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 
@@ -105,7 +106,8 @@ class Game {
     for (let i = 0; i < pc; i++) pp.set([(Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16, -Math.random() * 180], i * 3);
     const pg = new THREE.BufferGeometry();
     pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
-    this.menuParticles = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xbfb0ff, size: 0.35, transparent: true, opacity: 0.8 }));
+    // pulviscolo del tunnel di luce: tondo, piccolo e tenue (i quadratini chiari sembravano puntini bianchi sparsi)
+    this.menuParticles = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x8a7cff, size: 0.22, map: dotTexture(), transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
     s.add(this.menuParticles);
     this.menuScene = s;
     this.menuCam = new THREE.PerspectiveCamera(70, 1, 0.1, 300);

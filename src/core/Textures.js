@@ -82,10 +82,24 @@ export function tunnelWallTexture(base = '#231a4d', glow = '#7a5cff') {
   }
   g.shadowBlur = 0;
   g.globalAlpha = 1;
-  g.fillStyle = 'rgba(255,255,255,0.08)';
-  seed = 11;
-  for (let i = 0; i < 40; i++) g.fillRect(rnd() * 512, rnd() * 512, 3, 3);
   return tex(c, [1, 1]);
+}
+
+/** Punto tondo e sfumato per i Points (di default three.js disegna quadratini dai bordi netti). */
+let _dot = null;
+export function dotTexture() {
+  if (_dot) return _dot;
+  const c = canvas(64, 64);
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(255,255,255,1)');
+  grd.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  _dot = new THREE.CanvasTexture(c);
+  _dot.colorSpace = THREE.SRGBColorSpace;
+  return _dot;
 }
 
 export function grassTexture(base = '#5aa64b') {

@@ -331,21 +331,6 @@ export class Track {
     }
     this.group.add(ribs);
 
-    // particelle di energia
-    const pc = 2500;
-    const pp = new Float32Array(pc * 3);
-    for (let i = 0; i < pc; i++) {
-      const s = this.samples[Math.floor(Math.random() * N)];
-      const a = Math.random() * Math.PI * 2, rr = 8 + Math.random() * 12;
-      _v.copy(s.pos).addScaledVector(s.right, Math.cos(a) * rr).addScaledVector(s.normal, 12 + Math.sin(a) * rr * 0.7);
-      pp.set([_v.x, _v.y, _v.z], i * 3);
-    }
-    const pg = new THREE.BufferGeometry();
-    pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
-    const pm = new THREE.PointsMaterial({ color: 0xbfb0ff, size: 0.35, transparent: true, opacity: 0.7, sizeAttenuation: true });
-    this.particles = new THREE.Points(pg, pm);
-    this.group.add(this.particles);
-
     // pareti di energia lungo i cordoli (barriera visibile)
     this._energyWalls();
   }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Assets } from '../core/AssetLoader.js';
-import { faceTexture } from '../core/Textures.js';
+import { faceTexture, dotTexture } from '../core/Textures.js';
 
 const _f = new THREE.Vector3();
 const _u = new THREE.Vector3();
@@ -197,7 +197,7 @@ export class Kart {
     const g = new THREE.BufferGeometry();
     const n = 40;
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-    this.sparkMat = new THREE.PointsMaterial({ color: 0x7fd4ff, size: 0.35, transparent: true, opacity: 0, depthWrite: false });
+    this.sparkMat = new THREE.PointsMaterial({ color: 0xffc860, size: 0.3, map: dotTexture(), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
     this.sparks = new THREE.Points(g, this.sparkMat);
     this.sparkLife = new Float32Array(n);
     this.group.add(this.sparks);
@@ -425,7 +425,8 @@ export class Kart {
     const pos = this.sparks.geometry.attributes.position;
     const n = this.sparkLife.length;
     const spark = this.drifting && this.hop === 0;
-    this.sparkMat.color.set(this.driftCharge > 2.3 ? 0xff8a3a : this.driftCharge > 1.1 ? 0x7fd4ff : 0xffffff);
+    // dorate all'inizio, blu col mini-turbo pronto, arancioni col super mini-turbo (niente bianco: sembravano puntini sparsi)
+    this.sparkMat.color.set(this.driftCharge > 2.3 ? 0xff8a3a : this.driftCharge > 1.1 ? 0x5fc4ff : 0xffc860);
     for (let i = 0; i < n; i++) {
       this.sparkLife[i] -= dt * 3;
       if (this.sparkLife[i] <= 0 && spark && Math.random() < 0.5) {
