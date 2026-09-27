@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { faceTexture } from '../core/Textures.js';
+import { locomotionPose } from './Rig.js';
 
 // Fisica: salto ≈ 3 m di altezza, ≈ 6 m in lungo da fermo a terra (vedi stadio.js)
 const GRAV = 34;
@@ -16,41 +17,11 @@ export const PLAYER_H = 1.7;
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 
 /**
- * Dal GLB del kart (Whiskey seduto nel kart, mesh unica) tiene solo il personaggio dal busto in su:
- * scarta i triangoli sotto il 36% dell'altezza (il kart) e quelli che sporgono davanti al busto (il volante).
- * Ritorna una geometria nuova (quella originale resta intatta per il kart).
- */
-export function carveRider(geometry) {
-  const pos = geometry.attributes.position;
-  let y0 = Infinity, y1 = -Infinity;
-  for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y < y0) y0 = y; if (y > y1) y1 = y; }
-  const H = y1 - y0, cut = y0 + H * 0.36;
-  // profondità del busto e della testa (metà alta): quello che sporge oltre è kart o volante
-  const zs = [];
-  for (let i = 0; i < pos.count; i++) if (pos.getY(i) > y0 + H * 0.5) zs.push(pos.getZ(i));
-  zs.sort((a, b) => a - b);
-  const zFront = zs[Math.floor(zs.length * 0.98)] + 0.06, zBack = zs[Math.floor(zs.length * 0.02)] - 0.06;
-  const keep = (i) => pos.getY(i) >= cut && pos.getZ(i) <= zFront && pos.getZ(i) >= zBack;
-  const src = geometry.index ? geometry.index.array : Array.from({ length: pos.count }, (_, i) => i);
-  const out = [];
-  for (let t = 0; t < src.length; t += 3) {
-    const a = src[t], b = src[t + 1], c = src[t + 2];
-    if (keep(a) && keep(b) && keep(c)) out.push(a, b, c);
-  }
-  const g = geometry.clone();
-  g.setIndex(out);
-  g.computeBoundingBox();
-  g.computeBoundingSphere();
-  return g;
-}
-
-/**
- * Whiskey in versione platform. Con il GLB del personaggio (characters/<id>.glb) usa il modello vero
- * dal busto in su, con gambe e bacino nei suoi colori; senza GLB ripiega sulla versione procedurale
- * con la faccia di faceTexture.
+ * Whiskey in versione platform. Con il modello con scheletro (story/characters/<id>.glb, vedi Rig.js)
+ * anima le ossa vere; senza file ripiega sulla versione procedurale con la faccia di faceTexture.
  */
 export class Player {
-  constructor(character, model = null) {
+  constructor(character, rigged = null) {
     this.character = character;
     this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
     this.facing = 1;
@@ -64,58 +35,22 @@ export class Player {
     this.walkPhase = 0;
     this.group = new THREE.Group();
     this.squash = 0;
-    if (model) this._buildGlb(character, model);
+    if (rigged) this._buildRig(rigged);
     else this._build(character);
   }
 
-  _buildGlb(c, model) {
-    const col = c.colors;
+  _buildRig({ root: model, rig }) {
     const root = new THREE.Group();
     this.group.add(root);
     this.root = root;
-    let src = null;
-    model.traverse((o) => { if (o.isMesh && !src) src = o; });
-    const geo = carveRider(src.geometry);
-    const bb = geo.boundingBox;
-    const hip = 0.58;
-    const upper = 1.38 * Math.sqrt(c.scale || 1); // busto + testa, come nel kart ma in piedi
-    const k = upper / Math.max(0.001, bb.max.y - bb.min.y);
-    const body = new THREE.Group(); // si inclina, rimbalza e si schiaccia
-    body.position.y = hip;
-    root.add(body);
-    const mesh = new THREE.Mesh(geo, src.material);
-    mesh.scale.setScalar(k);
-    mesh.position.set(-((bb.min.x + bb.max.x) / 2) * k, -bb.min.y * k - 0.04, -((bb.min.z + bb.max.z) / 2) * k);
-    mesh.castShadow = true;
-    body.add(mesh);
-    this.body = body;
-    const width = (bb.max.x - bb.min.x) * k;
-    // bacino: copre il taglio del kart
-    const pants = std(col.primary, { roughness: 0.7 });
-    const pelvis = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), pants);
-    pelvis.scale.set(Math.min(0.42, width * 0.36), 0.2, Math.min(0.34, width * 0.3));
-    pelvis.position.y = 0.02;
-    body.add(pelvis);
-    // gambe
-    this.legs = [];
-    for (const s of [-1, 1]) {
-      const pivot = new THREE.Group();
-      pivot.position.set(s * Math.min(0.2, width * 0.17), hip, 0);
-      const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.34, 4, 10), pants);
-      leg.position.y = -0.26;
-      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.13, 0.34), std(col.secondary, { roughness: 0.4 }));
-      shoe.position.set(0, -0.52, 0.06);
-      pivot.add(leg, shoe);
-      root.add(pivot);
-      this.legs.push(pivot);
-    }
-    // bottiglia che compare in mano al momento del lancio
+    this.body = model; // si schiaccia e rimbalza; le ossa fanno il resto
+    root.add(model);
+    this.rig = rig;
+    // bottiglia che compare accanto alla mano destra al momento del lancio
     this.handBottle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.34, 8), std('#3f9a5a', { roughness: 0.2, transparent: true, opacity: 0.9 }));
-    this.handBottle.position.set(width * 0.45, 0.9, 0.2);
+    this.handBottle.position.set(-0.35, 1.5, 0.15);
     this.handBottle.visible = false;
-    body.add(this.handBottle);
-    this.arms = null;
-    this.glb = true;
+    root.add(this.handBottle);
   }
 
   _build(c) {
@@ -343,7 +278,7 @@ export class Player {
     // tre quarti verso la telecamera, così la faccia si vede sempre; sulla scala di spalle
     const targetYaw = this.climbing ? Math.PI : this.facing * (Math.PI / 2 - 0.55);
     this.root.rotation.y = THREE.MathUtils.damp(this.root.rotation.y, targetYaw, 14, dt);
-    if (this.glb) return this._poseGlb(dt);
+    if (this.rig) return this._poseRig(dt);
     const [la, ra] = this.arms, [ll, rl] = this.legs;
     if (this.climbing) {
       const s = Math.sin(this.walkPhase);
@@ -368,38 +303,24 @@ export class Player {
     this.group.visible = this.invuln <= 0 || Math.floor(this.invuln * 14) % 2 === 0;
   }
 
-  /** Il modello GLB è rigido: si anima il corpo intero (rimbalzo, inclinazione, allungamento) e le gambe. */
-  _poseGlb(dt) {
-    const [ll, rl] = this.legs, b = this.body;
+  /** Pose sullo scheletro vero (Rig.js): passo, salto, scale, lancio; il corpo intero rimbalza e si schiaccia. */
+  _poseRig(dt) {
     const run = Math.min(1, Math.abs(this.vx) / RUN);
-    let lean = 0, bob = 0, sx = 1, sy = 1, twist = 0;
-    if (this.climbing) {
-      const s = Math.sin(this.walkPhase);
-      ll.rotation.x = s * 0.5; rl.rotation.x = -s * 0.5;
-      bob = Math.abs(s) * 0.04;
-      twist = s * 0.08;
-    } else if (!this.onGround) {
-      ll.rotation.x = -0.7; rl.rotation.x = 0.35;
-      // allungato in salita, raccolto in discesa
-      const st = THREE.MathUtils.clamp(this.vy / JUMP_V, -1, 1);
-      sy = 1 + st * 0.07; sx = 1 - st * 0.04;
-      lean = 0.12;
-    } else {
-      const s = Math.sin(this.walkPhase * 2.2) * run;
-      ll.rotation.x = s * 0.9; rl.rotation.x = -s * 0.9;
-      bob = Math.abs(Math.sin(this.walkPhase * 2.2)) * 0.07 * run;
-      lean = run * 0.14;
-      twist = s * 0.08;
-    }
-    // atterraggio: schiacciata breve
+    const air = this.climbing || this.onGround ? null : THREE.MathUtils.clamp(this.vy / JUMP_V, -1, 1);
+    this.rig.apply(locomotionPose({
+      phase: this.walkPhase * (this.climbing ? 1 : 2.2),
+      run: this.onGround ? run : 0,
+      air,
+      climb: !!this.climbing,
+      throwT: this.throwAnim > 0 ? this.throwAnim / 0.28 : 0
+    }));
     this.squash = Math.max(0, this.squash - dt * 5);
-    sy *= 1 - this.squash * 0.18; sx *= 1 + this.squash * 0.1;
-    // lancio: slancio in avanti con torsione
-    this.handBottle.visible = this.throwAnim > 0.1;
-    if (this.throwAnim > 0) { const t = Math.sin((1 - this.throwAnim / 0.28) * Math.PI); lean += t * 0.3; twist -= t * 0.35; }
-    b.position.y = 0.58 + bob;
-    b.rotation.set(lean, twist, 0);
-    b.scale.set(sx, sy, sx);
+    const st = air === null ? 0 : air;
+    const sy = (1 + st * 0.05) * (1 - this.squash * 0.14), sx = (1 - st * 0.03) * (1 + this.squash * 0.08);
+    this.body.scale.set(sx, sy, sx);
+    this.body.position.y = this.onGround ? Math.abs(Math.sin(this.walkPhase * 2.2)) * 0.05 * run : 0;
+    this.handBottle.visible = this.throwAnim > 0.12;
     this.group.visible = this.invuln <= 0 || Math.floor(this.invuln * 14) % 2 === 0;
   }
+
 }

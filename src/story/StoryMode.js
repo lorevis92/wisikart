@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Assets } from '../core/AssetLoader.js';
 import { Player, PLAYER_H } from './Player.js';
+import { loadRigged, riggedUrl } from './Rig.js';
 import { CrumbleRow, Fan, Scarf, Dropper, Pendulum, Pickup, Steward, Boss, ThrownBottle, goalMesh, seatMesh, overlap } from './entities.js';
 
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
@@ -42,7 +43,7 @@ export class StoryMode {
     progress('Accendo i riflettori…');
     const S = 'assets/story/stadio/';
     const [charModel, bottleStand, stewardProto, bossModel] = await Promise.all([
-      this.character.model ? Assets.model(this.character.model, { targetHeight: 2 }) : null,
+      loadRigged(riggedUrl(this.character), 1.8),
       Assets.model(S + 'bottiglia.glb', { targetHeight: 0.55 }),
       Assets.model(S + 'steward.glb', { targetHeight: 1.9 }),
       Assets.model(S + 'tifoso.glb', { targetHeight: 3.6 })
@@ -72,7 +73,7 @@ export class StoryMode {
     this.stewards = L.stewards.map((s) => this._add(new Steward(s, stewardProto ? stewardProto.clone(true) : null)));
     this.boss = this._add(new Boss(L.boss, bossModel));
     // Whiskey
-    // il vero modello del personaggio (characters/<id>.glb) dal busto in su; senza file, la versione procedurale
+    // il personaggio con scheletro (story/characters/<id>.glb); senza file, la versione procedurale
     this.player = new Player(this.character, charModel);
     this.scene.add(this.player.group);
     this._respawn(true);

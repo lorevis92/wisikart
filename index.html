@@ -109,26 +109,25 @@
     </div>
   </section>
 
-  <!-- STORIA: mappa del pianeta -->
-  <section id="screen-story" class="screen story-map-screen">
-    <header class="screen-head">
-      <button class="btn ghost back" data-back>Indietro</button>
-      <h2 id="map-title">Niaboc</h2>
-      <span class="head-note" id="map-subtitle"></span>
-    </header>
-    <p class="story-msg hidden" id="story-msg"></p>
-    <div class="map-stage" id="map-stage">
-      <div class="map-frame" id="map-frame">
-        <img id="map-img" alt="" />
-        <div class="map-nodes" id="map-nodes"></div>
-        <div class="map-marker" id="map-marker"></div>
+  <!-- STORIA: piazza 3D del pianeta -->
+  <section id="screen-hub" class="screen hud hub-hud">
+    <div class="hud-top">
+      <div class="hub-title"><b id="hub-world">Niaboc</b><span id="hub-subtitle"></span></div>
+    </div>
+    <div class="hud-notice" id="hub-notice"></div>
+    <div class="hub-prompt" id="hub-prompt"><b id="hub-prompt-name"></b><span class="map-state" id="hub-prompt-state"></span></div>
+    <p class="hint hub-keys" id="hub-keys">Frecce / WASD per camminare · Spazio o K per saltare · Q / E girano la telecamera · Cammina dentro un ingresso per entrare · Esc pausa</p>
+    <div class="touch" id="hub-touch">
+      <div class="touch-left hub-pad">
+        <button class="tbtn small" data-touch="up">▲</button>
+        <div><button class="tbtn small" data-touch="left">◀</button><button class="tbtn small" data-touch="right">▶</button></div>
+        <button class="tbtn small" data-touch="down">▼</button>
       </div>
+      <div class="touch-right">
+        <button class="tbtn accel" data-touch="jump">Salta</button>
+      </div>
+      <button class="tbtn pause" data-touch="pause">II</button>
     </div>
-    <div class="map-info" id="map-info">
-      <div><b id="map-name"></b><span class="map-state" id="map-state"></span></div>
-      <span id="map-desc"></span>
-    </div>
-    <p class="hint story-keys" id="story-keys">Frecce per scegliere la sfida · Invio per entrare · Nel livello: Frecce / A D cammina · Spazio o K salta · Su / Giù sulle scale · Maiusc, E o J lancia · Esc pausa</p>
   </section>
 
   <!-- STORIA: HUD -->

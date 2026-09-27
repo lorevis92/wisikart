@@ -20,9 +20,9 @@ Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8,
 
 ## Storia
 
-Modalità separata dal kart (voce **Storia** nel menu), che parte dalla **mappa del pianeta** in stile Super Mario World: l'illustrazione di Niaboc (`story/niaboc/mappa.png`) con le sfide sopra, da scegliere con le frecce o con un tocco. Stadio di Space Ball (giocabile), Portale di Niaboc (chiuso finché non vinci lo stadio), Deposito Valvo Go, Vicoli notturni e Biblioteca (in arrivo). Le sfide sono in `src/story/worlds.js`.
+Modalità separata dal kart (voce **Storia** nel menu), che parte da una **piazza 3D di Niaboc** da attraversare a piedi, in terza persona come un mini Super Mario 64: cielo notturno con le due lune, palette e palazzi della pista di Niaboc, fontana al centro. Cinque ingressi, attivati camminandoci dentro (nessun menu): **Stadio di Space Ball** (`story/niaboc/stadio-esterno.glb`, carica il livello), **Portale di Niaboc** (`props/portale-niaboc.glb`, sigillato da una barriera finché non vinci lo stadio), **Deposito Valvo Go** (`props/valvo-go.glb`), **Vicoli notturni** (`story/niaboc/arco-vicoli.glb`) e **Biblioteca** (`story/niaboc/biblioteca.glb`), questi ultimi "in arrivo". La piazza è descritta in `src/story/worlds.js`. Comandi in piazza: Frecce / WASD, Spazio o K per saltare, Q / E per girare la telecamera.
 
-I livelli sono platform 2.5D a scorrimento laterale con Whiskey a piedi, che cammina, salta e lancia bottiglie. Il personaggio è l'ultimo scelto nel kart (altrimenti la Monna) ed è il suo vero modello `characters/<id>.glb`: al caricamento si tiene solo il personaggio dal busto in su (il kart viene scartato dalla geometria), con gambe e bacino nei suoi colori. Senza GLB si usa la versione procedurale con la faccia di `faceTexture`.
+Whiskey è l'ultimo personaggio scelto nel kart (altrimenti la Monna), con i modelli **con scheletro** `story/characters/<id>.glb`: camminata, corsa, salto, scale e lancio sono animati sulle ossa vere (`src/story/Rig.js`, nomi in stile Mixamo con riconoscimento anche di nomi diversi). Senza file resta la versione procedurale con la faccia di `faceTexture`.
 
 **Livello 1 – Stadio di Space Ball**: gradinate (file di sedili, alcune crollano; tifosi da scavalcare; sciarpe da saltare o da passarci sotto; bottiglie e secchi dagli spalti), campo (palle spaziali a pendolo, porte da passare sotto e una porta alta da cui saltare il fossato, bottigliera), tunnel degli spogliatoi (scale, grate, tre steward da evitare o stordire, cassa di bottiglie) e arena in cima con il **Tifoso Supremo**: lancia sedili a parabola (il bersaglio rosso a terra dice dove cadranno), ogni tanto uno lascia una bottiglia; servono tre bottigliate.
 
@@ -87,7 +87,9 @@ src/
   story/Player.js       Whiskey platform: fisica (coyote, salto variabile, scale) e animazioni
   story/entities.js     sedili che crollano, tifosi, sciarpe, pendoli, steward, boss, pickup, proiettili
   story/stadio.js       dati del livello 1 (misure pensate sulla fisica del salto)
-  story/worlds.js       mappe dei pianeti: immagine e sfide (livelli, portali, bonus)
+  story/worlds.js       piazze dei pianeti: ingressi, modelli, messaggi
+  story/Hub.js          piazza 3D in terza persona: movimento, collisioni, ingressi, telecamera
+  story/Rig.js          personaggi con scheletro: caricamento, riconoscimento delle ossa, pose animate
 scripts/fetch-assets.mjs  scarica gli asset di entrambi i manifest (kart e Storia)
 scripts/check-tracks.mjs  controlla le piste (lunghezza, raggio minimo, incroci)
 ```

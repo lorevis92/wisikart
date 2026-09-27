@@ -231,36 +231,18 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .story-ladder { display: flex; flex-direction: column; gap: 8px; }
 @media (max-width: 560px) { .story-stat { font-size: 20px; padding: 6px 10px; } .story-hearts { font-size: 20px; } }
 
-/* ---------- storia: mappa del pianeta ---------- */
-.story-map-screen { background: radial-gradient(900px 600px at 50% 30%, #2a1f5a 0%, var(--navy) 70%); }
-.map-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
-.map-frame { position: relative; border-radius: 22px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); background: linear-gradient(160deg, #2a1f5a, #120f30); }
-.map-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-.map-frame.no-image img { display: none; }
-.map-nodes { position: absolute; inset: 0; }
-.map-node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--cream); font: inherit; }
-.map-badge { position: relative; width: clamp(34px, 6.2%, 60px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: rgba(14,18,48,0.85); border: 3px solid var(--gold); box-shadow: 0 0 0 4px rgba(245,185,66,0.2), 0 6px 14px rgba(0,0,0,0.5); transition: transform 0.15s; }
-.map-badge svg { width: 62%; height: 62%; color: var(--gold); }
-.map-node.done .map-badge { border-color: var(--mint); box-shadow: 0 0 0 4px rgba(67,224,176,0.25), 0 6px 14px rgba(0,0,0,0.5); }
-.map-node.done .map-badge svg { color: var(--mint); }
-.map-node.soon .map-badge { border-color: var(--blue-2); box-shadow: 0 0 0 4px rgba(127,164,255,0.2), 0 6px 14px rgba(0,0,0,0.5); }
-.map-node.soon .map-badge svg { color: var(--blue-2); }
-.map-node.locked .map-badge { border-color: #8a8fa8; background: rgba(40,42,60,0.92); box-shadow: 0 6px 14px rgba(0,0,0,0.5); }
-.map-node.locked .map-badge svg { color: #c9cde0; }
-.map-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; background: var(--mint); color: var(--ink); font-style: normal; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
-.map-label { font-size: clamp(11px, 1.6vw, 14px); font-weight: 600; white-space: nowrap; background: rgba(10,12,34,0.8); padding: 2px 8px; border-radius: 8px; opacity: 0; transform: translateY(-4px); transition: opacity 0.15s, transform 0.15s; pointer-events: none; }
-.map-node.focused .map-badge, .map-node:hover .map-badge { transform: scale(1.18); }
-.map-node.focused .map-label, .map-node:hover .map-label { opacity: 1; transform: none; }
-.map-node.focused.open .map-badge { animation: mapPulse 1.2s ease-in-out infinite; }
-@keyframes mapPulse { 50% { box-shadow: 0 0 0 10px rgba(245,185,66,0.05), 0 6px 14px rgba(0,0,0,0.5); } }
-.map-marker { position: absolute; width: clamp(26px, 4.6%, 44px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; border: 3px solid var(--cream); box-shadow: 0 6px 12px rgba(0,0,0,0.5); transform: translate(-50%, -165%); transition: left 0.35s ease, top 0.35s ease; pointer-events: none; animation: mapHop 1.4s ease-in-out infinite; }
-.map-marker canvas { width: 100%; height: 100%; display: block; }
-@keyframes mapHop { 50% { transform: translate(-50%, -185%); } }
-.map-info { margin-top: 12px; display: flex; flex-direction: column; gap: 2px; background: rgba(10,12,34,0.6); padding: 10px 14px; border-radius: 14px; min-height: 58px; }
-.map-info b { font-size: 18px; margin-right: 10px; }
 .map-state { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 8px; background: rgba(245,185,66,0.2); color: var(--gold); }
 .map-state.done { background: rgba(67,224,176,0.18); color: var(--mint); }
 .map-state.soon { background: rgba(127,164,255,0.18); color: var(--blue-2); }
 .map-state.locked { background: rgba(200,205,224,0.15); color: #c9cde0; }
-.map-info > span { font-size: 14px; opacity: 0.8; }
-@media (prefers-reduced-motion: reduce) { .map-marker, .map-node.focused.open .map-badge { animation: none; } .map-marker { transition: none; } }
+
+/* ---------- storia: piazza 3D ---------- */
+.hub-title { display: flex; flex-direction: column; background: rgba(10,12,34,0.55); padding: 8px 14px; border-radius: 14px; }
+.hub-title b { font-size: 24px; color: var(--gold); }
+.hub-title span { font-size: 13px; opacity: 0.75; }
+.hub-hud .hud-notice { top: 20%; font-size: 22px; white-space: normal; text-align: center; width: min(92vw, 720px); }
+.hub-prompt { position: absolute; left: 50%; bottom: calc(70px + var(--safe-b)); transform: translate(-50%, 10px); display: flex; align-items: center; gap: 10px; background: rgba(10,12,34,0.75); padding: 10px 16px; border-radius: 16px; font-size: 18px; opacity: 0; transition: opacity 0.2s, transform 0.2s; white-space: nowrap; }
+.hub-prompt.show { opacity: 1; transform: translate(-50%, 0); }
+.hub-keys { position: absolute; left: 0; right: 0; bottom: calc(14px + var(--safe-b)); text-align: center; }
+.hub-pad { flex-direction: column; align-items: center; gap: 6px; }
+.hub-pad > div { display: flex; gap: 40px; }
