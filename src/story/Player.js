@@ -316,7 +316,11 @@ export class Player {
     let bob = this.onGround ? Math.abs(Math.sin(phase)) * 0.05 * run : 0;
     if (this.rig) {
       this.rig.apply(locomotionPose({ phase, run: this.onGround ? run : 0, air, climb: !!this.climbing, throwT }));
-      this.body.rotation.set(0, 0, 0);
+      // gambe non animabili (scheletro con le ginocchia sopra l'anca): braccia e busto sulle ossa, e un
+      // dondolio del corpo al posto dei passi
+      const s = Math.sin(phase);
+      if (this.rig.legsOk) this.body.rotation.set(0, 0, 0);
+      else { this.body.rotation.set(0, 0, this.climbing ? s * 0.08 : this.onGround ? s * 0.07 * run : 0); bob *= 1.6; }
     } else {
       // corpo rigido: si inclina correndo, dondola a ogni passo, si slancia nel lancio
       const s = Math.sin(phase);

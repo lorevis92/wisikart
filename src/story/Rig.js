@@ -123,10 +123,16 @@ export class RigAnimator {
       if (dir.angleTo(hang) > 0.35) this.rest.get(a).base = new THREE.Quaternion().setFromUnitVectors(dir, hang);
     }
     this.hasLegs = !!(this.bones.upLegL && this.bones.upLegR);
-    // ginocchia affidabili solo se a riposo il piede sta sotto il ginocchio (certi scheletri generati le mettono alla caviglia)
     const wy = (b) => b.getWorldPosition(new THREE.Vector3()).applyMatrix4(inv).y;
     const { legL, footL, legR, footR } = this.bones;
-    this.kneeOk = !!(legL && footL && legR && footR) && wy(footL) < wy(legL) - 0.02 && wy(footR) < wy(legR) - 0.02;
+    // gambe: la coscia si anima se il piede sta ben sotto l'anca (certi scheletri aggiunti a mano, come la
+    // Monna con la veste lunga, hanno piede e ginocchio sopra l'anca: lì le gambe restano ferme);
+    // il ginocchio si piega solo se sta davvero tra anca e piede
+    const { upLegL, upLegR } = this.bones;
+    const chain = (up, knee, foot) => up && knee && foot && { up: wy(up), knee: wy(knee), foot: wy(foot) };
+    const L = chain(upLegL, legL, footL), R = chain(upLegR, legR, footR);
+    this.legsOk = !!(L && R) && L.foot < L.up - 0.15 && R.foot < R.up - 0.15;
+    this.kneeOk = this.legsOk && [L, R].every((c) => c.knee < c.up - 0.05 && c.foot < c.knee - 0.02);
   }
 
   /** pose: { chiaveOsso: { x, y, z } } in radianti; le ossa non citate tornano a riposo. */
@@ -136,6 +142,7 @@ export class RigAnimator {
       b.quaternion.copy(r.q);
       let p = pose[key];
       if (p && !this.kneeOk && /^(leg|foot)[LR]$/.test(key)) p = null;
+      if (p && !this.legsOk && /^upLeg[LR]$/.test(key)) p = null;
       if (!p && !r.base) continue;
       // rotazione negli assi del personaggio (x, poi z, poi y), dopo l'eventuale correzione di base
       _m.identity();
