@@ -24,6 +24,18 @@
     "valvo/carrello.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_091504_061d931a-19bb-4f5a-8fda-5c00a91434a3.glb",
     "valvo/cassa.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_091507_153bfca2-f6a5-4d05-bb20-86f44a2bfcc8.glb",
     "valvo/valvola.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_091512_98639211-35a7-4210-9d1f-223e8c35653e.glb",
-    "valvo/badge.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_091240_0249f00c-4e17-43d2-b523-3fa8560c8c77.png"
+    "valvo/badge.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_091240_0249f00c-4e17-43d2-b523-3fa8560c8c77.png",
+    "portale/pattuglia.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094452_1551e672-379c-4bcc-a69a-2ddc89b1fdb1.glb",
+    "voce/volo-start.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_685eb0ae-9477-435b-8089-5bb4e2dc48e6.wav",
+    "voce/volo-anello1.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_2b195def-4b9d-4112-acb2-7d402d52411d.wav",
+    "voce/volo-anello2.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_3dd526e1-7cbe-4a46-88ed-c9270577ca65.wav",
+    "voce/volo-mancato.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_0f5b4d01-9927-453c-bbf1-9128cdd72b1b.wav",
+    "voce/volo-pattuglia.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_20b2f231-e57f-472a-a45a-aff0b904965b.wav",
+    "voce/volo-barriera.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_0b521752-13a5-4c9e-9b2b-f49428c87a37.wav",
+    "voce/volo-colpito.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_9ec0d97c-f7ab-4acb-9149-bbe113654b3f.wav",
+    "voce/volo-gong.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094425_4fde32b1-7abe-4983-b20a-212b151acd76.wav",
+    "voce/volo-portale.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_d7e0d873-d840-432a-b8d4-91038e0a8af5.wav",
+    "voce/volo-tardi.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094425_0a5a4e42-2b53-476f-a821-5c2ed6652981.wav",
+    "voce/volo-vittoria.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_094424_538fe919-1389-4e9f-b469-bb561389fccc.wav"
   }
 }

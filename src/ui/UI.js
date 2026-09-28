@@ -329,20 +329,63 @@ export class UI {
     $('#loading-skip').classList.add('hidden');
   }
 
-  storyHudStart() {
+  /** Cinematica a tutto schermo; si risolve a fine video, se la si salta o se il file manca. */
+  cinematic(url) {
+    this.show('cinematic');
+    const v = $('#cinematic-video');
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('keydown', finish);
+        window.removeEventListener('pointerdown', finish);
+        clearTimeout(guard);
+        this.stopVideo(v);
+        resolve();
+      };
+      // non far scattare il salto con lo stesso tasto che ha chiuso il livello
+      setTimeout(() => { if (!done) { window.addEventListener('keydown', finish); window.addEventListener('pointerdown', finish); } }, 600);
+      const guard = setTimeout(finish, 60000);
+      this.playVideo(v, url, { onFail: finish, onEnd: finish });
+    });
+  }
+
+  /** HUD dei livelli della Storia; nei livelli di volo i tasti touch diventano Spara e Frena. */
+  storyHudStart(type = 'platform') {
     this.show('story-hud');
     $('#story-touch').classList.toggle('on', this.game.input.isTouch);
     $('#story-notice').classList.remove('show');
+    const flight = type === 'flight';
+    $('#story-tbtn-jump').textContent = flight ? 'Spara' : 'Salta';
+    $('#story-tbtn-item').textContent = flight ? 'Frena' : 'Lancia';
     this._storyNotice = null;
     this._storyLives = null;
   }
 
   storyHud(h) {
-    let hearts = '';
-    for (let i = 0; i < h.maxLives; i++) hearts += i < h.lives ? '♥' : '<span class="off">♥</span>';
-    if (this._storyLives !== h.lives) { $('#story-lives').innerHTML = hearts; this._storyLives = h.lives; }
-    $('#story-ammo').textContent = h.ammo;
-    $('#story-ammo-max').textContent = `/${h.maxAmmo}`;
+    // cuori e bottiglie solo nei livelli a piedi; nel volo contano tempo e anelli
+    $('#story-lives-box').classList.toggle('hidden', h.lives === undefined);
+    $('#story-ammo-box').classList.toggle('hidden', h.ammo === undefined);
+    $('#story-speed-box').classList.toggle('hidden', h.speed === undefined);
+    $('#story-rings-box').classList.toggle('hidden', !h.rings);
+    if (h.speed !== undefined) $('#story-speed').textContent = h.speed;
+    if (h.rings) { $('#story-rings').textContent = h.rings.taken; $('#story-rings-total').textContent = `/${h.rings.total}`; }
+    if (h.lives !== undefined) {
+      const key = `${h.lives}/${h.maxLives}`;
+      if (this._storyLives !== key) {
+        let hearts = '';
+        for (let i = 0; i < h.maxLives; i++) hearts += i < h.lives ? '♥' : '<span class="off">♥</span>';
+        $('#story-lives').innerHTML = hearts;
+        this._storyLives = key;
+      }
+      $('#story-lives-box').classList.toggle('lifeup', !!h.lifeUp); // vita in più dalle monete
+    }
+    if (h.ammo !== undefined) {
+      $('#story-ammo').textContent = h.ammo;
+      $('#story-ammo-max').textContent = `/${h.maxAmmo}`;
+    }
+    $('#story-timer-label').textContent = h.timerLabel || 'Chiusura';
     const boss = $('#story-boss');
     boss.classList.toggle('hidden', !h.boss);
     if (h.boss) {

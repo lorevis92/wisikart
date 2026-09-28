@@ -23,7 +23,6 @@ export const VALVO = {
   lives: 5,
   ammo: 4,
   maxAmmo: 9,
-  coins: true,
   killY: -8,
   background: '#0a0c1a',
   completeMessage: 'Livello completato: Deposito Valvo & Go. Emma è con te, e il Portale di Niaboc è aperto.',

@@ -16,6 +16,7 @@ import { StoryMode } from './story/StoryMode.js';
 import { WORLDS } from './story/worlds.js';
 import { Hub } from './story/Hub.js';
 import { storyHero } from './story/hero.js';
+import { FlightMode } from './story/FlightMode.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 
@@ -323,11 +324,15 @@ class Game {
     this.ui.storyLoading(level);
     this._endStory();
     this._endHub();
-    // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js)
-    const story = new StoryMode({
+    // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js).
+    // Le monete sono un totale unico della Storia, salvato a ogni raccolta (ogni 100, una vita in più).
+    const Mode = level.type === 'flight' ? FlightMode : StoryMode;
+    const story = new Mode({
       level,
       character: storyHero(),
       audio: this.audio,
+      coins: this.save.storyCoins || 0,
+      onCoins: (n) => { this.save.storyCoins = n; this._persist(); },
       onComplete: () => this._storyComplete(level),
       onGameOver: () => this.startStory(level)
     });
@@ -338,14 +343,20 @@ class Game {
     this.input.releaseAll();
     this.input.pausePressed = false;
     this.state = 'story';
-    this.ui.storyHudStart();
+    this.ui.storyHudStart(level.type);
     this.audio.playTheme(level.music);
   }
 
-  _storyComplete(level) {
+  async _storyComplete(level) {
     this.save.story = { ...(this.save.story || {}), [level.id]: true };
     this._persist();
     this._endStory();
+    // livelli con una cinematica finale (il tunnel del portale): prima il video, poi la piazza
+    if (level.cinematic) {
+      this.state = 'cinematic';
+      this.audio.stopMusic();
+      await this.ui.cinematic(level.cinematic);
+    }
     // si ricompare in piazza davanti all'ingresso del livello appena finito; il salvataggio riapre il prossimo
     this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.id);
   }
@@ -359,7 +370,7 @@ class Game {
     this.state = on ? 'storypaused' : 'story';
     if (on) this._pauseLabels('Ricomincia il livello', 'Torna al menu principale');
     this.ui.pause(on);
-    if (!on) this.ui.storyHudStart(); // chiude l'overlay e rimette l'HUD
+    if (!on) this.ui.storyHudStart(this.story?.level.type); // chiude l'overlay e rimette l'HUD
   }
 
   /** Uscita da una gara (risultati o pausa): si torna al sottomenu WisiKart. */
@@ -428,7 +439,7 @@ class Game {
     this.input.update();
     // navigazione menu
     const ev = this.input.consumeMenu();
-    if (!['race', 'loading', 'story', 'storyload', 'hub', 'hubload'].includes(this.state)) {
+    if (!['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'].includes(this.state)) {
       for (const e of ev) {
         if (e === 'ok') this.ui.activateFocus();
         else if (e === 'back') {

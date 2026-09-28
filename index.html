@@ -157,11 +157,13 @@
   <section id="screen-story-hud" class="screen hud story-hud">
     <div class="story-alarm" id="story-alarm" aria-hidden="true"></div>
     <div class="hud-top">
-      <div class="story-stat"><span class="story-hearts" id="story-lives"></span></div>
+      <div class="story-stat" id="story-lives-box"><span class="story-hearts" id="story-lives"></span></div>
+      <div class="story-stat hidden" id="story-speed-box"><b id="story-speed">0</b><small>km/h</small></div>
       <div class="story-boss hidden" id="story-boss"><span id="story-boss-name">Il Tifoso Supremo</span><div class="story-boss-bar"><i id="story-boss-fill"></i></div></div>
-      <div class="story-timer hidden" id="story-timer"><small>Chiusura</small><b id="story-timer-val">0.0</b></div>
+      <div class="story-timer hidden" id="story-timer"><small id="story-timer-label">Chiusura</small><b id="story-timer-val">0.0</b></div>
       <div class="story-side">
-        <div class="story-stat"><span class="story-bottle" aria-hidden="true"></span><b id="story-ammo">3</b><small id="story-ammo-max">/9</small></div>
+        <div class="story-stat" id="story-ammo-box"><span class="story-bottle" aria-hidden="true"></span><b id="story-ammo">3</b><small id="story-ammo-max">/9</small></div>
+        <div class="story-stat hidden" id="story-rings-box"><span class="story-ring" aria-hidden="true"></span><b id="story-rings">0</b><small id="story-rings-total">/12</small></div>
         <div class="story-stat hidden" id="story-coins-box"><span class="story-coin" aria-hidden="true"></span><b id="story-coins">0</b></div>
         <div class="story-stat story-badge hidden" id="story-badge" title="Badge del deposito"><img id="story-badge-img" alt="Badge" /><small>Badge</small></div>
       </div>
@@ -177,11 +179,17 @@
           <button class="tbtn small" data-touch="up">▲</button>
           <button class="tbtn small" data-touch="down">▼</button>
         </div>
-        <button class="tbtn small" data-touch="item">Lancia</button>
-        <button class="tbtn accel" data-touch="jump">Salta</button>
+        <button class="tbtn small" data-touch="item" id="story-tbtn-item">Lancia</button>
+        <button class="tbtn accel" data-touch="jump" id="story-tbtn-jump">Salta</button>
       </div>
       <button class="tbtn pause" data-touch="pause">II</button>
     </div>
+  </section>
+
+  <!-- STORIA: cinematica (il tunnel del portale) -->
+  <section id="screen-cinematic" class="screen cinematic">
+    <video id="cinematic-video" playsinline class="cinematic-video"></video>
+    <p class="hint cinematic-skip">Un tasto o un tocco per saltare</p>
   </section>
 
   <!-- PAUSA -->

@@ -93,7 +93,7 @@ export class CoinCrate {
     this.group.visible = false;
     mode.burst((this.solid.x0 + this.solid.x1) / 2, 0.6 + this.group.position.y, 0xffd45a);
     mode.addCoins(this.coins);
-    return `+${this.coins} monete`;
+    return mode.lifeUpAt === mode.t ? true : `+${this.coins} monete`; // non coprire il messaggio della vita in più
   }
 }
 

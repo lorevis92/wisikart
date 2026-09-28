@@ -1,5 +1,6 @@
 import { STADIO } from './stadio.js';
 import { VALVO } from './valvo.js';
+import { PORTALE } from './portale.js';
 
 // Piazze 3D dei pianeti della Storia (una per pianeta), da attraversare a piedi come in un mini Super Mario 64.
 // Ogni ingresso: angle = direzione dal centro della piazza in gradi (0 = nord, cioè davanti alla partenza,
@@ -34,11 +35,10 @@ export const WORLDS = [
       },
       {
         // subito dietro il deposito, sulla stessa direzione: ci si arriva girandogli intorno
-        id: 'portale', kind: 'gate', requires: 'deposito', angle: 300, dist: 31, height: 10, arch: true,
+        id: 'portale', kind: 'level', level: PORTALE, requires: 'deposito', angle: 300, dist: 31, height: 10, arch: true,
         model: 'assets/props/portale-niaboc.glb',
-        name: 'Portale di Niaboc', desc: 'Una pista oltre il portale al neon.',
-        locked: 'Il portale è sigillato. Senza Emma non si va da nessuna parte: prima il Deposito Valvo & Go.',
-        soon: 'Il portale è aperto. Emma: «La pista dall’altra parte però non è ancora asciutta.»'
+        name: 'Portale: corsa al varco', desc: 'Un giro in volo prima del gong di mezzogiorno.',
+        locked: 'Il portale è sigillato. Senza Emma non si va da nessuna parte: prima il Deposito Valvo & Go.'
       },
       {
         id: 'biblioteca', kind: 'gate', requires: 'ritorno-niaboc', angle: 128, dist: 26, height: 12,

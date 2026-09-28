@@ -253,6 +253,14 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .story-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .story-coin { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff2a8, #f5b942 55%, #b07a12); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.2); }
 .story-badge img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+.story-ring { width: 22px; height: 22px; border-radius: 50%; border: 4px solid #ff4fc8; box-shadow: 0 0 8px #3fe8ff, inset 0 0 6px #3fe8ff; }
+/* cinematica a tutto schermo */
+#screen-cinematic { background: #000; padding: 0; align-items: center; justify-content: center; }
+.cinematic-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.cinematic-skip { position: absolute; bottom: calc(18px + var(--safe-b)); left: 0; right: 0; text-align: center; }
+/* vita in più dalle monete: i cuori si illuminano per un attimo */
+#story-lives-box.lifeup { animation: lifeUp 0.5s ease-in-out 3; }
+@keyframes lifeUp { 50% { transform: scale(1.18); box-shadow: 0 0 22px 6px rgba(255,90,110,0.7); } }
 .story-badge small { opacity: 0.8; }
 /* timer dell'hangar: grande, al centro, rosso quando manca poco */
 .story-timer { display: flex; flex-direction: column; align-items: center; background: rgba(40,6,12,0.75); border: 2px solid #ff4a5a; padding: 4px 18px 6px; border-radius: 16px; line-height: 1; }

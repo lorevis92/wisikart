@@ -21,10 +21,11 @@ const DEFAULT_MODELS = {
  * Il gioco (main.js) chiama load → update/render → dispose.
  */
 export class StoryMode {
-  constructor({ level, character, audio, onComplete, onGameOver }) {
+  constructor({ level, character, audio, coins = 0, onCoins, onComplete, onGameOver }) {
     this.level = level;
     this.character = character;
     this.audio = audio;
+    this.onCoins = onCoins;
     this.onComplete = onComplete;
     this.onGameOver = onGameOver;
     this.scene = new THREE.Scene();
@@ -41,7 +42,9 @@ export class StoryMode {
     this.lives = level.lives;
     this.ammo = level.ammo;
     this.maxAmmo = level.maxAmmo;
-    this.coins = level.coins ? 0 : null;
+    // monete: il totale della Storia, portato avanti tra i livelli (ogni 100 una vita in più)
+    this.coins = coins;
+    this.lifeUpAt = -10;
     this.extraHud = {};
     this.checkpoint = 0;
     this.state = 'play'; // play | won | over | ended
@@ -266,10 +269,19 @@ export class StoryMode {
     this.say(kind === 'rack' ? 'Bottigliera! +6 bottiglie' : kind === 'crate' ? 'Cassa di bottiglie! +6' : `+${n} bottiglie`, 1.4);
   }
 
+  /** Monete raccolte: ogni volta che il totale supera un multiplo di 100, una vita in più. Salvate subito. */
   addCoins(n) {
-    if (this.coins === null) this.coins = 0;
+    const before = this.coins;
     this.coins += n;
     this.sfx('pickup');
+    const bonus = Math.floor(this.coins / 100) - Math.floor(before / 100);
+    if (bonus > 0) {
+      this.lives += bonus;
+      this.lifeUpAt = this.t;
+      this.sfx('lap');
+      this.say(`${Math.floor(this.coins / 100) * 100} monete: una vita in più!`, 2.2);
+    }
+    if (this.onCoins) this.onCoins(this.coins);
   }
 
   spawnPickup(p, announce = true) {
@@ -504,7 +516,8 @@ export class StoryMode {
   hud() {
     return {
       lives: this.lives,
-      maxLives: this.level.lives,
+      maxLives: Math.max(this.level.lives, this.lives), // le vite extra delle monete si aggiungono ai cuori
+      lifeUp: this.t - this.lifeUpAt < 1.5,
       ammo: this.ammo,
       maxAmmo: this.maxAmmo,
       coins: this.coins,

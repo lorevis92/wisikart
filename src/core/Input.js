@@ -15,7 +15,8 @@ export class Input {
     this.lookBack = false;
     this._axisYPrev = 0;
     this.pausePressed = false;
-    this.touch = { left: false, right: false, accel: false, drift: false, jump: false, up: false, down: false };
+    this.touch = { left: false, right: false, accel: false, drift: false, jump: false, up: false, down: false, item: false };
+    this.brakeHeld = false;
     // modalità Storia (platform): assi grezzi e salto con fronte di salita
     this.axisX = 0;
     this.axisY = 0;
@@ -86,8 +87,9 @@ export class Input {
     const set = (name, v) => { this.touch[name] = v; };
     root.querySelectorAll('[data-touch]').forEach((b) => {
       const name = b.dataset.touch;
-      const on = (e) => { e.preventDefault(); if (name === 'item') this.itemPressed = true; else if (name === 'pause') this.pausePressed = true; else set(name, true); };
-      const off = (e) => { e.preventDefault(); if (name !== 'item' && name !== 'pause') set(name, false); };
+      // 'item' registra sia la pressione (lancio) sia il tenuto (freno nei livelli di volo)
+      const on = (e) => { e.preventDefault(); if (name === 'item') { this.itemPressed = true; set('item', true); } else if (name === 'pause') this.pausePressed = true; else set(name, true); };
+      const off = (e) => { e.preventDefault(); if (name !== 'pause') set(name, false); };
       b.addEventListener('pointerdown', on);
       b.addEventListener('pointerup', off);
       b.addEventListener('pointercancel', off);
@@ -145,6 +147,9 @@ export class Input {
     this.axisY = ay;
     if (jump && !this.jumpHeld) this.jumpPressed = true;
     this.jumpHeld = jump;
+    // freno (livelli di volo): lo stesso tasto dell'oggetto, tenuto
+    this.brakeHeld = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('KeyE') || k.has('KeyJ') || !!this.touch.item ||
+      !!(gp && (gp.buttons[2]?.pressed || gp.buttons[3]?.pressed || (gp.buttons[6]?.value || 0) > 0.3));
     // smorzamento dello sterzo per la tastiera
     const target = Math.max(-1, Math.min(1, st));
     this.steer += (target - this.steer) * (target === 0 ? 0.35 : 0.22);

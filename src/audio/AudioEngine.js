@@ -74,9 +74,13 @@ export class AudioEngine {
     this.voiceGain.gain.value = this.volumes.voice;
   }
 
-  voice(name, { duckMusic = true } = {}) {
-    const b = this.voices[name];
-    if (!b || !this.ctx) return false;
+  voice(name, opts) {
+    return this.voiceBuffer(this.voices[name], opts);
+  }
+
+  /** Suona una voce già caricata (es. le battute di Emma nei livelli) abbassando la musica; ritorna la durata o 0. */
+  voiceBuffer(b, { duckMusic = true } = {}) {
+    if (!b || !this.ctx) return 0;
     const s = this.ctx.createBufferSource();
     s.buffer = b;
     s.connect(this.voiceGain);
@@ -88,7 +92,7 @@ export class AudioEngine {
       g.setTargetAtTime(this.volumes.music * 0.18, now, 0.05);
       g.setTargetAtTime(this.volumes.music * 0.5, now + b.duration, 0.4);
     }
-    return true;
+    return b.duration;
   }
 
   // ---- musica ----
