@@ -26,7 +26,20 @@ export const ICONS = {
   leader: svg('<ellipse cx="18" cy="28" rx="14" ry="7" fill="#1d2a55"/><circle cx="18" cy="20" r="3.5" fill="#fff"/><rect x="34" y="23" width="8" height="8" rx="1" fill="#9fffe0"/><path d="M33 27h-6" stroke="#9fffe0" stroke-width="2" stroke-dasharray="2 2"/>'),
   pincer: svg('<ellipse cx="9" cy="24" rx="6" ry="4" fill="#2f6bd9"/><ellipse cx="39" cy="24" rx="6" ry="4" fill="#2f6bd9"/><path d="M16 24h5M32 24h-5" stroke="#f2c230" stroke-width="3"/><path d="M19 20l3 4-3 4M29 20l-3 4 3 4" fill="none" stroke="#f2c230" stroke-width="2"/><circle cx="24" cy="24" r="3" fill="#fff"/>'),
   gong: svg('<circle cx="24" cy="22" r="14" fill="#d9a441"/><circle cx="24" cy="22" r="8" fill="none" stroke="#8a5e12" stroke-width="2"/><path d="M24 38v6M16 44h16" stroke="#8a96b0" stroke-width="3"/><text x="24" y="26" font-size="10" font-weight="700" text-anchor="middle" fill="#5a3a08">12</text>'),
-  medal: svg('<path d="M16 4l8 14 8-14" fill="#2b62d9"/><circle cx="24" cy="30" r="12" fill="#f5b942"/><path d="M24 23l2.5 5h5l-4 3 1.5 5-5-3-5 3 1.5-5-4-3h5z" fill="#fff3c0"/>')
+  medal: svg('<path d="M16 4l8 14 8-14" fill="#2b62d9"/><circle cx="24" cy="30" r="12" fill="#f5b942"/><path d="M24 23l2.5 5h5l-4 3 1.5 5-5-3-5 3 1.5-5-4-3h5z" fill="#fff3c0"/>'),
+  // rissa alla tavola calda
+  fist: svg('<rect x="12" y="16" width="20" height="16" rx="6" fill="#f2c9a0"/><path d="M16 16v-3M21 16v-4M26 16v-3" stroke="#c99a70" stroke-width="3" stroke-linecap="round"/><path d="M34 20l8-4M34 25h9M34 30l8 4" stroke="#ffd45a" stroke-width="2.5" stroke-linecap="round"/><text x="22" y="44" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">×3</text>'),
+  stool: svg('<ellipse cx="24" cy="14" rx="11" ry="4" fill="#c23a3a"/><path d="M16 16l-4 24M32 16l4 24M24 18v22" stroke="#8a96b0" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="30" r="6" fill="#e8f0ff" stroke="#8a96b0" stroke-width="2"/>'),
+  baton: svg('<circle cx="16" cy="14" r="6" fill="#3a4a6a"/><rect x="10" y="20" width="12" height="18" rx="4" fill="#3a4a6a"/><path d="M22 26l18-14" stroke="#1d1d26" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="12" r="3" fill="#7fd4ff"/><path d="M26 40h16" stroke="#fff" stroke-width="2" stroke-dasharray="3 2"/>'),
+  net: svg('<ellipse cx="24" cy="38" rx="16" ry="5" fill="none" stroke="#ff3a4a" stroke-width="3"/><path d="M12 10h24l-4 22H16z" fill="none" stroke="#d8c8a0" stroke-width="2"/><path d="M14 16h20M15 22h18M16 28h16M20 10l-2 22M24 10v22M28 10l2 22" stroke="#d8c8a0" stroke-width="1.5"/>'),
+  jukebox: svg('<path d="M12 42V18a12 12 0 0 1 24 0v24z" fill="#8a2a4a"/><path d="M16 38V19a8 8 0 0 1 16 0v19" fill="none" stroke="#ffd45a" stroke-width="2"/><circle cx="24" cy="22" r="4" fill="#ff5fb0"/><path d="M38 8v8a2.5 2.5 0 1 1-2-2.4M42 6v8a2.5 2.5 0 1 1-2-2.4" stroke="#fff" stroke-width="1.8" fill="none"/>'),
+  // inseguimento sul lago
+  armored: svg('<rect x="6" y="20" width="32" height="14" rx="4" fill="#5a5f70"/><rect x="14" y="13" width="14" height="8" rx="2" fill="#3a3f52"/><path d="M28 16h14" stroke="#3a3f52" stroke-width="3"/><circle cx="12" cy="36" r="4" fill="#1d1d26"/><circle cx="32" cy="36" r="4" fill="#1d1d26"/><circle cx="20" cy="17" r="2" fill="#ff2a3a"/>'),
+  missile: svg('<path d="M8 30l22-12 8 4-22 12z" fill="#c9cde0"/><path d="M38 22l6-2-4 6z" fill="#ff4a5a"/><path d="M8 30l-4 6 8-2M14 27l-6-4 2 8" fill="#ff9a3a"/><path d="M40 34a8 8 0 0 1-8 8" stroke="#ffd45a" stroke-width="2.5" fill="none"/><path d="M29 40l3 2 1-4" stroke="#ffd45a" stroke-width="2" fill="none"/>'),
+  cannon: svg('<rect x="4" y="6" width="40" height="8" rx="4" fill="#2a2e3e"/><rect x="6" y="8" width="28" height="4" rx="2" fill="#7fd4ff"/><path d="M24 18l-6 26h12z" fill="#9fe8ff" opacity=".7"/><path d="M24 18v26" stroke="#fff" stroke-width="2"/>'),
+  cover: svg('<path d="M4 42h40" stroke="#b89468" stroke-width="3"/><path d="M28 42c-2-10 2-18 8-22 4 6 6 14 2 22z" fill="#6a7a3a"/><path d="M6 12l14 12" stroke="#9fe8ff" stroke-width="4" opacity=".8"/><ellipse cx="18" cy="36" rx="6" ry="3" fill="#d99a2b"/><path d="M36 4v12" stroke="#43e0b0" stroke-width="2"/><circle cx="36" cy="4" r="2" fill="#43e0b0"/>'),
+  heart: svg('<path d="M24 40S8 30 8 19a8 8 0 0 1 16-3 8 8 0 0 1 16 3c0 11-16 21-16 21z" fill="#ff5a6e"/><path d="M34 8v6M31 11h6" stroke="#fff" stroke-width="2"/>'),
+  vortex: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#7fa4ff" stroke-width="3"/><path d="M24 12a12 12 0 1 1-12 12 8 8 0 1 1 8 8 4 4 0 1 1 4-4" fill="none" stroke="#c9d6ff" stroke-width="2.5"/>')
 };
 
 const K = (label) => ({ kind: 'key', label });
@@ -42,21 +55,21 @@ export const CONTROLS = {
       ['Scale', [K('↑'), K('↓')]],
       ['Scivola (giù mentre corri)', [K('↓')]],
       ['Lancia una bottiglia', [K('Maiusc')], [K('E')], [K('J')]],
-      ['Pausa', [K('Esc')]]
+      ['Menu di gioco · silenzio', [K('Esc')], [K('M')]]
     ],
     touch: [
       ['Cammina', [T('◀'), T('▶')]],
       ['Salta', [T('Salta')]],
       ['Scale / scivola', [T('▲'), T('▼')]],
       ['Lancia una bottiglia', [T('Lancia')]],
-      ['Pausa', [T('II')]]
+      ['Menu di gioco', [T('II')]]
     ],
     gamepad: [
       ['Cammina', [P('levetta')], [P('croce')]],
       ['Salta', [P('A')]],
       ['Scale / scivola', [P('su')], [P('giù')]],
       ['Lancia una bottiglia', [P('Y')], [P('LB')]],
-      ['Pausa', [P('Start')]]
+      ['Menu di gioco', [P('Start')]]
     ]
   },
   flight: {
@@ -65,24 +78,51 @@ export const CONTROLS = {
       ['Quota su / giù', [K('↑'), K('↓')], [K('W'), K('S')]],
       ['Spara (tieni per la raffica)', [K('Spazio')], [K('K')]],
       ['Frena', [K('Maiusc')], [K('E')], [K('J')]],
-      ['Pausa', [K('Esc')]]
+      ['Menu di gioco · silenzio', [K('Esc')], [K('M')]]
     ],
     touch: [
       ['Sterza', [T('◀'), T('▶')]],
       ['Quota su / giù', [T('▲'), T('▼')]],
       ['Spara', [T('Spara')]],
       ['Frena', [T('Frena')]],
-      ['Pausa', [T('II')]]
+      ['Menu di gioco', [T('II')]]
     ],
     gamepad: [
       ['Sterza', [P('levetta')]],
       ['Quota su / giù', [P('levetta su/giù')], [P('croce')]],
       ['Spara', [P('A')]],
       ['Frena', [P('X')]],
-      ['Pausa', [P('Start')]]
+      ['Menu di gioco', [P('Start')]]
+    ]
+  },
+  // rissa: si cammina anche in profondità, pugni in combo, lanci
+  brawl: {
+    keyboard: [
+      ['Cammina (anche in profondità)', [K('←'), K('→'), K('↑'), K('↓')], [K('W'), K('A'), K('S'), K('D')]],
+      ['Pugno (premi di nuovo per la combo)', [K('F')], [K('L')]],
+      ['Salta (in aria: calcio volante)', [K('Spazio')], [K('K')]],
+      ['Raccogli / lancia (sgabelli, piatti, bottiglie)', [K('Maiusc')], [K('E')], [K('J')]],
+      ['Menu di gioco · silenzio', [K('Esc')], [K('M')]]
+    ],
+    touch: [
+      ['Cammina', [T('◀'), T('▶')]],
+      ['In profondità', [T('▲'), T('▼')]],
+      ['Pugno (combo)', [T('Pugno')]],
+      ['Salta', [T('Salta')]],
+      ['Raccogli / lancia', [T('Lancia')]],
+      ['Menu di gioco', [T('II')]]
+    ],
+    gamepad: [
+      ['Cammina (anche in profondità)', [P('levetta')], [P('croce')]],
+      ['Pugno (combo)', [P('X')]],
+      ['Salta', [P('A')]],
+      ['Raccogli / lancia', [P('Y')], [P('LB')]],
+      ['Menu di gioco', [P('Start')]]
     ]
   }
 };
+// l'inseguimento si guida come il Portale
+CONTROLS.chase = CONTROLS.flight;
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -94,7 +134,7 @@ function keyHtml(k) {
 /** HTML della schermata per un livello e un tipo di input ('keyboard' | 'touch' | 'gamepad'). */
 export function briefingHtml(level, device = 'keyboard') {
   const b = level.briefing || {};
-  const set = CONTROLS[b.controls || (level.type === 'flight' ? 'flight' : 'platform')];
+  const set = CONTROLS[b.controls || level.type] || CONTROLS.platform;
   const rows = set[device] || set.keyboard;
   const deviceName = { keyboard: 'Tastiera', touch: 'Touch', gamepad: 'Gamepad' }[device] || 'Tastiera';
   const controls = rows.map(([action, ...alts]) => `<li><span class="keys">${alts.map((a) => a.map(keyHtml).join('')).join('<i>o</i>')}</span><span>${esc(action)}</span></li>`).join('');

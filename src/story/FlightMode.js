@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Assets } from '../core/AssetLoader.js';
 import { Track } from '../track/Track.js';
 import { trackById } from '../config/tracks.js';
+import { EmmaVoice } from './emma.js';
 
 // Livello di volo della Storia (il primo è il Portale, story/portale.js): si pilota Emma sul circuito di
 // WisiKart. Stessa interfaccia di StoryMode (load → update/render → hud → dispose), così main.js li tratta
@@ -21,48 +22,6 @@ const RING_R = 3.4;
 const R_HIT = 2.4; // urto con una navicella della pattuglia
 const R_NEAR = 4.6; // sotto questa distanza, passando, è una "sfiorata"
 const TRAIL = 40; // punti della scia luminosa
-
-/** Emma parla una battuta alla volta: quelle importanti aspettano il loro turno, le altre si saltano. */
-class EmmaVoice {
-  constructor(audio, lines) {
-    this.audio = audio;
-    this.lines = lines;
-    this.buffers = {};
-    this.busyUntil = 0;
-    this.queue = null;
-    this.subtitle = null;
-    this.subUntil = 0;
-    this.t = 0;
-  }
-
-  async load() {
-    const ctx = this.audio.ctx;
-    await Promise.all(Object.entries(this.lines).map(async ([k, l]) => { this.buffers[k] = ctx ? await Assets.audioBuffer(ctx, l.url) : null; }));
-  }
-
-  say(key, { important = false } = {}) {
-    if (!this.lines[key]) return false;
-    if (this.t < this.busyUntil) {
-      if (important) this.queue = key; // la più recente tra le importanti
-      return false;
-    }
-    const dur = this.audio.voiceBuffer ? this.audio.voiceBuffer(this.buffers[key]) : 0;
-    const len = dur || 2.4; // senza audio resta il sottotitolo
-    this.busyUntil = this.t + len + 0.25;
-    this.subtitle = `Emma: «${this.lines[key].text}»`;
-    this.subUntil = this.t + len + 0.6;
-    return true;
-  }
-
-  /** Interrompe la coda (per le battute di fine giro). */
-  clear() { this.queue = null; this.busyUntil = 0; }
-
-  update(dt) {
-    this.t += dt;
-    if (this.queue && this.t >= this.busyUntil) { const k = this.queue; this.queue = null; this.say(k); }
-    if (this.t > this.subUntil) this.subtitle = null;
-  }
-}
 
 export class FlightMode {
   constructor({ level, audio, coins = 0, onCoins, onComplete, onGameOver }) {
@@ -129,7 +88,8 @@ export class FlightMode {
   _point(prog, lat, alt, out = new THREE.Vector3()) {
     const N = this.N, S = this.track.samples;
     const i = Math.floor(prog), f = prog - i;
-    const a = S[(this.startIdx + i) % N], b = S[(this.startIdx + i + 1) % N];
+    const w = (k) => ((k % N) + N) % N; // anche prima della partenza (i blindati alle spalle)
+    const a = S[w(this.startIdx + i)], b = S[w(this.startIdx + i + 1)];
     out.copy(a.pos).lerp(b.pos, f).addScaledVector(a.right, lat);
     out.y += alt;
     return out;
@@ -446,7 +406,7 @@ export class FlightMode {
     this.bullets = [];
     this.blocks = [];
     this.state = 'play';
-    this.emma.say('start', { important: true });
+    this._sayStart = true; // la prima battuta al primo fotogramma di gioco, non durante le istruzioni
     this.audio.playTheme(L.music);
     this.audio.setTempo && this.audio.setTempo(1);
     this._placeCamera(1);
@@ -476,6 +436,7 @@ export class FlightMode {
   update(dt, input) {
     this.t += dt;
     this.emma.update(dt);
+    if (this._sayStart) { this._sayStart = false; this.emma.say('start', { important: true }); }
     this.noticeTimer = Math.max(0, this.noticeTimer - dt);
     if (this.noticeTimer <= 0) this.notice = null;
     if (this.gain && this.t > this.gain.until) this.gain = null;
@@ -935,7 +896,8 @@ export class FlightMode {
       alarm: this.state === 'play' && this.timer < 10 && this._lastStretch(),
       callout: this.callout,
       flash: this.flashAt || 0,
-      notice: this.emma.subtitle || this.notice
+      notice: this.notice,
+      subtitle: this.emma.subtitle
     };
   }
 

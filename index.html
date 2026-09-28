@@ -128,7 +128,6 @@
         <button class="tbtn" data-touch="drift">Derapa</button>
         <button class="tbtn accel" data-touch="accel">Gas</button>
       </div>
-      <button class="tbtn pause" data-touch="pause">II</button>
     </div>
   </section>
 
@@ -139,7 +138,7 @@
     </div>
     <div class="hud-notice" id="hub-notice"></div>
     <div class="hub-prompt" id="hub-prompt"><b id="hub-prompt-name"></b><span class="map-state" id="hub-prompt-state"></span></div>
-    <p class="hint hub-keys" id="hub-keys">Frecce / WASD per camminare · Spazio o K per saltare · Q / E girano la telecamera · Cammina dentro un ingresso per entrare · Esc pausa</p>
+    <p class="hint hub-keys" id="hub-keys">Frecce / WASD per camminare · Spazio o K per saltare · Q / E girano la telecamera · Cammina dentro un ingresso per entrare · Esc menu · M silenzio</p>
     <div class="touch" id="hub-touch">
       <div class="touch-left hub-pad">
         <button class="tbtn small" data-touch="up">▲</button>
@@ -149,7 +148,6 @@
       <div class="touch-right">
         <button class="tbtn accel" data-touch="jump">Salta</button>
       </div>
-      <button class="tbtn pause" data-touch="pause">II</button>
     </div>
   </section>
 
@@ -160,7 +158,7 @@
     <div class="story-flash" id="story-flash" aria-hidden="true"></div>
     <div class="story-callout" id="story-callout"></div>
     <div class="hud-top">
-      <div class="story-stat" id="story-lives-box"><span class="story-hearts" id="story-lives"></span></div>
+      <div class="story-stat" id="story-lives-box"><span class="story-hearts" id="story-lives"></span><span class="story-health hidden" id="story-health"><i id="story-health-fill"></i></span></div>
       <div class="story-stat hidden" id="story-speed-box"><b id="story-speed">0</b><small>km/h</small></div>
       <div class="story-boss hidden" id="story-boss"><span id="story-boss-name">Il Tifoso Supremo</span><div class="story-boss-bar"><i id="story-boss-fill"></i></div></div>
       <div class="story-timer hidden" id="story-timer"><small id="story-timer-label">Chiusura</small><b id="story-timer-val">0.0</b><span class="timer-gain" id="story-timer-gain"></span></div>
@@ -172,6 +170,8 @@
       </div>
     </div>
     <div class="hud-notice" id="story-notice"></div>
+    <div class="story-warn" id="story-warn"><span class="warn-arrow" id="story-warn-arrow"></span><b id="story-warn-text"></b></div>
+    <p class="story-sub" id="story-sub"></p>
     <div class="touch" id="story-touch">
       <div class="touch-left">
         <button class="tbtn" data-touch="left">◀</button>
@@ -182,10 +182,10 @@
           <button class="tbtn small" data-touch="up">▲</button>
           <button class="tbtn small" data-touch="down">▼</button>
         </div>
+        <button class="tbtn small hidden" data-touch="attack" id="story-tbtn-attack">Pugno</button>
         <button class="tbtn small" data-touch="item" id="story-tbtn-item">Lancia</button>
         <button class="tbtn accel" data-touch="jump" id="story-tbtn-jump">Salta</button>
       </div>
-      <button class="tbtn pause" data-touch="pause">II</button>
     </div>
   </section>
 
@@ -213,13 +213,31 @@
   </section>
 
   <!-- PAUSA -->
-  <section id="screen-pause" class="screen overlay">
-    <div class="panel">
-      <h2>Pausa</h2>
-      <button class="btn primary" data-pause="resume">Riprendi</button>
-      <button class="btn hidden" data-pause="help" id="pause-help">Istruzioni</button>
-      <button class="btn" data-pause="restart">Ricomincia la gara</button>
-      <button class="btn ghost" data-pause="quit">Torna al menu</button>
+  <section id="screen-pause" class="screen overlay game-menu">
+    <div class="panel gm-panel">
+      <div class="gm-main" id="gm-main">
+        <h2 id="gm-title">Pausa</h2>
+        <button class="btn primary" data-pause="resume">Riprendi</button>
+        <button class="btn hidden" data-pause="help" id="pause-help">Istruzioni</button>
+        <button class="btn" data-pause="restart" id="pause-restart">Ricomincia</button>
+        <div class="audio-rows" id="gm-audio"></div>
+        <button class="btn ghost" data-pause="quit" id="pause-quit">Esci</button>
+      </div>
+      <div class="gm-confirm hidden" id="gm-confirm">
+        <h2>Uscire?</h2>
+        <p id="gm-confirm-text">Vuoi davvero uscire? I progressi di questo livello andranno persi.</p>
+        <button class="btn primary" data-pause="stay">No, resto</button>
+        <button class="btn" data-pause="exit">Sì, esci</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANNELLO AUDIO (fuori dal gioco: menu principale, opzioni…) -->
+  <section id="screen-audio" class="screen overlay game-menu">
+    <div class="panel gm-panel">
+      <h2>Audio</h2>
+      <div class="audio-rows" id="audio-panel-rows"></div>
+      <button class="btn primary" id="audio-panel-close">Chiudi</button>
     </div>
   </section>
 
@@ -242,9 +260,7 @@
       <h2>Opzioni</h2>
     </header>
     <div class="options-body">
-      <label>Musica <input type="range" id="opt-music" min="0" max="1" step="0.05" value="0.6" /></label>
-      <label>Effetti <input type="range" id="opt-sfx" min="0" max="1" step="0.05" value="0.8" /></label>
-      <label>Voce di Emma <input type="range" id="opt-voice" min="0" max="1" step="0.05" value="1" /></label>
+      <div class="audio-rows" id="opt-audio"></div>
       <label>Difficoltà
         <select id="opt-diff">
           <option value="0.85">Tranquilla</option>
@@ -261,7 +277,7 @@
       </label>
       <div class="controls-legend">
         <h3>Comandi</h3>
-        <p><b>Frecce / WASD</b> guida · <b>Spazio</b> derapata (tieni premuto in curva, rilascia per il turbo) · <b>Maiusc / E</b> usa l'oggetto · <b>C</b> guarda indietro · <b>Esc</b> pausa</p>
+        <p><b>Frecce / WASD</b> guida · <b>Spazio</b> derapata (tieni premuto in curva, rilascia per il turbo) · <b>Maiusc / E</b> usa l'oggetto · <b>C</b> guarda indietro · <b>Esc</b> menu di gioco · <b>M</b> silenzio</p>
         <p><b>Storia:</b> <b>Frecce / A D</b> cammina · <b>Spazio / K</b> salta (più a lungo lo tieni, più salti in alto) · <b>Su / Giù</b> sulle scale · <b>Giù mentre corri</b> scivola · <b>Maiusc / E / J</b> lancia una bottiglia</p>
         <p>Su telefono e tablet compaiono i tasti sullo schermo. Funziona anche il gamepad.</p>
       </div>
@@ -282,6 +298,11 @@
       <p class="tiny">Motore: three.js · Musica ed effetti generati in tempo reale · Illustrazioni, modelli 3D e voce prodotti con Higgsfield.</p>
     </div>
   </section>
+
+  <div class="corner-ui" id="corner-ui">
+    <button class="corner-btn hidden" id="menu-btn" aria-label="Menu di gioco" title="Menu di gioco (Esc)">II</button>
+    <button class="corner-btn" id="audio-btn" aria-label="Audio" title="Audio (M per il silenzio)"></button>
+  </div>
 
   <div id="toast"></div>
   <script type="module" src="./src/main.js"></script>

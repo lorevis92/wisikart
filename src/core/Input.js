@@ -15,7 +15,9 @@ export class Input {
     this.lookBack = false;
     this._axisYPrev = 0;
     this.pausePressed = false;
-    this.touch = { left: false, right: false, accel: false, drift: false, jump: false, up: false, down: false, item: false };
+    this.mutePressed = false; // M: silenzio immediato di tutto l'audio
+    this.attackPressed = false; // pugno (rissa): F / L, tasto X del gamepad, tasto touch
+    this.touch = { left: false, right: false, accel: false, drift: false, jump: false, up: false, down: false, item: false, attack: false };
     this.brakeHeld = false;
     // modalità Storia (platform): assi grezzi e salto con fronte di salita
     this.axisX = 0;
@@ -40,7 +42,7 @@ export class Input {
     this.keys.clear();
     for (const k in this.touch) this.touch[k] = false;
     this.jumpHeld = false;
-    this.jumpPressed = this.upPressed = this.itemPressed = false;
+    this.jumpPressed = this.upPressed = this.itemPressed = this.attackPressed = false;
   }
 
   /**
@@ -76,6 +78,8 @@ export class Input {
     if (down && !e.repeat) {
       if (k === 'ShiftLeft' || k === 'ShiftRight' || k === 'KeyE' || k === 'KeyJ') this.itemPressed = true;
       if (k === 'Escape' || k === 'KeyP') this.pausePressed = true;
+      if (k === 'KeyM') this.mutePressed = true;
+      if (k === 'KeyF' || k === 'KeyL') this.attackPressed = true;
       // navigazione menu
       if (k === 'ArrowUp' || k === 'KeyW') this.menuEvents.push('up');
       if (k === 'ArrowDown' || k === 'KeyS') this.menuEvents.push('down');
@@ -93,7 +97,7 @@ export class Input {
     root.querySelectorAll('[data-touch]').forEach((b) => {
       const name = b.dataset.touch;
       // 'item' registra sia la pressione (lancio) sia il tenuto (freno nei livelli di volo)
-      const on = (e) => { e.preventDefault(); if (name === 'item') { this.itemPressed = true; set('item', true); } else if (name === 'pause') this.pausePressed = true; else set(name, true); };
+      const on = (e) => { e.preventDefault(); if (name === 'item') { this.itemPressed = true; set('item', true); } else if (name === 'pause') this.pausePressed = true; else { if (name === 'attack') this.attackPressed = true; set(name, true); } };
       const off = (e) => { e.preventDefault(); if (name !== 'pause') set(name, false); };
       b.addEventListener('pointerdown', on);
       b.addEventListener('pointerup', off);
@@ -125,6 +129,7 @@ export class Input {
       if (gp.buttons[2]?.pressed || (gp.buttons[6]?.value || 0) > 0.2) th = -1;
       if (gp.buttons[1]?.pressed || gp.buttons[5]?.pressed) drift = true;
       if (gp.buttons[3]?.pressed || gp.buttons[4]?.pressed) { if (!this._gpItem) this.itemPressed = true; this._gpItem = true; } else this._gpItem = false;
+      if (gp.buttons[2]?.pressed) { if (!this._gpAttack) this.attackPressed = true; this._gpAttack = true; } else this._gpAttack = false;
       if (gp.buttons[9]?.pressed) { if (!this._gpPause) this.pausePressed = true; this._gpPause = true; } else this._gpPause = false;
       if (gp.buttons[12]?.pressed) { if (!this._gpUp) this.menuEvents.push('up'); this._gpUp = true; } else this._gpUp = false;
       if (gp.buttons[13]?.pressed) { if (!this._gpDown) this.menuEvents.push('down'); this._gpDown = true; } else this._gpDown = false;

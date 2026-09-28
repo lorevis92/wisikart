@@ -19,6 +19,8 @@ const THEMES = {
   // Deposito Valvo & Go: magazzino notturno, minore e meccanico; l'allarme dell'hangar corre e insiste
   valvo: { bpm: 108, root: 52, chords: [[0, 3, 7, 10], [0, 3, 7, 10], [-4, 0, 3, 7], [-2, 2, 5, 9]], lead: 'pluck', drums: 'drive' },
   allarme: { bpm: 152, root: 50, chords: [[0, 3, 7, 10], [1, 5, 8, 12], [0, 3, 7, 10], [-2, 1, 5, 8]], lead: 'saw', drums: 'drive' },
+  // Rissa alla tavola calda: arcade, maggiore e di corsa (I – VII♭ – IV – V), onde quadre e cassa dritta
+  rissa: { bpm: 152, root: 55, chords: [[0, 4, 7, 12], [-2, 2, 5, 10], [5, 9, 12, 17], [7, 11, 14, 19]], lead: 'saw', drums: 'drive' },
   results: { bpm: 104, root: 57, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [2, 5, 9, 12]], lead: 'soft', drums: 'light' }
 };
 
@@ -31,6 +33,11 @@ export class AudioEngine {
     this.voiceGain = null;
     this.engineGain = null;
     this.volumes = { music: 0.6, sfx: 0.8, voice: 1 };
+    // interruttori per canale e silenzio generale (tasto M, icona dell'altoparlante)
+    this.enabled = { music: true, sfx: true, voice: true };
+    this.muted = false;
+    this.activeVoices = new Set();
+    this.voiceEpoch = 0; // cresce quando le voci vengono zittite: chi ha una coda di battute la svuota
     this.tempo = 1; // moltiplicatore del tempo della musica (il finale teso dei voli lo alza)
     this.voices = {};
     this.theme = null;
@@ -69,12 +76,41 @@ export class AudioEngine {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   }
 
+  /**
+   * Impostazioni audio del gioco: volumi (music, sfx, voice), interruttori (musicOn, sfxOn, voiceOn) e
+   * silenzio generale (muted). Spegnere la voce (o silenziare tutto) interrompe subito la battuta in corso.
+   */
   setVolumes(v) {
-    Object.assign(this.volumes, v);
+    for (const k of ['music', 'sfx', 'voice']) {
+      if (typeof v[k] === 'number') this.volumes[k] = v[k];
+      if (typeof v[k + 'On'] === 'boolean') this.enabled[k] = v[k + 'On'];
+    }
+    if (typeof v.muted === 'boolean') this.muted = v.muted;
+    if (!this.voiceOn()) this.stopVoices();
     if (!this.ctx) return;
-    this.musicGain.gain.value = this.volumes.music * 0.5;
-    this.sfxGain.gain.value = this.volumes.sfx;
-    this.voiceGain.gain.value = this.volumes.voice;
+    const now = this.ctx.currentTime;
+    for (const [g, val] of [[this.musicGain, this._level('music') * 0.5], [this.sfxGain, this._level('sfx')], [this.voiceGain, this._level('voice')]]) {
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(val, now);
+    }
+  }
+
+  /** Volume effettivo di un canale (0 se spento o se è tutto silenziato). */
+  _level(k) { return this.muted || !this.enabled[k] ? 0 : this.volumes[k]; }
+
+  /** La voce di Emma si sente? (altrimenti restano solo i sottotitoli) */
+  voiceOn() { return !this.muted && this.enabled.voice && this.volumes.voice > 0; }
+
+  /** Zittisce le battute in corso e fa svuotare le code (vedi voiceEpoch). */
+  stopVoices() {
+    for (const s of this.activeVoices) { try { s.stop(); } catch {} }
+    this.activeVoices.clear();
+    this.voiceEpoch++;
+    if (this.ctx) {
+      const g = this.musicGain.gain, now = this.ctx.currentTime;
+      g.cancelScheduledValues(now);
+      g.setTargetAtTime(this._level('music') * 0.5, now, 0.1);
+    }
   }
 
   voice(name, opts) {
@@ -83,17 +119,20 @@ export class AudioEngine {
 
   /** Suona una voce già caricata (es. le battute di Emma nei livelli) abbassando la musica; ritorna la durata o 0. */
   voiceBuffer(b, { duckMusic = true } = {}) {
-    if (!b || !this.ctx) return 0;
+    if (!b || !this.ctx || !this.voiceOn()) return 0;
     const s = this.ctx.createBufferSource();
     s.buffer = b;
     s.connect(this.voiceGain);
     s.start();
+    this.activeVoices.add(s);
+    s.onended = () => this.activeVoices.delete(s);
     if (duckMusic) {
       const g = this.musicGain.gain;
       const now = this.ctx.currentTime;
+      const full = this._level('music') * 0.5;
       g.cancelScheduledValues(now);
-      g.setTargetAtTime(this.volumes.music * 0.18, now, 0.05);
-      g.setTargetAtTime(this.volumes.music * 0.5, now + b.duration, 0.4);
+      g.setTargetAtTime(full * 0.36, now, 0.05);
+      g.setTargetAtTime(full, now + b.duration, 0.4);
     }
     return b.duration;
   }
@@ -239,6 +278,16 @@ export class AudioEngine {
       case 'whoosh': this._noise(t, 0.3, 0.25, d, 900); break;
       case 'jump': this._osc('triangle', 440, t, 0.06, 0.14, d); this._osc('triangle', 660, t + 0.05, 0.08, 0.12, d); break;
       case 'break': this._noise(t, 0.18, 0.28, d, 2200); this._osc('triangle', 1400, t, 0.05, 0.08, d); break;
+      // rissa: pugno (colpo sordo), pugno finale più pesante, rete che cade, juke-box che parte
+      case 'punch': this._noise(t, 0.08, 0.35, d, 700); this._osc('sine', 150, t, 0.09, 0.3, d, { attack: 0.003, release: 0.07 }); break;
+      case 'punch3': this._noise(t, 0.14, 0.45, d, 500); this._osc('sine', 110, t, 0.16, 0.4, d, { attack: 0.003, release: 0.12 }); break;
+      case 'swing': this._noise(t, 0.1, 0.12, d, 2500); break;
+      case 'net': this._noise(t, 0.4, 0.25, d, 1200); this._osc('triangle', 300, t, 0.3, 0.12, d); break;
+      case 'jukebox': [392, 494, 587, 784, 587, 784].forEach((f, i) => this._osc('square', f, t + i * 0.07, 0.1, 0.1, d)); break;
+      // inseguimento: allarme missile, esplosione, raggio del cannone ionico
+      case 'warn': this._osc('square', 990, t, 0.09, 0.14, d); this._osc('square', 990, t + 0.14, 0.09, 0.14, d); break;
+      case 'boom': this._noise(t, 0.6, 0.6, d, 200); this._osc('sine', 70, t, 0.5, 0.45, d, { attack: 0.005, release: 0.4 }); break;
+      case 'beam': this._noise(t, 1.0, 0.35, d, 300); this._osc('sawtooth', 90, t, 1.0, 0.25, d, { attack: 0.05, release: 0.6 }); this._osc('sine', 1800, t, 0.8, 0.08, d); break;
     }
   }
 

@@ -22,7 +22,8 @@ export const PORTALE = {
   patrolModel: { url: 'assets/story/portale/pattuglia.glb', h: 2.0 },
   portalModel: { url: 'assets/props/portale-niaboc.glb', h: 30 },
   cinematic: 'assets/video/intro.mp4', // il tunnel: si vede se si arriva prima del gong
-  completeMessage: 'Sei passato dal portale prima del gong. Il viaggio verso Retah è in arrivo.',
+  completeMessage: 'Atterraggio riuscito: benvenuto su Retah. La tavola calda sembra un posto tranquillo. Non lo è.',
+  nextWorld: 'retah', // finito il tunnel si atterra su Retah (e per ora non si torna a Niaboc)
 
   // --- tempo (tarato con i piloti automatici: vedi README) ---
   time: 12.5, // secondi al gong alla partenza: da soli non bastano

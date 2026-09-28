@@ -32,7 +32,8 @@ export class Hub {
     this.onEnter = onEnter;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.3, 600);
-    this.pal = trackById.niaboc.palette;
+    this.pal = trackById[world.track || 'niaboc'].palette; // colori del circuito dello stesso pianeta
+    this.desert = world.theme === 'desert';
     this.circles = [];   // ostacoli cilindrici { x, z, r }
     this.segments = [];  // ostacoli lineari { ax, az, bx, bz, r }
     this.platforms = []; // cilindri su cui si sale { x, z, r, top }
@@ -53,12 +54,20 @@ export class Hub {
 
   // ---------- costruzione ----------
   async load(progress = () => {}) {
-    progress('Accendo i lampioni…');
+    progress(this.desert ? 'Spazzo la sabbia dalla piazza…' : 'Accendo i lampioni…');
     await this._sky();
     this._lights();
-    this._ground();
-    this._city();
-    this._props();
+    if (this.desert) {
+      // Retah: pianura di sabbia al tramonto, un lago calmo su un lato, cespugli bassi, veicoli fermi
+      this._sand();
+      this._lake();
+      this._bushes();
+      await this._decor();
+    } else {
+      this._ground();
+      this._city();
+      this._props();
+    }
     progress('Apro i portoni…');
     await Promise.all(this.world.entrances.map((e) => this._entrance(e)));
     progress('Whiskey scende in piazza…');
@@ -76,15 +85,16 @@ export class Hub {
     if (!tex) tex = T.skyGradientTexture('#05061a', '#1a1a4a', '#3a2a5a', true, true);
     this.scene.background = tex;
     this.scene.environment = tex;
-    this.scene.environmentIntensity = 0.15; // notte: il cielo non deve illuminare tutto di grigio
-    this.scene.fog = new THREE.Fog(this.pal.fog, 70, 190);
+    // notte: il cielo non deve illuminare tutto di grigio; al tramonto di Retah invece scalda tutto
+    this.scene.environmentIntensity = this.desert ? 0.55 : 0.15;
+    this.scene.fog = this.desert ? new THREE.Fog(this.pal.fog, 110, 420) : new THREE.Fog(this.pal.fog, 70, 190);
   }
 
   _lights() {
-    this.scene.add(new THREE.HemisphereLight(new THREE.Color(this.pal.ambient), new THREE.Color(this.pal.ground), 0.45));
-    // la luna grande, rosa: fa ombre nette sulla piazza
-    const moon = new THREE.DirectionalLight(new THREE.Color(this.pal.sun), 1.9);
-    moon.position.set(40, 60, -30);
+    this.scene.add(new THREE.HemisphereLight(new THREE.Color(this.pal.ambient), new THREE.Color(this.pal.ground), this.desert ? 0.95 : 0.45));
+    // Niaboc: la luna grande, rosa, fa ombre nette sulla piazza. Retah: sole basso del tramonto, ombre lunghe
+    const moon = new THREE.DirectionalLight(new THREE.Color(this.pal.sun), this.desert ? 2.3 : 1.9);
+    moon.position.set(this.desert ? -70 : 40, this.desert ? 34 : 60, this.desert ? -40 : -30);
     moon.castShadow = true;
     moon.shadow.mapSize.set(2048, 2048);
     const c = moon.shadow.camera;
@@ -217,6 +227,111 @@ export class Hub {
       this.scene.add(bench);
       this.platforms.push({ x, z, r: 1.2, top: 0.7 });
     }
+  }
+
+  /** Retah: pianura di sabbia piatta fino all'orizzonte, con qualche venatura più scura. */
+  _sand() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = this.pal.sand;
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2600; i++) {
+      const k = ((i * 97) % 100) / 100;
+      g.fillStyle = k < 0.5 ? 'rgba(160,120,80,0.10)' : 'rgba(255,240,210,0.12)';
+      g.fillRect((i * 53) % 256, (i * 131 + (i >> 3)) % 256, 2 + (i % 3), 1 + (i % 2));
+    }
+    // ondine lasciate dal vento
+    g.strokeStyle = 'rgba(150,110,70,0.12)';
+    g.lineWidth = 2;
+    for (let y = 8; y < 256; y += 22) { g.beginPath(); for (let x = 0; x <= 256; x += 16) g.lineTo(x, y + Math.sin(x * 0.05 + y) * 3); g.stroke(); }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(90, 90);
+    tex.anisotropy = 8;
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(700, 64), std('#ffffff', { map: tex, roughness: 0.97 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
+  }
+
+  /** Il lago, calmo, su un lato: l'acqua comincia a lake.x (verso +X) e ci si ferma sulla riva. */
+  _lake() {
+    const L = this.world.lake;
+    if (!L) return;
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(900, 1400), new THREE.MeshStandardMaterial({ color: 0x3f7fa8, roughness: 0.08, metalness: 0.35, emissive: 0x1a3048, emissiveIntensity: 0.35, transparent: true, opacity: 0.92 }));
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(L.x + 450, 0.04, 0);
+    this.scene.add(water);
+    // riva bagnata, più scura
+    const shore = new THREE.Mesh(new THREE.PlaneGeometry(5, 1400), std('#a88a64', { roughness: 0.6 }));
+    shore.rotation.x = -Math.PI / 2;
+    shore.position.set(L.x - 2.2, 0.02, 0);
+    shore.receiveShadow = true;
+    this.scene.add(shore);
+    // riflessi del tramonto che luccicano sull'acqua
+    const glints = [];
+    for (let i = 0; i < 40; i++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(2.5 + (i % 4), 0.25), new THREE.MeshBasicMaterial({ color: 0xffd2a0, transparent: true, opacity: 0.5, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(L.x + 8 + ((i * 37) % 140), 0.07, -70 + ((i * 53) % 140));
+      this.scene.add(m);
+      glints.push(m);
+    }
+    this.dynamic.push((t) => glints.forEach((m, i) => { m.material.opacity = 0.2 + Math.max(0, Math.sin(t * 1.5 + i * 1.7)) * 0.45; }));
+  }
+
+  /** Cespugli bassi sparsi sulla sabbia (si attraversano: non fanno da ostacolo). */
+  _bushes() {
+    const n = 180;
+    const geo = new THREE.IcosahedronGeometry(1, 0);
+    const mesh = new THREE.InstancedMesh(geo, std('#8a8a4a', { roughness: 0.95, flatShading: true }), n);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
+    const lakeX = this.world.lake ? this.world.lake.x - 3 : Infinity;
+    const busy = [...this.world.entrances.map((e) => { const a = THREE.MathUtils.degToRad(e.angle); return [Math.sin(a) * e.dist, -Math.cos(a) * e.dist, 12]; }), ...(this.world.decor || []).map((d) => [d.x, d.z, 5])];
+    let k = 0;
+    for (let i = 0; k < n && i < n * 6; i++) {
+      const a = i * 2.39996, r = 10 + ((i * 7919) % 1000) / 1000 * 170;
+      const x = Math.sin(a) * r, z = -Math.cos(a) * r;
+      if (x > lakeX || busy.some(([bx, bz, br]) => Math.hypot(x - bx, z - bz) < br)) continue;
+      const h = 0.35 + ((i * 31) % 10) / 10 * 0.55;
+      pos.set(x, h * 0.45, z);
+      sc.set(h * 1.6, h, h * 1.4);
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), i);
+      mesh.setMatrixAt(k++, m.compose(pos, q, sc));
+    }
+    mesh.count = k;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.scene.add(mesh);
+  }
+
+  /** Veicoli e rottami fermi (autovettori parcheggiati, blindati minacciosi, relitto inclinato): solo scena e ostacoli. */
+  async _decor() {
+    await Promise.all((this.world.decor || []).map(async (d) => {
+      const model = await Assets.model(d.model, { targetHeight: d.h });
+      const g = new THREE.Group();
+      if (model) {
+        model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        g.add(model);
+      } else {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(d.h * 2, d.h, d.h * 1.2), std('#6a5a4a'));
+        b.position.y = d.h / 2;
+        g.add(b);
+      }
+      g.position.set(d.x, d.sink ? -d.sink : 0, d.z);
+      g.rotation.set(d.tiltX || 0, THREE.MathUtils.degToRad(d.rot || 0), d.tilt || 0);
+      this.scene.add(g);
+      if (d.r) this.circles.push({ x: d.x, z: d.z, r: d.r });
+      // blindati: luci rosse di sorveglianza che pulsano piano
+      if (d.lights) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a3a }));
+        eye.position.set(0, d.h * 0.95, 0);
+        g.add(eye);
+        this.dynamic.push((t) => { eye.visible = Math.sin(t * 2.2 + d.x) > -0.3; });
+      }
+    }));
   }
 
   async _entrance(e) {
@@ -420,6 +535,7 @@ export class Hub {
     // bordo della piazza
     const d = Math.hypot(p.x, p.z), max = this.world.radius + 1.2;
     if (d > max) { p.x *= max / d; p.z *= max / d; }
+    if (this.world.lake && p.x > this.world.lake.x - 1) p.x = this.world.lake.x - 1; // riva del lago
   }
 
   _groundAt(x, z, y) {

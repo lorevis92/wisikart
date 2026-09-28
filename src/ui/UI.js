@@ -20,16 +20,19 @@ export class UI {
     this.focus = { list: [], index: 0, cols: 1, onChange: null };
     this.noticeTimer = null;
     this.centerTimer = null;
+    this._waits = new Set(); // pannelli e video in attesa di un tasto (vedi abortWaits)
     document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => game.back()));
     $('#toast');
   }
 
   show(name) {
-    document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+    // il menu di gioco e il pannello audio restano sopra (un caricamento può finire mentre sono aperti)
+    const keep = ['screen-pause', 'screen-audio'].filter((id) => $(`#${id}`).classList.contains('active'));
+    document.querySelectorAll('.screen').forEach((s) => { if (!keep.includes(s.id)) s.classList.remove('active'); });
     const el = $(`#screen-${name}`);
     if (el) el.classList.add('active');
     this.current = name;
-    this.focus = { list: [], index: 0, cols: 1 };
+    if (!keep.length) this.focus = { list: [], index: 0, cols: 1 };
   }
 
   /**
@@ -96,6 +99,9 @@ export class UI {
   moveFocus(dir) {
     const f = this.focus;
     if (!f.list.length) return;
+    // righe con un cursore (volumi): sinistra/destra lo spostano invece di cambiare voce
+    const cur = f.list[f.index];
+    if ((dir === 'left' || dir === 'right') && cur && cur._adjust) { cur._adjust(dir === 'right' ? 1 : -1); return; }
     let i = f.index;
     if (dir === 'up') i -= f.cols;
     if (dir === 'down') i += f.cols;
@@ -109,7 +115,134 @@ export class UI {
 
   activateFocus() {
     const el = this.focus.list[this.focus.index];
-    if (el) el.click();
+    if (el && el._activate) el._activate();
+    else if (el) el.click();
+  }
+
+  // ---------- audio: righe condivise da menu di gioco, pannello audio e opzioni ----------
+  /**
+   * Righe dei comandi audio dentro `box`: silenzio generale, Musica, Voce di Emma, Effetti (interruttore e
+   * cursore), Sottotitoli. Con tastiera e gamepad: Invio accende/spegne, sinistra/destra regolano il volume.
+   * Ritorna le righe, da mettere nella lista del focus.
+   */
+  audioRows(box) {
+    const s = this.game.settings;
+    const rows = [
+      { key: 'muted', label: 'Silenzio totale', hint: 'M', invert: true },
+      { key: 'music', label: 'Musica', slider: true },
+      { key: 'voice', label: 'Voce di Emma', slider: true },
+      { key: 'sfx', label: 'Effetti', slider: true },
+      { key: 'subtitles', label: 'Sottotitoli' }
+    ];
+    box.innerHTML = '';
+    return rows.map((r) => {
+      const el = document.createElement('div');
+      el.className = 'arow' + (r.slider ? '' : ' no-slider');
+      el.tabIndex = -1;
+      const onKey = r.slider ? r.key + 'On' : r.key;
+      el.innerHTML = `<button class="atoggle" type="button"></button><span class="aname">${r.label}${r.hint ? ` <small>${r.hint}</small>` : ''}</span>${r.slider ? '<input type="range" min="0" max="1" step="0.05" />' : ''}`;
+      const btn = el.querySelector('.atoggle'), range = el.querySelector('input');
+      const render = () => {
+        const on = !!s[onKey];
+        btn.textContent = r.invert ? (on ? 'Sì' : 'No') : on ? 'On' : 'Off';
+        btn.classList.toggle('on', r.invert ? !on : on);
+        btn.setAttribute('aria-pressed', String(on));
+        el.classList.toggle('off', r.invert ? false : !on);
+        if (range) range.value = s[r.key];
+      };
+      const toggle = () => { this.game.setAudio({ [onKey]: !s[onKey] }); this.game.audio.sfx('move'); };
+      btn.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+      el._activate = toggle;
+      if (range) {
+        range.addEventListener('input', () => this.game.setAudio({ [r.key]: +range.value, [onKey]: true }));
+        el._adjust = (d) => { this.game.setAudio({ [r.key]: Math.round(Math.max(0, Math.min(1, s[r.key] + d * 0.1)) * 20) / 20, [onKey]: true }); this.game.audio.sfx('move'); };
+      }
+      el._render = render;
+      render();
+      box.appendChild(el);
+      return el;
+    });
+  }
+
+  /** Aggiorna tutte le righe audio visibili e l'icona dell'altoparlante dopo un cambio. */
+  refreshAudio() {
+    document.querySelectorAll('.arow').forEach((el) => el._render && el._render());
+    const s = this.game.settings;
+    const silent = s.muted || (!s.musicOn && !s.sfxOn && !s.voiceOn);
+    const btn = $('#audio-btn');
+    btn.classList.toggle('muted', !!silent);
+    btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>${silent
+      ? '<path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+      : '<path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>'}</svg>`;
+  }
+
+  /** Pannello audio da solo (fuori dal gioco). Si chiude con Chiudi, Esc o il tasto B del gamepad. */
+  audioPanel(on) {
+    if (on) {
+      this._panelFocus = this.focus;
+      const rows = this.audioRows($('#audio-panel-rows'));
+      this.overlay('audio', true);
+      this.setFocusList([...rows, $('#audio-panel-close')]);
+    } else {
+      this.overlay('audio', false);
+      if (this._panelFocus) { this.focus = this._panelFocus; this._panelFocus = null; this._applyFocus(); }
+    }
+  }
+
+  /** Tasto del menu (II) nell'angolo: visibile dove il menu di gioco si può aprire. */
+  menuButton(on) { $('#menu-btn').classList.toggle('hidden', !on); }
+
+  /**
+   * Menu di gioco. ctx = { title, help, restart (testo o null), confirm (testo della conferma d'uscita),
+   * focusAudio } oppure null per chiuderlo.
+   */
+  gameMenu(ctx) {
+    if (!ctx) { this.overlay('pause', false); return; }
+    $('#gm-title').textContent = ctx.title || 'Pausa';
+    $('#pause-help').classList.toggle('hidden', !ctx.help);
+    $('#pause-restart').classList.toggle('hidden', !ctx.restart);
+    if (ctx.restart) $('#pause-restart').textContent = ctx.restart;
+    $('#gm-confirm-text').textContent = ctx.confirm;
+    this.gameMenuConfirm(false);
+    this.overlay('pause', true);
+    const rows = this.audioRows($('#gm-audio'));
+    const main = [...$('#gm-main').querySelectorAll(':scope > .btn:not(.hidden)')];
+    const quit = main.pop(); // Esci resta in fondo, dopo l'audio
+    this.setFocusList([...main, ...rows, quit]);
+    if (ctx.focusAudio) { this.focus.index = main.length; this._applyFocus(); } // dall'altoparlante: subito sul silenzio
+  }
+
+  /** Vista di conferma dell'uscita dentro il menu di gioco. */
+  gameMenuConfirm(on) {
+    $('#gm-main').classList.toggle('hidden', on);
+    $('#gm-confirm').classList.toggle('hidden', !on);
+    if (on) this.setFocusList([...$('#gm-confirm').querySelectorAll('.btn')]);
+  }
+
+  /**
+   * Un tasto o un tocco che deve saltare un video o chiudere un pannello? No se è un comando del menu
+   * (Esc, P, M), un tocco sui tasti dell'angolo o sul menu, o se il menu di gioco è aperto.
+   */
+  _skips(e) {
+    if (this.game.state === 'menu' || this.game.audioPanelOpen) return false;
+    if (e.type === 'keydown' && ['Escape', 'KeyP', 'KeyM'].includes(e.code)) return false;
+    if (e.type === 'keydown' && ['Escape', 'Esc', 'p', 'P', 'm', 'M'].includes(e.key)) return false;
+    if (e.target && e.target.closest && e.target.closest('.corner-ui, #screen-pause, #screen-audio')) return false;
+    return true;
+  }
+
+  /** Menu aperto sopra un video (cinematica, griglia di partenza): il video si ferma e poi riprende. */
+  pauseVideos(on) {
+    for (const v of [$('#cinematic-video'), $('#loading-video')]) {
+      if (on) { if (!v.paused && v.getAttribute('src')) { v._menuPaused = true; v.pause(); } }
+      else if (v._menuPaused) { v._menuPaused = false; v.play().catch(() => {}); }
+    }
+  }
+
+  /** Uscita dal gioco con pannelli o video in attesa: li chiude tutti (chi li aspettava controlla e si ferma). */
+  abortWaits() {
+    for (const f of this._waits) f();
+    this._waits.clear();
   }
 
   // ---------- boot ----------
@@ -338,19 +471,22 @@ export class UI {
   _waitPanel(name) {
     return new Promise((resolve) => {
       let done = false;
+      const onInput = (e) => { if (this._skips(e)) finish(); };
       const finish = () => {
         if (done) return;
         done = true;
-        window.removeEventListener('keydown', finish);
-        window.removeEventListener('pointerdown', finish);
-        this.closePanel = null;
+        window.removeEventListener('keydown', onInput);
+        window.removeEventListener('pointerdown', onInput);
+        this._waits.delete(finish);
+        if (this.closePanel === finish) this.closePanel = null;
         this.overlay(name, false);
         resolve();
       };
+      this._waits.add(finish);
       setTimeout(() => {
         if (done) return;
-        window.addEventListener('keydown', finish);
-        window.addEventListener('pointerdown', finish);
+        window.addEventListener('keydown', onInput);
+        window.addEventListener('pointerdown', onInput);
         this.closePanel = finish;
       }, 450);
     });
@@ -380,19 +516,24 @@ export class UI {
     this.show('cinematic');
     const v = $('#cinematic-video');
     return new Promise((resolve) => {
-      let done = false;
+      let done = false, guard = 0;
+      const onInput = (e) => { if (this._skips(e)) finish(); };
       const finish = () => {
         if (done) return;
         done = true;
-        window.removeEventListener('keydown', finish);
-        window.removeEventListener('pointerdown', finish);
+        window.removeEventListener('keydown', onInput);
+        window.removeEventListener('pointerdown', onInput);
+        this._waits.delete(finish);
         clearTimeout(guard);
         this.stopVideo(v);
         resolve();
       };
+      this._waits.add(finish);
       // non far scattare il salto con lo stesso tasto che ha chiuso il livello
-      setTimeout(() => { if (!done) { window.addEventListener('keydown', finish); window.addEventListener('pointerdown', finish); } }, 600);
-      const guard = setTimeout(finish, 60000);
+      setTimeout(() => { if (!done) { window.addEventListener('keydown', onInput); window.addEventListener('pointerdown', onInput); } }, 600);
+      // rete di sicurezza se il video si blocca (con il menu aperto il video è fermo: si aspetta)
+      const arm = () => { guard = setTimeout(() => (this.game.state === 'menu' ? arm() : finish()), 60000); };
+      arm();
       this.playVideo(v, url, { onFail: finish, onEnd: finish });
     });
   }
@@ -402,11 +543,16 @@ export class UI {
     this.show('story-hud');
     $('#story-touch').classList.toggle('on', this.game.input.isTouch);
     $('#story-notice').classList.remove('show');
-    const flight = type === 'flight';
+    $('#story-sub').classList.remove('show');
+    $('#story-warn').classList.remove('show');
+    const flight = type === 'flight' || type === 'chase';
     $('#story-tbtn-jump').textContent = flight ? 'Spara' : 'Salta';
     $('#story-tbtn-item').textContent = flight ? 'Frena' : 'Lancia';
+    $('#story-tbtn-attack').classList.toggle('hidden', type !== 'brawl'); // rissa: c'è anche il pugno
     this._storyNotice = null;
     this._storyLives = null;
+    this._storySub = null;
+    this._warnKey = null;
   }
 
   storyHud(h) {
@@ -483,6 +629,28 @@ export class UI {
       if (h.notice) n.textContent = h.notice;
       n.classList.toggle('show', !!h.notice);
     }
+    // sottotitoli di Emma: restano anche a voce spenta; li nasconde solo l'opzione Sottotitoli
+    const sub = this.game.settings.subtitles !== false ? h.subtitle || null : null;
+    if (sub !== this._storySub) {
+      this._storySub = sub;
+      const el = $('#story-sub');
+      if (sub) el.textContent = sub;
+      el.classList.toggle('show', !!sub);
+    }
+    // salute dentro la vita (rissa)
+    $('#story-health').classList.toggle('hidden', h.health === undefined);
+    if (h.health !== undefined) $('#story-health-fill').style.width = `${(h.health / h.maxHealth) * 100}%`;
+    // avviso con direzione (missili dell'inseguimento)
+    const warnKey = h.warn ? h.warn.text + h.warn.dir : null;
+    if (warnKey !== this._warnKey) {
+      this._warnKey = warnKey;
+      const w = $('#story-warn');
+      if (h.warn) {
+        $('#story-warn-text').textContent = h.warn.text;
+        $('#story-warn-arrow').textContent = { left: '◀', right: '▶', up: '▲', down: '▼', back: '▼' }[h.warn.dir] || '!';
+      }
+      w.classList.toggle('show', !!h.warn);
+    }
   }
 
   // ---------- caricamento ----------
@@ -499,17 +667,20 @@ export class UI {
     $('#loading-skip').classList.remove('hidden');
     return new Promise((resolve) => {
       let done = false;
+      const onInput = (e) => { if (this._skips(e)) finish(); };
       const finish = () => {
         if (done) return;
         done = true;
-        window.removeEventListener('keydown', finish);
-        window.removeEventListener('pointerdown', finish);
+        window.removeEventListener('keydown', onInput);
+        window.removeEventListener('pointerdown', onInput);
+        this._waits.delete(finish);
         this.stopVideo(v);
         $('#loading-skip').classList.add('hidden');
         resolve();
       };
-      window.addEventListener('keydown', finish);
-      window.addEventListener('pointerdown', finish);
+      this._waits.add(finish);
+      window.addEventListener('keydown', onInput);
+      window.addEventListener('pointerdown', onInput);
       // ogni pista ha la sua griglia di partenza; senza video resta l'anteprima statica
       if (track.grid) this.playVideo(v, track.grid, { onFail: finish, onEnd: finish });
       else finish();
@@ -677,17 +848,13 @@ export class UI {
   // ---------- opzioni ----------
   options(settings, onChange) {
     this.show('options');
-    $('#opt-music').value = settings.music;
-    $('#opt-sfx').value = settings.sfx;
-    $('#opt-voice').value = settings.voice;
+    // audio: le stesse righe del menu di gioco (valgono ovunque e si salvano subito)
+    const rows = this.audioRows($('#opt-audio'));
     $('#opt-diff').value = settings.difficulty;
     $('#opt-quality').value = settings.quality;
-    const read = () => onChange({
-      music: +$('#opt-music').value, sfx: +$('#opt-sfx').value, voice: +$('#opt-voice').value,
-      difficulty: +$('#opt-diff').value, quality: $('#opt-quality').value
-    });
-    ['#opt-music', '#opt-sfx', '#opt-voice', '#opt-diff', '#opt-quality'].forEach((s) => ($(s).oninput = read));
-    this.setFocusList([$('#screen-options [data-back]')]);
+    const read = () => onChange({ difficulty: +$('#opt-diff').value, quality: $('#opt-quality').value });
+    ['#opt-diff', '#opt-quality'].forEach((s) => ($(s).oninput = read));
+    this.setFocusList([...rows, $('#screen-options [data-back]')]);
   }
 
   credits() {
@@ -695,8 +862,4 @@ export class UI {
     this.setFocusList([$('#screen-credits [data-back]')]);
   }
 
-  pause(on) {
-    this.overlay('pause', on);
-    if (on) this.setFocusList([...document.querySelectorAll('#screen-pause .btn')]);
-  }
 }

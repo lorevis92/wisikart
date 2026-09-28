@@ -17,8 +17,16 @@ import { WORLDS } from './story/worlds.js';
 import { Hub } from './story/Hub.js';
 import { storyHero } from './story/hero.js';
 import { FlightMode } from './story/FlightMode.js';
+import { BrawlMode } from './story/BrawlMode.js';
+import { ChaseMode } from './story/ChaseMode.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
+// stati da cui si apre il menu di gioco (Esc, Start, tasto II): piazza, livelli, gare, caricamenti, video
+const MENU_FROM = ['race', 'loading', 'story', 'storyload', 'briefing', 'storyhelp', 'hub', 'hubload', 'cinematic', 'medals'];
+// stati di gioco in cui le frecce non navigano un menu
+const GAMEPLAY = ['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'];
+// motore di ogni tipo di livello della Storia
+const MODES = { flight: FlightMode, chase: ChaseMode, brawl: BrawlMode };
 
 class Game {
   constructor() {
@@ -36,9 +44,13 @@ class Game {
     this.audio = new AudioEngine();
     this.ui = new UI(this);
     this.state = 'boot';
-    this.settings = { music: 0.6, sfx: 0.8, voice: 1, difficulty: 1, quality: 'high' };
+    // audio: volumi, interruttori per canale, silenzio generale (M) e sottotitoli; salvati con il resto
+    this.settings = { music: 0.6, sfx: 0.8, voice: 1, musicOn: true, sfxOn: true, voiceOn: true, muted: false, subtitles: true, difficulty: 1, quality: 'high' };
     this.save = this._loadSave();
     Object.assign(this.settings, this.save.settings || {});
+    this.menu = null; // menu di gioco aperto: { from: stato di partenza, confirm }
+    this.audioPanelOpen = false;
+    this._flow = 0; // cresce a ogni nuovo caricamento o uscita: i caricamenti superati si fermano da soli
     this.composer = null;
     this.menuScene = null;
     this._resize();
@@ -46,6 +58,11 @@ class Game {
     this.input.bindTouch(document.getElementById('touch'));
     this.input.bindTouch(document.getElementById('story-touch'));
     this.input.bindTouch(document.getElementById('hub-touch'));
+    this.audio.setVolumes(this.settings);
+    this.ui.refreshAudio();
+    document.getElementById('menu-btn').addEventListener('click', () => { if (this.state === 'menu') this.closeMenu(); else this.openMenu(); });
+    document.getElementById('audio-btn').addEventListener('click', () => this.onSpeaker());
+    document.getElementById('audio-panel-close').addEventListener('click', () => this.closeAudioPanel());
     document.querySelectorAll('#main-menu .menu-item').forEach((b) => b.addEventListener('click', () => this.menuAction(b.dataset.action)));
     document.querySelectorAll('#kart-menu .menu-item').forEach((b) => b.addEventListener('click', () => {
       if (b.dataset.action === 'main') { this.audio.sfx('back'); this.state = 'title'; this.ui.title(); }
@@ -176,11 +193,120 @@ class Game {
     this.ui.kartMenu();
   }
 
-  /** Testi della pausa: riprendi / ricomincia / esci, secondo dove ci si trova. */
-  _pauseLabels(restart, quit, help = false) {
-    document.querySelector('[data-pause="restart"]').textContent = restart;
-    document.querySelector('[data-pause="quit"]').textContent = quit;
-    document.getElementById('pause-help').classList.toggle('hidden', !help); // "Istruzioni" solo nei livelli della Storia
+  // ---------- audio ----------
+  /** Cambia le impostazioni audio (volumi, interruttori, silenzio, sottotitoli): valgono subito ovunque e si salvano. */
+  setAudio(patch) {
+    Object.assign(this.settings, patch);
+    this.audio.setVolumes(this.settings);
+    this._persist();
+    this.ui.refreshAudio();
+  }
+
+  /** Tasto M: tutto l'audio spento o riacceso, subito. */
+  toggleMute() {
+    this.setAudio({ muted: !this.settings.muted });
+    this.ui.toast(this.settings.muted ? 'Audio spento. M per riaccenderlo.' : 'Audio acceso.');
+  }
+
+  /** Altoparlante nell'angolo: il primo tocco silenzia tutto, il secondo apre il pannello audio. */
+  onSpeaker() {
+    if (this.state === 'menu' || this.audioPanelOpen) return this.toggleMute();
+    if (!this.settings.muted) {
+      this.setAudio({ muted: true });
+      this.ui.toast('Audio spento. Tocca di nuovo l’altoparlante per le impostazioni.');
+      return;
+    }
+    // in gioco il pannello audio è il menu di gioco (così la partita si ferma); fuori, un pannello a parte
+    if (!this.openMenu({ focusAudio: true })) this.openAudioPanel();
+  }
+
+  openAudioPanel() {
+    this.audioPanelOpen = true;
+    this.ui.audioPanel(true);
+  }
+
+  closeAudioPanel() {
+    if (!this.audioPanelOpen) return;
+    this.audioPanelOpen = false;
+    this.audio.sfx('back');
+    this.ui.audioPanel(false);
+  }
+
+  // ---------- menu di gioco ----------
+  /** Voci del menu secondo dove ci si trova. */
+  _menuCtx(from) {
+    const kart = from === 'race' || from === 'loading';
+    return {
+      title: from === 'cinematic' ? 'Video in pausa' : 'Pausa',
+      help: from === 'story' && !!this.story?.level.briefing, // "Istruzioni" solo nei livelli della Storia
+      restart: from === 'race' ? 'Ricomincia la gara' : from === 'story' ? 'Ricomincia il livello' : from === 'hub' ? 'Torna al centro della piazza' : null,
+      confirm: kart ? 'Vuoi davvero uscire? I progressi di questa gara andranno persi.'
+        : from === 'hub' || from === 'hubload' ? 'Vuoi davvero tornare al menu principale? I livelli completati restano salvati.'
+          : from === 'cinematic' || from === 'medals' ? 'Vuoi davvero uscire? Il livello è già completato e salvato.'
+            : 'Vuoi davvero uscire? I progressi di questo livello andranno persi.'
+    };
+  }
+
+  /** Apre il menu di gioco se da qui si può (ritorna false altrimenti). La partita, i video e il motore si fermano. */
+  openMenu({ focusAudio = false } = {}) {
+    if (this.state === 'storyhelp') { if (this.ui.closePanel) this.ui.closePanel(); return true; } // Esc chiude le istruzioni e torna al menu
+    if (!MENU_FROM.includes(this.state)) return false;
+    const from = this.state;
+    this.menu = { from, confirm: false };
+    this.state = 'menu';
+    this.audio.sfx('select');
+    if (from === 'race') this.audio.stopEngine();
+    this.ui.pauseVideos(true);
+    this.ui.gameMenu({ ...this._menuCtx(from), focusAudio });
+    return true;
+  }
+
+  closeMenu() {
+    if (!this.menu) return;
+    const from = this.menu.from;
+    this.menu = null;
+    this.ui.gameMenu(null);
+    this.state = from;
+    this.ui.pauseVideos(false);
+    // niente comandi rimasti in memoria dal menu (salto, lancio, tasti tenuti)
+    this.input.releaseAll();
+    this.input.pausePressed = false;
+    if (from === 'race' && this.race && ['countdown', 'racing', 'finished'].includes(this.race.state)) this.audio.startEngine();
+  }
+
+  /** Esc / B nel menu: dalla conferma si torna alle voci, dalle voci si riprende. */
+  menuBack() {
+    if (!this.menu) return;
+    if (this.menu.confirm) { this.menu.confirm = false; this.audio.sfx('back'); this.ui.gameMenu(this._menuCtx(this.menu.from)); }
+    else this.closeMenu();
+  }
+
+  /** Cambio di stato alla fine di un caricamento: se nel frattempo il menu è aperto, vale alla sua chiusura. */
+  _setState(s) {
+    if (this.state === 'menu' && this.menu) this.menu.from = s;
+    else this.state = s;
+  }
+
+  pauseAction(a) {
+    this.audio.sfx('select');
+    if (this.state !== 'menu' || !this.menu) return;
+    const from = this.menu.from;
+    if (a === 'resume') this.closeMenu();
+    else if (a === 'help') this.storyHelp();
+    else if (a === 'restart') {
+      this.closeMenu();
+      if (from === 'race' && this.race) this.startRace(this.race.trackDef);
+      else if (from === 'story' && this.story) this.startStory(this.story.level);
+      else if (from === 'hub' && this.hub) { this.hub.spawnAt = null; this.hub._spawn(); }
+    } else if (a === 'quit') { this.menu.confirm = true; this.ui.gameMenuConfirm(true); }
+    else if (a === 'stay') this.menuBack();
+    else if (a === 'exit') {
+      // Storia → menu principale, WisiKart → sottomenu WisiKart
+      this.menu = null;
+      this.ui.gameMenu(null);
+      this.ui.abortWaits();
+      if (from === 'race' || from === 'loading') this.toKartMenu(); else this.toMainMenu();
+    }
   }
 
   pickCharacter(c) {
@@ -202,6 +328,7 @@ class Game {
 
   // ---------- gara ----------
   async startRace(trackDef) {
+    const flow = ++this._flow;
     this.state = 'loading';
     this.audio.stopMusic();
     const intro = this.ui.loading(trackDef);
@@ -213,17 +340,22 @@ class Game {
       onEvent: (e) => this.onRaceEvent(e)
     });
     await race.load((t) => this.ui.loadingStatus(t));
+    if (flow !== this._flow) { race.dispose(); return; } // uscito dal menu durante il caricamento
     // la gara parte quando la presentazione dei piloti (griglia.mp4) finisce o viene saltata
     this.ui.loadingStatus('Pista pronta. I piloti si stanno sistemando…');
     await intro;
+    if (flow !== this._flow) { race.dispose(); return; }
     this.ui.loadingDone();
     this.race = race;
     this._setupComposer(trackDef);
     this.ui.hudStart(race.track);
-    this.state = 'race';
-    this.paused = false;
-    // un frame di respiro per il caricamento, poi si parte
-    setTimeout(() => race.start(), 300);
+    this._setState('race');
+    // un frame di respiro per il caricamento, poi si parte (col menu aperto il motore resta spento)
+    setTimeout(() => {
+      if (this.race !== race) return;
+      race.start();
+      if (this.state === 'menu') this.audio.stopEngine();
+    }, 300);
   }
 
   onRaceEvent(e) {
@@ -279,10 +411,18 @@ class Game {
   // ---------- storia ----------
   /** La Storia parte dalla piazza 3D del pianeta (per ora Niaboc). spawnAt = id dell'ingresso da cui si esce. */
   openStory(message = '', spawnAt = null) {
-    this.startHub(WORLDS[0], { message, spawnAt });
+    this.startHub(this._storyWorld(), { message, spawnAt });
+  }
+
+  /** Il pianeta in cui si trova Whiskey (save.storyWorld); dopo il Portale è Retah, e per ora non si torna indietro. */
+  _storyWorld() {
+    // salvataggi di prima di Retah: Portale già finito = si è già atterrati su Retah
+    if (!this.save.storyWorld && this.save.story?.portale) this.save.storyWorld = 'retah';
+    return WORLDS.find((w) => w.id === this.save.storyWorld) || WORLDS[0];
   }
 
   async startHub(world, { message = '', spawnAt = null } = {}) {
+    const flow = ++this._flow;
     this.state = 'hubload';
     this.audio.stopMusic();
     this.ui.hubLoading(world);
@@ -299,11 +439,12 @@ class Game {
       onEnter: (e) => { if (e.kind === 'level') this.startStory(e.level); }
     });
     await hub.load((t) => this.ui.loadingStatus(t));
+    if (flow !== this._flow) { hub.dispose(); return; }
     this.hub = hub;
     this._resize();
     this.input.releaseAll();
     this.input.pausePressed = false;
-    this.state = 'hub';
+    this._setState('hub');
     this.ui.hubStart(message);
     this.audio.playTheme(world.music);
   }
@@ -312,15 +453,8 @@ class Game {
     if (this.hub) { this.hub.dispose(); this.hub = null; }
   }
 
-  hubPause(on) {
-    if (this.state !== 'hub' && this.state !== 'hubpaused') return;
-    this.state = on ? 'hubpaused' : 'hub';
-    if (on) this._pauseLabels('Torna al centro della piazza', 'Torna al menu principale');
-    this.ui.pause(on);
-    if (!on) this.ui.hubStart();
-  }
-
   async startStory(level) {
+    const flow = ++this._flow;
     this.state = 'storyload';
     this.audio.stopMusic();
     this.ui.storyLoading(level);
@@ -328,8 +462,8 @@ class Game {
     this._endHub();
     // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js).
     // Le monete sono un totale unico della Storia, salvato a ogni raccolta (ogni 100, una vita in più).
-    const flight = level.type === 'flight';
-    const Mode = flight ? FlightMode : StoryMode;
+    const Mode = MODES[level.type] || StoryMode;
+    const flight = level.type === 'flight' || level.type === 'chase';
     // vite guadagnate con le monete durante un volo (dove le vite non ci sono): valgono nel livello a piedi dopo
     const bonusLives = flight ? 0 : this.save.storyBonusLives || 0;
     if (!flight && bonusLives) { this.save.storyBonusLives = 0; this._persist(); }
@@ -348,23 +482,27 @@ class Game {
       onGameOver: () => this.startStory(level)
     });
     await story.load((t) => this.ui.loadingStatus(t));
+    if (flow !== this._flow) { story.dispose(); return; } // uscito dal menu durante il caricamento
     this.story = story;
     this._resize();
     // istruzioni prima di partire (la scena del livello resta ferma dietro)
-    this.state = 'briefing';
+    this._setState('briefing');
     await this.ui.briefing(level, this.input.lastDevice);
-    if (this.story !== story) return; // nel frattempo si è usciti
+    if (flow !== this._flow || this.story !== story) return; // nel frattempo si è usciti
     // niente comandi rimasti in memoria dal menu o dalle istruzioni (tasti, touch, salto)
     this.input.releaseAll();
     this.input.pausePressed = false;
-    this.state = 'story';
+    this._setState('story');
     this.ui.storyHudStart(level.type);
     this.audio.playTheme(level.music);
   }
 
   /** result (livelli con medaglie): { medal, stats } calcolati dal livello. */
   async _storyComplete(level, result = null) {
+    const flow = ++this._flow;
     this.save.story = { ...(this.save.story || {}), [level.id]: true };
+    // livello che chiude un pianeta (il Portale): si atterra sul prossimo e da lì si riparte
+    if (level.nextWorld) this.save.storyWorld = level.nextWorld;
     // medaglia: si tiene la migliore per livello, ed è quella che si vede sull'ingresso in piazza
     let best = null, isNewBest = false;
     if (result && result.medal) {
@@ -379,45 +517,42 @@ class Game {
     this._endStory();
     // livelli con una cinematica finale (il tunnel del portale): prima il video
     if (level.cinematic) {
-      this.state = 'cinematic';
+      this._setState('cinematic');
       this.audio.stopMusic();
       await this.ui.cinematic(level.cinematic);
+      if (flow !== this._flow) return; // uscito dal menu durante il video
     }
     if (result && result.medal) {
-      this.state = 'medals';
+      this._setState('medals');
       this.audio.sfx('finish');
       await this.ui.medals({ level, medal: result.medal, best, isNewBest, stats: result.stats });
+      if (flow !== this._flow) return;
     }
-    // si ricompare in piazza davanti all'ingresso del livello appena finito; il salvataggio riapre il prossimo
-    this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.id);
+    // si ricompare in piazza davanti all'ingresso del livello appena finito (o all'arrivo, su un pianeta nuovo)
+    this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.nextWorld ? null : level.id);
   }
 
   _endStory() {
     if (this.story) { this.story.dispose(); this.story = null; }
   }
 
-  storyPause(on) {
-    if (this.state !== 'story' && this.state !== 'storypaused') return;
-    this.state = on ? 'storypaused' : 'story';
-    if (on) this._pauseLabels('Ricomincia il livello', 'Torna al menu principale', true);
-    this.ui.pause(on);
-    if (!on) this.ui.storyHudStart(this.story?.level.type); // chiude l'overlay e rimette l'HUD
-  }
-
-  /** "Istruzioni" dal menu di pausa della Storia: riapre la schermata, poi torna alla pausa. */
+  /** "Istruzioni" dal menu di gioco nei livelli della Storia: riapre la schermata, poi torna al menu. */
   async storyHelp() {
-    if (this.state !== 'storypaused' || !this.story) return;
+    if (this.state !== 'menu' || !this.menu || !this.story) return;
+    const menu = this.menu;
     this.state = 'storyhelp';
-    this.ui.overlay('pause', false);
+    this.ui.gameMenu(null);
     await this.ui.briefing(this.story.level, this.input.lastDevice);
     if (this.state !== 'storyhelp') return;
-    this.state = 'storypaused';
+    this.state = 'menu';
+    this.menu = menu;
     this.input.pausePressed = false;
-    this.ui.pause(true);
+    this.ui.gameMenu(this._menuCtx(menu.from));
   }
 
-  /** Uscita da una gara (risultati o pausa): si torna al sottomenu WisiKart. */
+  /** Uscita da una gara (risultati o menu di gioco): si torna al sottomenu WisiKart. */
   toKartMenu() {
+    this._flow++;
     this.audio.sfx('back');
     if (this.race) { this.race.dispose(); this.race = null; }
     this.composer = null;
@@ -426,48 +561,15 @@ class Game {
     this.openKartMenu();
   }
 
-  /** Uscita dalla Storia (piazza o livello): si torna al menu principale. */
+  /** Uscita dalla Storia (piazza, livello, video): si torna al menu principale. */
   toMainMenu() {
+    this._flow++;
     this.audio.sfx('back');
     this._endStory();
     this._endHub();
     this.state = 'title';
     this.audio.playTheme('menu');
     this.ui.title();
-  }
-
-  pauseAction(a) {
-    this.audio.sfx('select');
-    if (this.state === 'hubpaused') {
-      this.ui.pause(false);
-      if (a === 'resume') this.hubPause(false);
-      else if (a === 'restart') { this.hub.spawnAt = null; this.hub._spawn(); this.hubPause(false); }
-      else this.toMainMenu();
-      return;
-    }
-    if (this.state === 'storypaused') {
-      const level = this.story.level;
-      if (a === 'help') { this.storyHelp(); return; }
-      if (a === 'resume') this.storyPause(false);
-      else {
-        this.ui.pause(false);
-        if (a === 'restart') this.startStory(level);
-        else this.toMainMenu();
-      }
-      return;
-    }
-    if (a === 'resume') this.togglePause(false);
-    else if (a === 'restart') { this.togglePause(false); this.startRace(this.race.trackDef); }
-    else if (a === 'quit') { this.togglePause(false); this.toKartMenu(); }
-  }
-
-  togglePause(on) {
-    if (this.state !== 'race' && this.state !== 'paused') return;
-    this.paused = on;
-    this.state = on ? 'paused' : 'race';
-    if (on) this._pauseLabels('Ricomincia la gara', 'Torna a WisiKart');
-    this.ui.pause(on);
-    if (on) this.audio.stopEngine(); else this.audio.startEngine();
   }
 
   /** Utilità di debug/test: fa avanzare la simulazione senza aspettare i frame. */
@@ -481,56 +583,55 @@ class Game {
     requestAnimationFrame(this._loop);
     const dt = Math.min(0.05, this.clock.getDelta());
     this.input.update();
-    // navigazione menu
     const ev = this.input.consumeMenu();
-    // istruzioni e medaglie: qualsiasi tasto (anche del gamepad) le chiude
-    if (['briefing', 'storyhelp', 'medals'].includes(this.state)) {
+    // M: silenzio immediato, sempre e ovunque
+    if (this.input.mutePressed) { this.input.mutePressed = false; this.toggleMute(); }
+    // Esc / P / Start / tasto II: apre o chiude il menu di gioco
+    const pause = this.input.pausePressed;
+    this.input.pausePressed = false;
+    this.ui.menuButton(this.state === 'menu' || MENU_FROM.includes(this.state));
+    if (this.audioPanelOpen) {
+      if (pause) this.closeAudioPanel();
+      else for (const e of ev) { if (e === 'back') this.closeAudioPanel(); else if (e === 'ok') this.ui.activateFocus(); else this.ui.moveFocus(e); }
+    } else if (this.state === 'menu') {
+      if (pause) this.menuBack();
+      else for (const e of ev) { if (e === 'back') this.menuBack(); else if (e === 'ok') this.ui.activateFocus(); else this.ui.moveFocus(e); }
+    } else if (pause && this.openMenu()) {
+      // aperto: gli altri tasti di questo frame non contano
+    } else if (['briefing', 'storyhelp', 'medals'].includes(this.state)) {
+      // istruzioni e medaglie: qualsiasi tasto (anche del gamepad) le chiude
       if (ev.length && this.ui.closePanel) this.ui.closePanel();
-    } else if (!['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'].includes(this.state)) {
+    } else if (!GAMEPLAY.includes(this.state)) {
       for (const e of ev) {
         if (e === 'ok') this.ui.activateFocus();
-        else if (e === 'back') {
-          if (this.input.pausePressed) continue; // Esc: ci pensa la pausa qui sotto, sennò riprende e ri-mette in pausa
-          if (this.state === 'paused') this.togglePause(false);
-          else if (this.state === 'storypaused') this.storyPause(false);
-          else if (this.state === 'hubpaused') this.hubPause(false);
-          else this.back();
-        }
+        else if (e === 'back') this.back();
         else this.ui.moveFocus(e);
       }
     }
-    if (this.input.pausePressed) {
-      this.input.pausePressed = false;
-      if (this.state === 'race' && this.race.state !== 'countdown') this.togglePause(true);
-      else if (this.state === 'paused') this.togglePause(false);
-      else if (this.state === 'story') this.storyPause(true);
-      else if (this.state === 'storypaused') this.storyPause(false);
-      else if (this.state === 'hub') this.hubPause(true);
-      else if (this.state === 'hubpaused') this.hubPause(false);
-    }
+    // con il menu aperto la scena resta ferma dietro
+    const view = this.state === 'menu' && this.menu ? this.menu.from : this.state;
     if (this.state === 'hub' && this.hub) {
       this.hub.update(dt, this.input);
       if (this.state === 'hub' && this.hub) {
         this.ui.hubHud(this.hub.hud());
         this.renderer.render(this.hub.scene, this.hub.camera);
       }
-    } else if (this.state === 'hubpaused' && this.hub) {
-      this.renderer.render(this.hub.scene, this.hub.camera);
     } else if (this.state === 'story' && this.story) {
       this.story.update(dt, this.input);
       if (this.state === 'story' && this.story) {
         this.ui.storyHud(this.story.hud());
         this.renderer.render(this.story.scene, this.story.camera);
       }
-    } else if ((this.state === 'storypaused' || this.state === 'briefing' || this.state === 'storyhelp') && this.story) {
-      this.renderer.render(this.story.scene, this.story.camera);
     } else if (this.state === 'race' && this.race) {
       this.race.update(dt);
       if (this.race.state !== 'done') this.ui.hud(this.race.hud());
       if (this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera);
-    } else if (this.state === 'paused' || this.state === 'results') {
-      if (this.race && this.race.state !== 'done') { if (this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera); }
-      else if (this.race) this.renderer.render(this.scene, this.camera);
+    } else if (view === 'hub' && this.hub) {
+      this.renderer.render(this.hub.scene, this.hub.camera);
+    } else if (['story', 'briefing', 'storyhelp'].includes(view) && this.story) {
+      this.renderer.render(this.story.scene, this.story.camera);
+    } else if ((view === 'race' || view === 'results') && this.race) {
+      if (this.race.state !== 'done' && this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera);
     } else if (this.menuScene) {
       const t = performance.now() / 1000;
       this.menuCam.aspect = this.camera.aspect;

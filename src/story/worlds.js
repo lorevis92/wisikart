@@ -1,6 +1,8 @@
 import { STADIO } from './stadio.js';
 import { VALVO } from './valvo.js';
 import { PORTALE } from './portale.js';
+import { RISSA } from './rissa.js';
+import { INSEGUIMENTO } from './inseguimento.js';
 
 // Piazze 3D dei pianeti della Storia (una per pianeta), da attraversare a piedi come in un mini Super Mario 64.
 // Ogni ingresso: angle = direzione dal centro della piazza in gradi (0 = nord, cioè davanti alla partenza,
@@ -9,7 +11,8 @@ import { PORTALE } from './portale.js';
 // da ostacolo e l'ingresso è nel vano; gli altri sono edifici con la porta sul davanti.
 // kind: 'level' (livello giocabile) o 'gate' (sfida senza livello, per ora solo un messaggio).
 // requires: id dell'ingresso da completare prima (salvato in save.story); finché manca, lucchetto e `locked`.
-// L'ordine è obbligato: stadio → deposito → portale. Vicoli e biblioteca si apriranno quando Whiskey
+// Un pianeta alla volta (save.storyWorld): il Portale (nextWorld) porta da Niaboc a Retah.
+// L'ordine è obbligato: stadio → deposito → portale, poi su Retah rissa → inseguimento. Vicoli e biblioteca si apriranno quando Whiskey
 // tornerà a Niaboc, più avanti nella storia ('ritorno-niaboc' non è ancora raggiungibile).
 
 export const WORLDS = [
@@ -51,6 +54,46 @@ export const WORLDS = [
         model: 'assets/story/niaboc/arco-vicoli.glb',
         name: 'Vicoli notturni', desc: 'Neon, scorciatoie e porte che non dovresti aprire.',
         locked: 'Sbarrati. I vicoli si apriranno quando Whiskey tornerà a Niaboc, più avanti nella storia.'
+      }
+    ]
+  },
+  {
+    // Retah: si atterra qui dopo il tunnel del Portale (save.storyWorld). Pianeta piatto e sabbioso al tramonto,
+    // un lago su un lato (lake.x: l'acqua comincia a quella x, verso est), niente livelli bonus.
+    // decor: veicoli e rottami fermi (h = altezza in metri, rot = gradi, tilt = inclinazione, r = ostacolo).
+    id: 'retah',
+    name: 'Retah',
+    subtitle: 'Sabbia, un lago e una tavola calda piena di cacciatori di taglie',
+    theme: 'desert',
+    track: 'retah', // palette del circuito di WisiKart dello stesso pianeta
+    sky: 'assets/tracks/retah/sky.png',
+    music: 'retah',
+    radius: 40,
+    lake: { x: 27 },
+    spawn: { x: -4, z: 24, heading: Math.PI }, // guarda verso nord (la tavola calda)
+    decor: [
+      // tre autovettori parcheggiati davanti e di lato alla tavola calda
+      { model: 'assets/props/autovettore.glb', h: 2.2, x: -10.5, z: 1, rot: 70, r: 2.4 },
+      { model: 'assets/props/autovettore.glb', h: 2.2, x: 10, z: 2.5, rot: -80, r: 2.4 },
+      { model: 'assets/props/autovettore.glb', h: 2.2, x: 14, z: -5, rot: -100, r: 2.4 },
+      // due blindati fermi e minacciosi, puntati sulla tavola calda
+      { model: 'assets/props/blindato.glb', h: 3.4, x: -23, z: -6, rot: 20, r: 3.8, lights: true },
+      { model: 'assets/props/blindato.glb', h: 3.4, x: -21, z: -17, rot: -15, r: 3.8, lights: true },
+      // relitto inclinato, mezzo insabbiato
+      { model: 'assets/props/relitto.glb', h: 4.5, x: 17, z: 19, rot: 35, tilt: 0.22, sink: 0.6, r: 4.2 }
+    ],
+    entrances: [
+      {
+        id: 'rissa', kind: 'level', level: RISSA, angle: 0, dist: 7, height: 8,
+        model: 'assets/props/tavola-calda.glb',
+        name: 'Tavola calda', desc: 'Profumo di frittura e di guai. Dentro, i cacciatori di taglie.'
+      },
+      {
+        // sul retro della tavola calda: ci si arriva girandole intorno
+        id: 'inseguimento', kind: 'level', level: INSEGUIMENTO, requires: 'rissa', angle: 0, dist: 25, height: 2.4,
+        model: 'assets/props/autovettore.glb',
+        name: 'L’autovettore di Emma', desc: 'Parcheggiato sul retro. Motore caldo, pieno fatto, due blindati in agguato.',
+        locked: 'Emma è chiusa dentro e non apre. Prima si esce vivi dalla tavola calda.'
       }
     ]
   }
