@@ -15,6 +15,7 @@ import { dotTexture } from './core/Textures.js';
 import { StoryMode } from './story/StoryMode.js';
 import { WORLDS } from './story/worlds.js';
 import { Hub } from './story/Hub.js';
+import { storyHero } from './story/hero.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 
@@ -288,7 +289,7 @@ class Game {
     this.save.story = this.save.story || {};
     const hub = new Hub({
       world,
-      character: this.playerChar || CHARACTERS[0],
+      character: storyHero(),
       audio: this.audio,
       completed: this.save.story,
       spawnAt,
@@ -322,10 +323,10 @@ class Game {
     this.ui.storyLoading(level);
     this._endStory();
     this._endHub();
-    // Whiskey: l'ultimo personaggio scelto nel kart, altrimenti la Monna
+    // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js)
     const story = new StoryMode({
       level,
-      character: this.playerChar || CHARACTERS[0],
+      character: storyHero(),
       audio: this.audio,
       onComplete: () => this._storyComplete(level),
       onGameOver: () => this.startStory(level)

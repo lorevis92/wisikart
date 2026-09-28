@@ -17,8 +17,9 @@ export const PLAYER_H = 1.7;
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 
 /**
- * Whiskey in versione platform. Con il modello con scheletro (story/characters/<id>.glb, vedi Rig.js)
- * anima le ossa vere; senza file ripiega sulla versione procedurale con la faccia di faceTexture.
+ * Whiskey in versione platform. Con il modello della Storia (story/characters/<id>.glb, vedi Rig.js) anima
+ * le ossa vere, o il corpo intero se il modello non ha scheletro; senza file ripiega sulla versione
+ * procedurale con la faccia di faceTexture.
  */
 export class Player {
   constructor(character, rigged = null) {
@@ -278,7 +279,7 @@ export class Player {
     // tre quarti verso la telecamera, così la faccia si vede sempre; sulla scala di spalle
     const targetYaw = this.climbing ? Math.PI : this.facing * (Math.PI / 2 - 0.55);
     this.root.rotation.y = THREE.MathUtils.damp(this.root.rotation.y, targetYaw, 14, dt);
-    if (this.rig) return this._poseRig(dt);
+    if (this.body) return this._poseRig(dt);
     const [la, ra] = this.arms, [ll, rl] = this.legs;
     if (this.climbing) {
       const s = Math.sin(this.walkPhase);
@@ -303,22 +304,33 @@ export class Player {
     this.group.visible = this.invuln <= 0 || Math.floor(this.invuln * 14) % 2 === 0;
   }
 
-  /** Pose sullo scheletro vero (Rig.js): passo, salto, scale, lancio; il corpo intero rimbalza e si schiaccia. */
+  /**
+   * Modello vero: con lo scheletro (Rig.js) si animano le ossa (passo, salto, scale, lancio); senza scheletro
+   * si muove il corpo intero, rigido (inclinazione, dondolio, torsione). In entrambi i casi rimbalza e si schiaccia.
+   */
   _poseRig(dt) {
     const run = Math.min(1, Math.abs(this.vx) / RUN);
     const air = this.climbing || this.onGround ? null : THREE.MathUtils.clamp(this.vy / JUMP_V, -1, 1);
-    this.rig.apply(locomotionPose({
-      phase: this.walkPhase * (this.climbing ? 1 : 2.2),
-      run: this.onGround ? run : 0,
-      air,
-      climb: !!this.climbing,
-      throwT: this.throwAnim > 0 ? this.throwAnim / 0.28 : 0
-    }));
+    const throwT = this.throwAnim > 0 ? this.throwAnim / 0.28 : 0;
+    const phase = this.walkPhase * (this.climbing ? 1 : 2.2);
+    let bob = this.onGround ? Math.abs(Math.sin(phase)) * 0.05 * run : 0;
+    if (this.rig) {
+      this.rig.apply(locomotionPose({ phase, run: this.onGround ? run : 0, air, climb: !!this.climbing, throwT }));
+      this.body.rotation.set(0, 0, 0);
+    } else {
+      // corpo rigido: si inclina correndo, dondola a ogni passo, si slancia nel lancio
+      const s = Math.sin(phase);
+      const lean = (this.onGround ? run * 0.16 : air !== null ? 0.1 : 0) + (throwT ? Math.sin((1 - throwT) * Math.PI) * 0.3 : 0);
+      const roll = this.climbing ? s * 0.1 : this.onGround ? s * 0.09 * run : 0;
+      const twist = (this.onGround ? s * 0.1 * run : 0) - (throwT ? Math.sin((1 - throwT) * Math.PI) * 0.35 : 0);
+      this.body.rotation.set(lean, twist, roll);
+      bob *= 2;
+    }
     this.squash = Math.max(0, this.squash - dt * 5);
     const st = air === null ? 0 : air;
     const sy = (1 + st * 0.05) * (1 - this.squash * 0.14), sx = (1 - st * 0.03) * (1 + this.squash * 0.08);
     this.body.scale.set(sx, sy, sx);
-    this.body.position.y = this.onGround ? Math.abs(Math.sin(this.walkPhase * 2.2)) * 0.05 * run : 0;
+    this.body.position.y = bob;
     this.handBottle.visible = this.throwAnim > 0.12;
     this.group.visible = this.invuln <= 0 || Math.floor(this.invuln * 14) % 2 === 0;
   }

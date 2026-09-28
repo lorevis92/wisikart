@@ -24,6 +24,7 @@ export const riggedUrl = (character) => `assets/story/characters/${character.id}
 /**
  * Carica e clona (con lo scheletro) il personaggio. Ritorna { root, rig } oppure null se il file manca.
  * root: gruppo con i piedi a y = 0, alto `height`, che guarda verso +Z.
+ * Un modello senza scheletro (o con ossa irriconoscibili) torna con rig = null: si anima come corpo rigido.
  */
 export async function loadRigged(url, height = 1.8) {
   if (!(await Assets.exists(url))) return null;
@@ -39,7 +40,6 @@ export async function loadRigged(url, height = 1.8) {
       if (o.material && o.material.map) o.material.map.colorSpace = THREE.SRGBColorSpace;
     }
   });
-  if (!skinned) return null;
   // normalizza: altezza e piedi a terra
   scene.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(scene, true);
@@ -50,7 +50,10 @@ export async function loadRigged(url, height = 1.8) {
   const root = new THREE.Group();
   root.add(scene);
   root.updateMatrixWorld(true);
-  return { root, rig: new RigAnimator(root, skinned.skeleton) };
+  if (!skinned) return { root, rig: null };
+  const rig = new RigAnimator(root, skinned.skeleton);
+  // servono almeno le due cosce per camminare con le ossa; altrimenti corpo rigido
+  return { root, rig: rig.hasLegs ? rig : null };
 }
 
 const BONE_PATTERNS = {
@@ -74,6 +77,7 @@ const BONE_PATTERNS = {
 
 const AXES = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
 const _q = new THREE.Quaternion();
+const _m = new THREE.Quaternion();
 
 /**
  * Anima le ossa con rotazioni espresse negli assi del personaggio (non in quelli, arbitrari, di ogni osso):
@@ -101,16 +105,22 @@ export class RigAnimator {
       if (!bl || !br || /left|right/i.test(bl.name + br.name)) continue;
       if (wx(bl) < wx(br)) { this.bones[l] = br; this.bones[r] = bl; }
     }
-    // riposo: rotazione locale e, per ogni asse del personaggio, lo stesso asse espresso nello spazio dell'osso
+    // riposo: rotazione locale e orientamento dell'osso negli assi del personaggio (per convertire le pose)
     const rootQ = root.getWorldQuaternion(new THREE.Quaternion()).invert();
     this.rest = new Map();
     for (const b of Object.values(this.bones)) {
-      const wq = rootQ.clone().multiply(b.getWorldQuaternion(new THREE.Quaternion()));
-      const inv2 = wq.clone().invert();
-      this.rest.set(b, {
-        q: b.quaternion.clone(),
-        x: AXES.x.clone().applyQuaternion(inv2), y: AXES.y.clone().applyQuaternion(inv2), z: AXES.z.clone().applyQuaternion(inv2)
-      });
+      const w = rootQ.clone().multiply(b.getWorldQuaternion(new THREE.Quaternion()));
+      this.rest.set(b, { q: b.quaternion.clone(), w, wInv: w.clone().invert(), base: null });
+    }
+    // braccia: le pose presuppongono braccia lungo i fianchi. Se a riposo un braccio è alzato o in T
+    // (es. il Bacco tiene su i grappoli), una rotazione di base lo porta giù prima delle pose.
+    const pos = (b) => b.getWorldPosition(new THREE.Vector3()).applyMatrix4(inv);
+    for (const [arm, fore, side] of [['armL', 'foreArmL', 1], ['armR', 'foreArmR', -1]]) {
+      const a = this.bones[arm], f = this.bones[fore];
+      if (!a || !f) continue;
+      const dir = pos(f).sub(pos(a)).normalize();
+      const hang = new THREE.Vector3(side * 0.26, -0.97, 0).normalize();
+      if (dir.angleTo(hang) > 0.35) this.rest.get(a).base = new THREE.Quaternion().setFromUnitVectors(dir, hang);
     }
     this.hasLegs = !!(this.bones.upLegL && this.bones.upLegR);
     // ginocchia affidabili solo se a riposo il piede sta sotto il ginocchio (certi scheletri generati le mettono alla caviglia)
@@ -124,12 +134,17 @@ export class RigAnimator {
     for (const [key, b] of Object.entries(this.bones)) {
       const r = this.rest.get(b);
       b.quaternion.copy(r.q);
-      const p = pose[key];
-      if (!p) continue;
-      if (!this.kneeOk && /^(leg|foot)[LR]$/.test(key)) continue;
-      if (p.x) b.quaternion.multiply(_q.setFromAxisAngle(r.x, p.x));
-      if (p.z) b.quaternion.multiply(_q.setFromAxisAngle(r.z, p.z));
-      if (p.y) b.quaternion.multiply(_q.setFromAxisAngle(r.y, p.y));
+      let p = pose[key];
+      if (p && !this.kneeOk && /^(leg|foot)[LR]$/.test(key)) p = null;
+      if (!p && !r.base) continue;
+      // rotazione negli assi del personaggio (x, poi z, poi y), dopo l'eventuale correzione di base
+      _m.identity();
+      if (p?.x) _m.multiply(_q.setFromAxisAngle(AXES.x, p.x));
+      if (p?.z) _m.multiply(_q.setFromAxisAngle(AXES.z, p.z));
+      if (p?.y) _m.multiply(_q.setFromAxisAngle(AXES.y, p.y));
+      if (r.base) _m.multiply(r.base);
+      // stessa rotazione nello spazio dell'osso: riposo · w⁻¹ · M · w
+      b.quaternion.multiply(_q.copy(r.wInv).multiply(_m).multiply(r.w));
     }
   }
 }
