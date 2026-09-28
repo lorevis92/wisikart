@@ -43,9 +43,10 @@ export class Hub {
     this.entering = null;
   }
 
+  /** open | done | locked | soon. Un ingresso con `requires` resta chiuso finché quel livello non è completato. */
   state(e) {
+    if (e.requires && !this.completed[e.requires]) return 'locked';
     if (e.kind === 'level') return this.completed[e.id] ? 'done' : 'open';
-    if (e.kind === 'gate') return this.completed[e.requires] ? 'open' : 'locked';
     return 'soon';
   }
 
@@ -184,9 +185,12 @@ export class Hub {
     const poleM = std('#2a2a38', { metalness: 0.6, roughness: 0.4 });
     const headM = new THREE.MeshStandardMaterial({ color: 0xffe2b0, emissive: 0xffb45a, emissiveIntensity: 3 });
     const lampCount = 10;
+    // niente lampioni davanti agli ingressi
+    const spots = this.world.entrances.map((e) => { const a = THREE.MathUtils.degToRad(e.angle); return [Math.sin(a) * e.dist, -Math.cos(a) * e.dist]; });
     for (let i = 0; i < lampCount; i++) {
       const a = ((i + 0.5) / lampCount) * Math.PI * 2;
       const x = Math.sin(a) * (R - 3), z = -Math.cos(a) * (R - 3);
+      if (spots.some(([ex, ez]) => Math.hypot(ex - x, ez - z) < 8)) continue;
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 6, 8), poleM);
       pole.position.set(x, 3, z);
       pole.castShadow = true;
@@ -203,7 +207,7 @@ export class Hub {
     // panchine lungo il bordo della fontana
     const benchM = std('#6b4a8a');
     for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const a = (i / 4) * Math.PI * 2 + (Math.PI * 3) / 8; // fuori dalle traiettorie verso gli ingressi
       const x = Math.sin(a) * 9, z = -Math.cos(a) * 9;
       const bench = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 0.9), benchM);
       bench.position.set(x, 0.45, z);
@@ -266,20 +270,40 @@ export class Hub {
     ring.position.set(entrance.door.x, 0.05, entrance.door.z);
     this.scene.add(ring);
     this.dynamic.push((t) => { ring.material.opacity = 0.45 + Math.sin(t * 3 + e.angle) * 0.25; });
-    // portale chiuso: barriera di energia nel vano, che blocca il passaggio
+    // ingresso chiuso: barriera di energia (nel vano per gli archi, sulla facciata per gli edifici) e lucchetto
     if (st === 'locked') {
-      const w = halfW * 1.5, h = e.height * 0.75;
+      const w = e.arch ? halfW * 1.5 : Math.min(halfW * 1.2, 8), h = e.arch ? e.height * 0.75 : Math.min(e.height * 0.6, 6);
       const barrier = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xff3a7a, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
-      barrier.position.set(0, h / 2, 0);
+      const front = e.arch ? 0 : ((halfW + halfD) / 2) * 0.9 + 0.2;
+      barrier.position.set(0, h / 2, front);
       group.add(barrier);
       this.dynamic.push((t) => { barrier.material.opacity = 0.25 + Math.sin(t * 5) * 0.1; });
-      const hw = w / 2;
-      this.segments.push({ ax: x - tangent.x * hw, az: z - tangent.z * hw, bx: x + tangent.x * hw, bz: z + tangent.z * hw, r: 0.5 });
-      // il messaggio "chiuso" scatta avvicinandosi alla barriera dal lato della piazza
-      entrance.door = { x: x + toCenter.x * 1.6, z: z + toCenter.z * 1.6, r: 2.2 };
-      ring.position.set(entrance.door.x, 0.05, entrance.door.z);
+      if (e.arch) {
+        const hw = w / 2;
+        this.segments.push({ ax: x - tangent.x * hw, az: z - tangent.z * hw, bx: x + tangent.x * hw, bz: z + tangent.z * hw, r: 0.5 });
+        // il messaggio "chiuso" scatta avvicinandosi alla barriera dal lato della piazza
+        entrance.door = { x: x + toCenter.x * 1.6, z: z + toCenter.z * 1.6, r: 2.2 };
+        ring.position.set(entrance.door.x, 0.05, entrance.door.z);
+      }
+      // lucchetto che fluttua sopra l'ingresso
+      const lock = this._padlock();
+      lock.position.set(0, h + 1.2, front + 0.3);
+      group.add(lock);
+      this.dynamic.push((t) => { lock.position.y = h + 1.2 + Math.sin(t * 2 + e.angle) * 0.15; lock.rotation.y = Math.sin(t * 0.8) * 0.4; });
     }
     this.entrances.push(entrance);
+  }
+
+  _padlock() {
+    const g = new THREE.Group();
+    const metal = std('#c9cde0', { metalness: 0.8, roughness: 0.3 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 0.5), std('#8a8fa8', { metalness: 0.7, roughness: 0.35 }));
+    const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.1, 8, 20, Math.PI), metal);
+    shackle.position.y = 0.5;
+    const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.52, 10), std('#1b1f3a'));
+    hole.rotation.x = Math.PI / 2;
+    g.add(body, shackle, hole);
+    return g;
   }
 
   _spawn() {
@@ -398,7 +422,10 @@ export class Hub {
       if (d > e.door.r) continue;
       e.armed = false;
       const st = this.state(e);
-      if (e.kind === 'level') {
+      if (st === 'locked') {
+        this.audio.sfx('back');
+        this.say(e.locked, 3.5);
+      } else if (e.kind === 'level') {
         this.audio.sfx('select');
         this.say(`${e.name}…`, 1.5);
         this.entering = { e, t: 0.7 };

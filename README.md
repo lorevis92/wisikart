@@ -35,7 +35,7 @@ Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8,
 
 ## Storia
 
-La parte principale del WiSiVERSE (prima voce del menu principale), separata dalle gare: parte da una **piazza 3D di Niaboc** da attraversare a piedi, in terza persona come un mini Super Mario 64: cielo notturno con le due lune, palette e palazzi della pista di Niaboc, fontana al centro. Cinque ingressi, attivati camminandoci dentro (nessun menu): **Stadio di Space Ball** (`story/niaboc/stadio-esterno.glb`, carica il livello), **Portale di Niaboc** (`props/portale-niaboc.glb`, sigillato da una barriera finché non vinci lo stadio), **Deposito Valvo Go** (`props/valvo-go.glb`), **Vicoli notturni** (`story/niaboc/arco-vicoli.glb`) e **Biblioteca** (`story/niaboc/biblioteca.glb`), questi ultimi "in arrivo". La piazza è descritta in `src/story/worlds.js`. Comandi in piazza: Frecce / WASD, Spazio o K per saltare, Q / E per girare la telecamera.
+La parte principale del WiSiVERSE (prima voce del menu principale), separata dalle gare: parte da una **piazza 3D di Niaboc** da attraversare a piedi, in terza persona come un mini Super Mario 64: cielo notturno con le due lune, palette e palazzi della pista di Niaboc, fontana al centro. Cinque ingressi, attivati camminandoci dentro (nessun menu), in un ordine obbligato: **Stadio di Space Ball** (`story/niaboc/stadio-esterno.glb`, livello 1) → **Deposito Valvo & Go** (`props/valvo-go.glb`, livello 2, chiuso finché non vinci lo stadio) → **Portale di Niaboc** (`props/portale-niaboc.glb`, subito dietro il deposito, sigillato finché non finisci il deposito; poi per ora solo un messaggio). **Vicoli notturni** (`story/niaboc/arco-vicoli.glb`) e **Biblioteca** (`story/niaboc/biblioteca.glb`) restano chiusi con lucchetto: si apriranno quando Whiskey tornerà a Niaboc. I livelli completati sono salvati (`save.story`) e al ricaricamento lucchetti e ordine si ricostruiscono. La piazza è descritta in `src/story/worlds.js`. Comandi in piazza: Frecce / WASD, Spazio o K per saltare, Q / E per girare la telecamera.
 
 Nella Storia si gioca sempre con **Whiskey basic** (`story/characters/basic.glb`), il personaggio di partenza. I sei Whiskey del kart sono le sue "forme", che si sbloccheranno più avanti nella storia (capitoli 8-9): i loro modelli per la Storia sono già in `story/characters/<id>.glb`, ma per ora non si scelgono (`src/story/hero.js`). Nel kart restano giocabili i sei Whiskey, con i modelli del kart.
 
@@ -43,7 +43,9 @@ I modelli della Storia hanno lo **scheletro**: camminata, corsa, salto, scale e 
 
 **Livello 1 – Stadio di Space Ball**: gradinate (file di sedili, alcune crollano; tifosi da scavalcare; sciarpe da saltare o da passarci sotto; bottiglie e secchi dagli spalti), campo (palle spaziali a pendolo, porte da passare sotto e una porta alta da cui saltare il fossato, bottigliera), tunnel degli spogliatoi (scale, grate, tre steward da evitare o stordire, cassa di bottiglie) e arena in cima con il **Tifoso Supremo**: lancia sedili a parabola (il bersaglio rosso a terra dice dove cadranno), ogni tanto uno lascia una bottiglia; servono tre bottigliate.
 
-Comandi: **Frecce / A D** cammina · **Spazio / K** salta (più lo tieni, più salti in alto) · **Su / Giù** sulle scale · **Maiusc / E / J** lancia · **Esc** pausa. HUD: vite, bottiglie, vita del boss. Le cadute nel vuoto riportano all'ultimo checkpoint; a zero vite il livello riparte da capo.
+**Livello 2 – Deposito Valvo & Go** (asset in `story/valvo/`): platform industriale senza boss, in tre sezioni. **Scaffali**: casse impilate come piattaforme (`cassa.glb`), nastri trasportatori che trascinano e cambiano verso (le frecce lampeggiano prima), carrelli-droide che pattugliano (`carrello.glb`, si stordiscono con una bottigliata), bottiglie sulle casse e casse con monete da aprire a bottigliate. **Sala valvole**: getti di vapore a intervalli fissi (`valvola.glb`); quello verso l'alto è un trampolino per le grate alte, quello laterale respinge; leve da colpire con una bottiglia per aprire le paratie; in fondo il badge (`badge.png`). **Hangar a tempo**: preso il badge scatta l'allarme, le saracinesche scendono una dopo l'altra (si passa solo scivolando, **giù mentre corri**), timer e bordo rosso nell'HUD, droidi che spuntano; restare chiusi dietro una saracinesca costa una vita e fa ripartire l'hangar. In fondo l'autovettore sotto il faro (`props/autovettore.glb`): Emma si accende con una battuta (voce `welcome.wav` in attesa di quelle dedicate) e si torna in piazza.
+
+Comandi: **Frecce / A D** cammina · **Spazio / K** salta (più lo tieni, più salti in alto) · **Su / Giù** sulle scale · **Giù mentre corri** scivola · **Maiusc / E / J** lancia · **Esc** pausa. HUD: vite, bottiglie, monete, badge, vita del boss, timer dell'allarme. Le cadute nel vuoto riportano all'ultimo checkpoint; a zero vite il livello riparte da capo.
 
 ## Avvio rapido
 
@@ -106,7 +108,8 @@ src/
   story/Player.js       Whiskey platform: fisica (coyote, salto variabile, scale) e animazioni
   story/entities.js     sedili che crollano, tifosi, sciarpe, pendoli, steward, boss, pickup, proiettili
   story/stadio.js       dati del livello 1 (misure pensate sulla fisica del salto)
-  story/worlds.js       piazze dei pianeti: ingressi, modelli, messaggi
+  story/worlds.js       piazze dei pianeti: ingressi, modelli, messaggi, ordine di sblocco
+  story/valvo.js        dati del livello 2 (Deposito Valvo & Go) e sue entità (valvo-entities.js)
   story/Hub.js          piazza 3D in terza persona: movimento, collisioni, ingressi, telecamera
   story/Rig.js          personaggi con scheletro: caricamento, riconoscimento delle ossa, pose animate
 scripts/fetch-assets.mjs  scarica gli asset di entrambi i manifest (kart e Storia)

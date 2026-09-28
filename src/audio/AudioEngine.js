@@ -14,6 +14,9 @@ const THEMES = {
   // Storia: stadio allegro e saltellante, boss minore e incalzante
   stadio: { bpm: 120, root: 55, chords: [[0, 4, 7, 11], [7, 11, 14, 17], [9, 12, 16, 19], [5, 9, 12, 16]], lead: 'pluck', drums: 'bounce' },
   boss: { bpm: 138, root: 50, chords: [[0, 3, 7, 10], [-2, 2, 5, 9], [-4, 0, 3, 7], [-5, -1, 2, 5]], lead: 'saw', drums: 'drive' },
+  // Deposito Valvo & Go: magazzino notturno, minore e meccanico; l'allarme dell'hangar corre e insiste
+  valvo: { bpm: 108, root: 52, chords: [[0, 3, 7, 10], [0, 3, 7, 10], [-4, 0, 3, 7], [-2, 2, 5, 9]], lead: 'pluck', drums: 'drive' },
+  allarme: { bpm: 152, root: 50, chords: [[0, 3, 7, 10], [1, 5, 8, 12], [0, 3, 7, 10], [-2, 1, 5, 8]], lead: 'saw', drums: 'drive' },
   results: { bpm: 104, root: 57, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [2, 5, 9, 12]], lead: 'soft', drums: 'light' }
 };
 

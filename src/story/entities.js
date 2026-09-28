@@ -350,14 +350,21 @@ export class Pickup {
   }
 }
 
-/** Steward che pattuglia un tratto: fa male al contatto, una bottigliata lo stordisce. */
+/**
+ * Nemico che pattuglia un tratto (steward dello stadio, carrelli-droide del deposito): fa male al contatto,
+ * una bottigliata lo stordisce. Opzioni: speed, w, h, stunText, hidden (compare solo con appear()).
+ */
 export class Steward {
-  constructor({ x0, x1, y }, model) {
+  constructor({ x0, x1, y, speed = 2.3, w = 0.9, h = 1.85, stunText = 'Steward stordito', hidden = false }, model) {
     this.x0 = x0; this.x1 = x1; this.y = y;
     this.x = (x0 + x1) / 2;
     this.dir = 1;
     this.stun = 0;
+    this.speed = speed; this.w = w; this.h = h; this.stunText = stunText;
+    this.active = !hidden;
+    this.appearT = hidden ? 0 : 1;
     this.group = new THREE.Group();
+    this.group.visible = this.active;
     this.body = new THREE.Group();
     this.group.add(this.body);
     if (model) this.body.add(model);
@@ -384,7 +391,27 @@ export class Steward {
     this.group.add(this.stars);
   }
 
+  /** Fa comparire un nemico nascosto (es. i droidi che spuntano con l'allarme), partendo verso `dir`. */
+  appear(dir = -1) {
+    if (this.active) return;
+    this.active = true;
+    this.appearT = 0;
+    this.dir = dir;
+    this.group.visible = true;
+  }
+
+  /** Torna nascosto e al suo posto (quando Whiskey riparte dal checkpoint). */
+  hide() {
+    this.active = false;
+    this.group.visible = false;
+    this.stun = 0;
+    this.stars.visible = false;
+    this.x = (this.x0 + this.x1) / 2;
+  }
+
   update(dt, ctx) {
+    if (!this.active) return;
+    if (this.appearT < 1) { this.appearT = Math.min(1, this.appearT + dt * 3); this.group.scale.setScalar(0.2 + this.appearT * 0.8); }
     if (this.stun > 0) {
       this.stun -= dt;
       this.stars.visible = true;
@@ -392,7 +419,7 @@ export class Steward {
       this.body.rotation.z = THREE.MathUtils.damp(this.body.rotation.z, this.dir * 0.5, 8, dt);
       if (this.stun <= 0) this.stars.visible = false;
     } else {
-      this.x += this.dir * 2.3 * dt;
+      this.x += this.dir * this.speed * dt;
       if (this.x > this.x1) { this.x = this.x1; this.dir = -1; }
       if (this.x < this.x0) { this.x = this.x0; this.dir = 1; }
       this.body.rotation.z = THREE.MathUtils.damp(this.body.rotation.z, 0, 8, dt);
@@ -402,9 +429,15 @@ export class Steward {
     this.group.position.set(this.x, this.y, 0);
   }
 
-  box() { return { x0: this.x - 0.45, x1: this.x + 0.45, y0: this.y, y1: this.y + 1.85 }; }
-  hurts(b) { return this.stun <= 0 && overlap(b, this.box()); }
+  box() { return { x0: this.x - this.w / 2, x1: this.x + this.w / 2, y0: this.y, y1: this.y + this.h }; }
+  hurts(b) { return this.active && this.appearT >= 1 && this.stun <= 0 && overlap(b, this.box()); }
   hit() { this.stun = 5; }
+
+  onBottle(bb) {
+    if (!this.active || this.stun > 0 || !overlap(bb, this.box())) return false;
+    this.hit();
+    return this.stunText;
+  }
 }
 
 /** Sedile lanciato dal boss: parabola verso il punto dove sei adesso, con il bersaglio a terra. */
@@ -527,6 +560,12 @@ export class Boss {
     this.stagger = 0.9;
     if (this.hp <= 0) this.dead = true;
     return true;
+  }
+
+  onBottle(bb) {
+    if (!this.active || this.dead || !overlap(bb, this.box())) return false;
+    // durante il lampeggio la bottiglia si rompe ma non conta
+    return this.hit() ? (this.dead ? true : `Colpito! Ancora ${this.hp}.`) : true;
   }
 }
 

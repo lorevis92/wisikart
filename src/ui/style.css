@@ -250,6 +250,21 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .story-hearts .off { color: rgba(255,255,255,0.18); }
 .story-bottle { width: 14px; height: 28px; border-radius: 5px 5px 4px 4px; background: linear-gradient(180deg, #7fe0a0 0 22%, #3f9a5a 22% 100%); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25); }
 .story-boss { flex: 1; max-width: 420px; text-align: center; font-weight: 600; font-size: 15px; }
+.story-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.story-coin { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff2a8, #f5b942 55%, #b07a12); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.2); }
+.story-badge img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+.story-badge small { opacity: 0.8; }
+/* timer dell'hangar: grande, al centro, rosso quando manca poco */
+.story-timer { display: flex; flex-direction: column; align-items: center; background: rgba(40,6,12,0.75); border: 2px solid #ff4a5a; padding: 4px 18px 6px; border-radius: 16px; line-height: 1; }
+.story-timer small { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #ffb3bb; }
+.story-timer b { font-size: 40px; font-variant-numeric: tabular-nums; color: #fff; }
+.story-timer.urgent b { color: #ff4a5a; animation: timerPulse 0.4s ease-in-out infinite alternate; }
+@keyframes timerPulse { to { transform: scale(1.12); } }
+/* allarme: bordo rosso che lampeggia intorno allo schermo */
+.story-alarm { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 rgba(255,30,40,0); opacity: 0; }
+.story-alarm.on { opacity: 1; animation: alarmFlash 0.75s steps(2, jump-none) infinite; }
+@keyframes alarmFlash { 0% { box-shadow: inset 0 0 90px 20px rgba(255,30,40,0.55); } 100% { box-shadow: inset 0 0 40px 4px rgba(255,30,40,0.15); } }
+@media (prefers-reduced-motion: reduce) { .story-alarm.on, .story-timer.urgent b { animation: none; } .story-alarm.on { box-shadow: inset 0 0 60px 10px rgba(255,30,40,0.4); } }
 .story-boss-bar { height: 14px; margin-top: 4px; border-radius: 8px; background: rgba(10,12,34,0.7); border: 2px solid rgba(255,255,255,0.25); overflow: hidden; }
 .story-boss-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--coral), var(--gold)); transition: width 0.3s; }
 .story-hud .hud-notice { top: 22%; font-size: 24px; white-space: normal; text-align: center; width: min(92vw, 720px); }

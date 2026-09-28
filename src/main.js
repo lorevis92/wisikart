@@ -346,7 +346,8 @@ class Game {
     this.save.story = { ...(this.save.story || {}), [level.id]: true };
     this._persist();
     this._endStory();
-    this.openStory(`Livello completato: ${level.name}. Il portale di Niaboc si è aperto. Emma: «Goditi il momento, dura poco.»`, level.id);
+    // si ricompare in piazza davanti all'ingresso del livello appena finito; il salvataggio riapre il prossimo
+    this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.id);
   }
 
   _endStory() {

@@ -22,6 +22,16 @@ export const STADIO = {
   ammo: 3,
   maxAmmo: 9,
   killY: -8,
+  winText: 'Livello completato! Emma: «Lo sapevo. Più o meno.»',
+  completeMessage: 'Livello completato: Stadio di Space Ball. Il Deposito Valvo & Go è aperto.',
+
+  // telecamera: arena larga e quasi ferma; tunnel verticale che segue l'altezza
+  camera: [
+    { rect: [190, 44.5, 260, 80], x: 211, follow: 0.25, y: 52, dist: 27 },
+    { rect: [194, -20, 260, 44.5], clampX: [206, 216], yOff: 1.8, dist: 21 }
+  ],
+  // luci calde del tunnel degli spogliatoi
+  lamps: [[204, 6], [214, 14], [206, 22], [218, 30], [210, 42]],
 
   // sfondi: ogni immagine copre il suo rettangolo [x0, y0, x1, y1] e scorre in parallasse
   sections: [
@@ -139,5 +149,5 @@ export const STADIO = {
     { x0: 207, x1: 216, y: 24 }
   ],
 
-  boss: { x: 220, y: 46, x0: 214, x1: 223, hp: 3, trigger: 45 }
+  boss: { x: 220, y: 46, x0: 214, x1: 223, hp: 3, trigger: 45, name: 'Il Tifoso Supremo', intro: 'Il Tifoso Supremo! Tre bottigliate e torna a sedersi.' }
 };

@@ -13,6 +13,10 @@ const COYOTE = 0.1;
 const BUFFER = 0.13;
 export const PLAYER_W = 0.8;
 export const PLAYER_H = 1.7;
+// scivolata: più bassa, più veloce, dura poco (si prolunga se c'è un soffitto sopra)
+const SLIDE_H = 0.85;
+const SLIDE_T = 0.6;
+const SLIDE_V = 9.5;
 
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 
@@ -34,6 +38,8 @@ export class Player {
     this.invuln = 0;
     this.throwAnim = 0;
     this.walkPhase = 0;
+    this.sliding = 0;
+    this.boosted = false;
     this.group = new THREE.Group();
     this.squash = 0;
     if (rigged) this._buildRig(rigged);
@@ -150,12 +156,32 @@ export class Player {
     this.climbing = null;
     this.onGround = false;
     this.standingOn = null;
+    this.sliding = 0;
+    this.boosted = false;
   }
+
+  /** Altezza attuale: più bassa durante la scivolata (si passa sotto saracinesche e ostacoli bassi). */
+  get h() { return this.sliding > 0 ? SLIDE_H : PLAYER_H; }
 
   box(out = {}) {
     out.x0 = this.x - PLAYER_W / 2; out.x1 = this.x + PLAYER_W / 2;
-    out.y0 = this.y; out.y1 = this.y + PLAYER_H;
+    out.y0 = this.y; out.y1 = this.y + this.h;
     return out;
+  }
+
+  /** Spinta dal basso (getto di vapore): il salto non si accorcia lasciando il tasto. */
+  launch(vy) {
+    this.vy = vy;
+    this.onGround = false;
+    this.boosted = true;
+    this.climbing = null;
+    this.sliding = 0;
+  }
+
+  /** C'è spazio per rialzarsi? (un soffitto basso sopra la testa prolunga la scivolata) */
+  _canStand(level) {
+    const x0 = this.x - PLAYER_W / 2, x1 = this.x + PLAYER_W / 2, y0 = this.y + SLIDE_H, y1 = this.y + PLAYER_H;
+    return !level.solids.some((s) => x1 > s.x0 && x0 < s.x1 && y1 > s.y0 && y0 < s.y1);
   }
 
   /**
@@ -207,33 +233,52 @@ export class Player {
       return events;
     }
 
-    // ---- corsa ----
-    const target = ctl.ax * RUN;
-    const acc = this.onGround ? ACC_GROUND : ACC_AIR;
-    if (this.vx < target) this.vx = Math.min(target, this.vx + acc * dt);
-    else if (this.vx > target) this.vx = Math.max(target, this.vx - acc * dt);
-    if (Math.abs(ctl.ax) > 0.1) this.facing = Math.sign(ctl.ax);
+    // ---- scivolata: giù mentre si corre a terra ----
+    if (!this.sliding && this.onGround && ctl.ay < -0.5 && (Math.abs(this.vx) > 2.5 || Math.abs(ctl.ax) > 0.5) && !ladder) {
+      this.sliding = SLIDE_T;
+      const dir = Math.sign(this.vx) || Math.sign(ctl.ax) || this.facing;
+      this.vx = dir * Math.max(Math.abs(this.vx), SLIDE_V);
+      events.push('slide');
+    }
+    if (this.sliding > 0) {
+      this.sliding = Math.max(0, this.sliding - dt);
+      if (this.sliding === 0 && !this._canStand(level)) this.sliding = 0.05; // resta giù finché c'è un soffitto
+      this.vx *= Math.max(0, 1 - dt * 1.2); // perde velocità pian piano
+      if (Math.abs(this.vx) > 0.5) this.facing = Math.sign(this.vx);
+    } else {
+      // ---- corsa ----
+      const target = ctl.ax * RUN;
+      const acc = this.onGround ? ACC_GROUND : ACC_AIR;
+      if (this.vx < target) this.vx = Math.min(target, this.vx + acc * dt);
+      else if (this.vx > target) this.vx = Math.max(target, this.vx - acc * dt);
+      if (Math.abs(ctl.ax) > 0.1) this.facing = Math.sign(ctl.ax);
+    }
 
     // ---- salto (con tempo di coyote e tasto memorizzato) ----
     this.coyote = this.onGround ? COYOTE : Math.max(0, this.coyote - dt);
-    if (this.jumpBuffer > 0 && this.coyote > 0) {
+    if (this.jumpBuffer > 0 && this.coyote > 0 && (this.sliding === 0 || this._canStand(level))) {
       this.vy = JUMP_V;
       this.jumpBuffer = 0;
       this.coyote = 0;
       this.onGround = false;
+      this.sliding = 0;
       events.push('jump');
     }
-    // salto più corto se si lascia il tasto
-    if (!ctl.jumpHeld && this.vy > 0) this.vy -= GRAV * 1.4 * dt;
+    // salto più corto se si lascia il tasto (non per le spinte del vapore)
+    if (this.vy <= 0) this.boosted = false;
+    if (!ctl.jumpHeld && this.vy > 0 && !this.boosted) this.vy -= GRAV * 1.4 * dt;
     this.vy = Math.max(-28, this.vy - GRAV * dt);
 
     // ---- movimento con collisioni separate sui due assi ----
     const b = {};
-    this.x += this.vx * dt;
+    // nastro trasportatore: chi ci sta sopra viene trascinato (standingOn è quello del passo precedente)
+    const carry = this.onGround && this.standingOn && this.standingOn.carry ? this.standingOn.carry : 0;
+    const moveX = this.vx + carry;
+    this.x += moveX * dt;
     this.box(b);
     for (const s of level.solids) {
       if (b.x1 <= s.x0 || b.x0 >= s.x1 || b.y1 <= s.y0 + 0.001 || b.y0 >= s.y1 - 0.001) continue;
-      if (this.vx > 0 || this.x < (s.x0 + s.x1) / 2) this.x = s.x0 - PLAYER_W / 2 - 0.001;
+      if (moveX > 0 || this.x < (s.x0 + s.x1) / 2) this.x = s.x0 - PLAYER_W / 2 - 0.001;
       else this.x = s.x1 + PLAYER_W / 2 + 0.001;
       this.vx = 0;
       this.box(b);
@@ -247,7 +292,7 @@ export class Player {
     for (const s of level.solids) {
       if (b.x1 <= s.x0 || b.x0 >= s.x1 || b.y1 <= s.y0 || b.y0 >= s.y1) continue;
       if (this.vy <= 0 && prevY >= s.y1 - 0.05) { this.y = s.y1; this.vy = 0; this.onGround = true; this.standingOn = s; }
-      else if (this.vy > 0) { this.y = s.y0 - PLAYER_H; this.vy = 0; }
+      else if (this.vy > 0) { this.y = s.y0 - this.h; this.vy = 0; this.boosted = false; }
       this.box(b);
     }
     if (this.vy <= 0) {
@@ -335,6 +380,13 @@ export class Player {
     const sy = (1 + st * 0.05) * (1 - this.squash * 0.14), sx = (1 - st * 0.03) * (1 + this.squash * 0.08);
     this.body.scale.set(sx, sy, sx);
     this.body.position.y = bob;
+    // scivolata: tutto il corpo all'indietro, piedi in avanti (l'altezza scende sotto la hitbox di 0,85 m)
+    this.slideTilt = THREE.MathUtils.damp(this.slideTilt || 0, this.sliding > 0 ? 1 : 0, 18, dt);
+    if (this.slideTilt > 0.01) {
+      this.body.rotation.x = THREE.MathUtils.lerp(this.body.rotation.x, -1.2, this.slideTilt);
+      this.body.position.y = THREE.MathUtils.lerp(bob, 0.25, this.slideTilt);
+      if (this.rig) this.rig.apply(locomotionPose({ slide: true }));
+    }
     this.handBottle.visible = this.throwAnim > 0.12;
     this.group.visible = this.invuln <= 0 || Math.floor(this.invuln * 14) % 2 === 0;
   }

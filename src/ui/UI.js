@@ -345,7 +345,27 @@ export class UI {
     $('#story-ammo-max').textContent = `/${h.maxAmmo}`;
     const boss = $('#story-boss');
     boss.classList.toggle('hidden', !h.boss);
-    if (h.boss) $('#story-boss-fill').style.width = `${(h.boss.hp / h.boss.max) * 100}%`;
+    if (h.boss) {
+      $('#story-boss-fill').style.width = `${(h.boss.hp / h.boss.max) * 100}%`;
+      if (h.boss.name) $('#story-boss-name').textContent = h.boss.name;
+    }
+    // monete (solo nei livelli che le hanno), badge, allarme e timer dell'hangar
+    $('#story-coins-box').classList.toggle('hidden', h.coins === null || h.coins === undefined);
+    if (h.coins !== null && h.coins !== undefined) $('#story-coins').textContent = h.coins;
+    const badge = $('#story-badge');
+    if (!!h.badge !== !badge.classList.contains('show-badge')) {
+      badge.classList.toggle('hidden', !h.badge);
+      badge.classList.toggle('show-badge', !!h.badge);
+      if (h.badge && !$('#story-badge-img').getAttribute('src')) $('#story-badge-img').src = 'assets/story/valvo/badge.png';
+    }
+    $('#story-alarm').classList.toggle('on', !!h.alarm);
+    const timer = $('#story-timer');
+    const showTimer = h.timer !== null && h.timer !== undefined;
+    timer.classList.toggle('hidden', !showTimer);
+    if (showTimer) {
+      $('#story-timer-val').textContent = h.timer.toFixed(1);
+      timer.classList.toggle('urgent', h.timer < 2);
+    }
     const n = $('#story-notice');
     if (h.notice !== this._storyNotice) {
       this._storyNotice = h.notice;

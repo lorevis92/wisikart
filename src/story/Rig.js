@@ -160,8 +160,17 @@ export class RigAnimator {
  * Pose di base condivise da livello e piazza.
  * phase = fase del passo, run = 0..1 intensità della corsa, air = -1..1 (salita/discesa) o null a terra.
  */
-export function locomotionPose({ phase = 0, run = 0, air = null, climb = false, throwT = 0, lean = 0 }) {
+export function locomotionPose({ phase = 0, run = 0, air = null, climb = false, throwT = 0, lean = 0, slide = false }) {
   const P = {};
+  if (slide) {
+    // scivolata: gambe tese in avanti, braccia indietro per l'equilibrio, testa che guarda avanti
+    P.upLegL = { x: -1.2 }; P.upLegR = { x: -1.0 };
+    P.legL = { x: 0.2 }; P.legR = { x: 0.5 };
+    P.armL = { x: 0.9, z: 0.5 }; P.armR = { x: 0.9, z: -0.5 };
+    P.spine = { x: 0.35 };
+    P.head = { x: 0.6 };
+    return P;
+  }
   if (climb) {
     const s = Math.sin(phase);
     P.upLegL = { x: -0.5 - s * 0.4 }; P.upLegR = { x: -0.5 + s * 0.4 };

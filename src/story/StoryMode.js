@@ -7,9 +7,18 @@ import { CrumbleRow, Fan, Scarf, Dropper, Pendulum, Pickup, Steward, Boss, Throw
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
+// modelli di default (quelli dello stadio); ogni livello può sostituirli o aggiungerne in `models`
+const DEFAULT_MODELS = {
+  bottle: { url: 'assets/story/stadio/bottiglia.glb', h: 0.55 },
+  patrol: { url: 'assets/story/stadio/steward.glb', h: 1.9 },
+  boss: { url: 'assets/story/stadio/tifoso.glb', h: 3.6 }
+};
+
 /**
  * Modalità Storia: platform 2.5D a scorrimento laterale (telecamera fissa di lato).
- * Scena, fisica e HUD sono separati dal kart; il gioco (main.js) chiama load → update/render → dispose.
+ * Il livello (stadio.js, valvo.js…) descrive geometria, entità, telecamera e modelli; un livello può
+ * aggiungere entità sue con `setup(mode)` e chiudere la partita con `mode.win()`.
+ * Il gioco (main.js) chiama load → update/render → dispose.
  */
 export class StoryMode {
   constructor({ level, character, audio, onComplete, onGameOver }) {
@@ -27,11 +36,15 @@ export class StoryMode {
     this.projectiles = [];
     this.seats = [];
     this.bursts = [];
+    this.pickups = [];
+    this.onRespawn = []; // entità che si rimettono a posto quando Whiskey riparte dal checkpoint
     this.lives = level.lives;
     this.ammo = level.ammo;
     this.maxAmmo = level.maxAmmo;
+    this.coins = level.coins ? 0 : null;
+    this.extraHud = {};
     this.checkpoint = 0;
-    this.state = 'play'; // play | dead | won | over
+    this.state = 'play'; // play | won | over | ended
     this.stateTimer = 0;
     this.notice = null;
     this.noticeTimer = 0;
@@ -40,62 +53,79 @@ export class StoryMode {
   // ---------- costruzione ----------
   async load(progress = () => {}) {
     const L = this.level;
-    progress('Accendo i riflettori…');
-    const S = 'assets/story/stadio/';
-    const [charModel, bottleStand, stewardProto, bossModel] = await Promise.all([
+    progress(L.loadingText || 'Accendo i riflettori…');
+    const defs = { ...DEFAULT_MODELS, ...(L.models || {}) };
+    const keys = Object.keys(defs);
+    const [charModel, ...loaded] = await Promise.all([
       loadRigged(riggedUrl(this.character), 1.8),
-      Assets.model(S + 'bottiglia.glb', { targetHeight: 0.55 }),
-      Assets.model(S + 'steward.glb', { targetHeight: 1.9 }),
-      Assets.model(S + 'tifoso.glb', { targetHeight: 3.6 })
+      ...keys.map((k) => Assets.model(defs[k].url, { targetHeight: defs[k].h }))
     ]);
-    // bottiglia centrata (per i lanci) e appoggiata a terra (per pickup e spalti)
-    this.bottleStand = bottleStand;
-    if (bottleStand) {
+    this.models = Object.fromEntries(keys.map((k, i) => [k, loaded[i]]));
+    // bottiglia appoggiata (pickup, spalti) e centrata (lanci)
+    this.bottleStand = this.models.bottle;
+    if (this.bottleStand) {
       this.bottleCentered = new THREE.Group();
-      const b = bottleStand.clone(true);
-      b.position.y = -0.275;
+      const b = this.bottleStand.clone(true);
+      b.position.y = -(defs.bottle.h / 2);
       this.bottleCentered.add(b);
     }
-    progress('Sistemo i sedili…');
+    progress(L.buildingText || 'Sistemo i sedili…');
     this._lights();
     await this._backgrounds();
     this._geometry();
-    progress('Chiamo gli steward…');
-    // entità
-    this.crumbles = L.crumbles.map((c) => new CrumbleRow(c));
+    progress(L.enemiesText || 'Chiamo gli steward…');
+    // entità comuni (tutte facoltative)
+    this.crumbles = (L.crumbles || []).map((c) => new CrumbleRow(c));
     this.platforms.push(...this.crumbles);
     for (const e of this.crumbles) this._add(e, false);
-    for (const f of L.fans) this._add(new Fan(f));
-    for (const s of L.scarves) this._add(new Scarf(s));
-    for (const d of L.droppers) this._add(new Dropper(d, this.bottleCentered));
-    for (const p of L.pendulums) this._add(new Pendulum(p));
-    this.pickups = L.pickups.map((p) => this._add(new Pickup(p, bottleStand), false));
-    this.stewards = L.stewards.map((s) => this._add(new Steward(s, stewardProto ? stewardProto.clone(true) : null)));
-    this.boss = this._add(new Boss(L.boss, bossModel));
-    // Whiskey
-    // il personaggio con scheletro (story/characters/<id>.glb); senza file, la versione procedurale
+    for (const f of L.fans || []) this._add(new Fan(f));
+    for (const s of L.scarves || []) this._add(new Scarf(s));
+    for (const d of L.droppers || []) this._add(new Dropper(d, this.bottleCentered));
+    for (const p of L.pendulums || []) this._add(new Pendulum(p));
+    for (const p of L.pickups || []) this.spawnPickup(p, false);
+    this.stewards = (L.stewards || []).map((s) => this.addPatrol(s));
+    this.boss = L.boss ? this._add(new Boss(L.boss, this.models.boss)) : null;
+    // entità proprie del livello (nastri, valvole, saracinesche…)
+    if (L.setup) L.setup(this);
+    // Whiskey: il personaggio con scheletro (story/characters/<id>.glb); senza file, la versione procedurale
     this.player = new Player(this.character, charModel);
     this.scene.add(this.player.group);
     this._respawn(true);
     progress('Pronti.');
   }
 
+  /** Aggiunge un'entità alla scena; con hazard = true fa male al contatto (metodo hurts). */
   _add(e, hazard = true) {
     this.entities.push(e);
     if (hazard && e.hurts) this.hazards.push(e);
-    this.scene.add(e.group);
+    if (e.group) this.scene.add(e.group);
     return e;
   }
 
+  add(e, hazard = true) { return this._add(e, hazard); }
+
+  /** Nemico che pattuglia un tratto (steward, carrello-droide): si stordisce con una bottigliata. */
+  addPatrol(def) {
+    const proto = this.models[def.model || 'patrol'];
+    return this._add(new Steward(def, proto ? proto.clone(true) : null));
+  }
+
   _lights() {
-    this.scene.add(new THREE.HemisphereLight(0xcfd8ff, 0x3a2a5a, 1.25));
-    const key = new THREE.DirectionalLight(0xfff1dd, 1.6);
+    const Lt = this.level.lights || {};
+    this.scene.add(new THREE.HemisphereLight(Lt.sky ?? 0xcfd8ff, Lt.ground ?? 0x3a2a5a, Lt.hemi ?? 1.25));
+    const key = new THREE.DirectionalLight(Lt.key ?? 0xfff1dd, Lt.keyI ?? 1.6);
     key.position.set(-8, 20, 18);
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x9a7cff, 0.7);
+    const rim = new THREE.DirectionalLight(Lt.rim ?? 0x9a7cff, 0.7);
     rim.position.set(10, 6, -10);
     this.scene.add(rim);
     this.scene.fog = null;
+    // lampade calde (tunnel dello stadio, corsie del deposito…)
+    for (const [x, y, color = 0xffc27a, intensity = 12] of this.level.lamps || []) {
+      const lamp = new THREE.PointLight(color, intensity, 14, 1.6);
+      lamp.position.set(x, y, 2);
+      this.scene.add(lamp);
+    }
   }
 
   /** Un pannello per sezione, molto dietro al piano di gioco: scorre in parallasse e sfuma ai confini. */
@@ -114,7 +144,7 @@ export class StoryMode {
       this.scene.add(mesh);
       this.bgs.push({ sec, mesh, aspect, z: mesh.position.z });
     }
-    this.scene.background = new THREE.Color('#0b0d26');
+    this.scene.background = new THREE.Color(this.level.background || '#0b0d26');
   }
 
   _fallbackBg([top, mid, bottom]) {
@@ -134,20 +164,26 @@ export class StoryMode {
   _geometry() {
     const L = this.level;
     this.solids = L.solids.map(({ r, style }) => ({ x0: r[0], x1: r[1], y0: r[2], y1: r[3], style }));
-    this.platforms = L.platforms.map(({ r, style }) => ({ x0: r[0], x1: r[1], y: r[2], style, active: true }));
-    this.ladders = L.ladders;
+    this.platforms = (L.platforms || []).map(({ r, style }) => ({ x0: r[0], x1: r[1], y: r[2], style, active: true }));
+    this.ladders = L.ladders || [];
     const seatCols = ['#f29a2e', '#a24cf0', '#1fbfae'];
     const mats = {
       stand: std('#3b3270'), standTop: std('#5a4aa8'),
       field: std('#4a2a9a', { emissive: 0x2a0a6a, emissiveIntensity: 0.35, roughness: 0.4 }), fieldEdge: std('#3ff0b0', { emissive: 0x1fd090, emissiveIntensity: 1.2 }),
       bench: std('#2f6bd9'), brick: std('#1f4a52', { roughness: 0.9 }), wall: std('#241c4a'),
-      grate: std('#4a5a78', { metalness: 0.6, roughness: 0.4 }), arena: std('#5a3aa8', { emissive: 0x2a0a5a, emissiveIntensity: 0.3 })
+      grate: std('#4a5a78', { metalness: 0.6, roughness: 0.4 }), arena: std('#5a3aa8', { emissive: 0x2a0a5a, emissiveIntensity: 0.3 }),
+      // deposito: pavimento industriale, lamiere, cemento
+      floor: std('#3a3f52', { metalness: 0.5, roughness: 0.55 }), floorEdge: std('#f2c230', { emissive: 0x6a4a00, emissiveIntensity: 0.4 }),
+      metal: std('#4a5068', { metalness: 0.7, roughness: 0.4 }), concrete: std('#565a66', { roughness: 0.95 }),
+      crate: std('#8a5a32', { roughness: 0.85 })
     };
     for (const s of this.solids) {
       const w = s.x1 - s.x0, h = s.y1 - s.y0;
-      const depth = s.style === 'field' ? 7 : s.style === 'brick' ? 3 : 4;
+      if (s.style === 'crate') { this._crateStack(s); continue; }
+      if (s.style === 'none') continue; // disegnato da un'entità (nastri, paratie…)
+      const depth = s.style === 'field' || s.style === 'floor' ? 7 : s.style === 'brick' ? 3 : 4;
       const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, depth), mats[s.style] || mats.wall);
-      box.position.set((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, s.style === 'field' ? -1.5 : 0);
+      box.position.set((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, depth === 7 ? -1.5 : 0);
       this.scene.add(box);
       if (s.style === 'stand') {
         // la fila di sedili è il piano su cui si cammina, con una seconda fila dietro
@@ -162,8 +198,8 @@ export class StoryMode {
         const step = new THREE.Mesh(new THREE.BoxGeometry(w, 0.9, 1.6), mats.standTop);
         step.position.set((s.x0 + s.x1) / 2, s.y1 + 0.45, -1.6);
         this.scene.add(step);
-      } else if (s.style === 'field') {
-        const edge = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.12), mats.fieldEdge);
+      } else if (s.style === 'field' || s.style === 'floor') {
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.12), s.style === 'floor' ? mats.floorEdge : mats.fieldEdge);
         edge.position.set((s.x0 + s.x1) / 2, s.y1 - 0.05, 2.0);
         this.scene.add(edge);
       }
@@ -171,11 +207,11 @@ export class StoryMode {
     for (const p of this.platforms) {
       if (p.style === 'goal') continue; // la traversa la disegna la porta
       const w = p.x1 - p.x0;
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(w, p.style === 'arena' ? 0.8 : 0.3, p.style === 'arena' ? 6 : 2.4), mats[p.style]);
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(w, p.style === 'arena' ? 0.8 : 0.3, p.style === 'arena' ? 6 : 2.4), mats[p.style] || mats.grate);
       slab.position.set((p.x0 + p.x1) / 2, p.y - (p.style === 'arena' ? 0.4 : 0.15), -0.3);
       this.scene.add(slab);
     }
-    for (const g of L.goals) this.scene.add(goalMesh(g));
+    for (const g of L.goals || []) this.scene.add(goalMesh(g));
     // scale
     const rail = std('#8a96b0', { metalness: 0.7, roughness: 0.35 });
     for (const l of this.ladders) {
@@ -191,11 +227,31 @@ export class StoryMode {
         this.scene.add(rung);
       }
     }
-    // luci calde del tunnel
-    for (const [x, y] of [[204, 6], [214, 14], [206, 22], [218, 30], [210, 42]]) {
-      const lamp = new THREE.PointLight(0xffc27a, 12, 14, 1.6);
-      lamp.position.set(x, y, 2);
-      this.scene.add(lamp);
+  }
+
+  /** Pila di casse (cassa.glb, o scatole procedurali) che riempie un blocco solido, una cassa ogni 1,2 m. */
+  _crateStack(s) {
+    const size = 1.2;
+    const nx = Math.max(1, Math.round((s.x1 - s.x0) / size)), ny = Math.max(1, Math.round((s.y1 - s.y0) / size));
+    const cw = (s.x1 - s.x0) / nx, ch = (s.y1 - s.y0) / ny;
+    const proto = this.models.crate;
+    const mat = std('#8a5a32', { roughness: 0.85 });
+    for (let iy = 0; iy < ny; iy++) {
+      for (let ix = 0; ix < nx; ix++) {
+        let c;
+        if (proto) {
+          c = proto.clone(true);
+          c.scale.multiplyScalar(ch / size);
+          c.rotation.y = ((ix * 7 + iy * 3) % 4) * (Math.PI / 2); // non tutte uguali
+        } else {
+          c = new THREE.Mesh(new THREE.BoxGeometry(cw * 0.96, ch * 0.96, 1.2), mat);
+          c.position.y = ch / 2;
+        }
+        const g = new THREE.Group();
+        g.add(c);
+        g.position.set(s.x0 + (ix + 0.5) * cw, s.y0 + iy * ch, 0);
+        this.scene.add(g);
+      }
     }
   }
 
@@ -210,10 +266,17 @@ export class StoryMode {
     this.say(kind === 'rack' ? 'Bottigliera! +6 bottiglie' : kind === 'crate' ? 'Cassa di bottiglie! +6' : `+${n} bottiglie`, 1.4);
   }
 
-  spawnPickup(p) {
+  addCoins(n) {
+    if (this.coins === null) this.coins = 0;
+    this.coins += n;
+    this.sfx('pickup');
+  }
+
+  spawnPickup(p, announce = true) {
     const pk = new Pickup(p, this.bottleStand);
     this.pickups.push(pk);
     this._add(pk, false);
+    return pk;
   }
 
   hasBottleOnFloor() { return this.pickups.some((p) => !p.taken && p.kind === 'bottle' && p.y >= 45); }
@@ -227,11 +290,31 @@ export class StoryMode {
     this.bursts.push({ m, t: 0 });
   }
 
+  /** Livello vinto: messaggio, voce facoltativa di Emma, poi si torna alla piazza. */
+  win(message, { voice = null, time = 3.2 } = {}) {
+    if (this.state !== 'play') return;
+    this.state = 'won';
+    this.stateTimer = time;
+    this.sfx('finish');
+    if (voice) this.audio.voice(voice);
+    this.say(message, time);
+  }
+
   _respawn(first = false) {
     const cp = this.level.checkpoints[this.checkpoint];
     this.player.reset(cp.x, cp.y);
     this.player.invuln = first ? 0 : 1.5;
     this.camX = cp.x; this.camY = cp.y + 3;
+    if (!first) for (const f of this.onRespawn) f(this.checkpoint);
+  }
+
+  /** Riparte dall'ultimo checkpoint perdendo una vita (cadute, trappole). */
+  fail(message) {
+    this.lives--;
+    this.sfx('hit');
+    if (this.lives <= 0) return this._gameOver();
+    if (message) this.say(message);
+    this._respawn();
   }
 
   _hurt(fromX) {
@@ -242,17 +325,12 @@ export class StoryMode {
     if (this.lives <= 0) return this._gameOver();
     p.invuln = 1.6;
     p.climbing = null;
+    p.sliding = 0;
     p.vy = 9;
     p.vx = (p.x < fromX ? -1 : 1) * 6;
   }
 
-  _fell() {
-    this.lives--;
-    this.sfx('hit');
-    if (this.lives <= 0) return this._gameOver();
-    this.say('Emma: «Il vuoto non è una scorciatoia.»');
-    this._respawn();
-  }
+  _fell() { this.fail('Emma: «Il vuoto non è una scorciatoia.»'); }
 
   _gameOver() {
     this.state = 'over';
@@ -285,11 +363,12 @@ export class StoryMode {
     input.jumpPressed = input.upPressed = false;
     const ev = p.update(dt, ctl, this);
     if (ev.includes('jump')) this.sfx('jump');
+    if (ev.includes('slide')) this.sfx('move');
 
     // lancio della bottiglia
     if (input.itemPressed) {
       input.itemPressed = false;
-      if (this.ammo > 0 && p.throwAnim <= 0 && !p.climbing) {
+      if (this.ammo > 0 && p.throwAnim <= 0 && !p.climbing && !p.sliding) {
         this.ammo--;
         p.throwBottle();
         const b = new ThrownBottle(p.x + p.facing * 0.5, p.y + 1.3, p.facing, this.bottleCentered);
@@ -301,6 +380,7 @@ export class StoryMode {
 
     for (const e of this.entities) e.update(dt, ctx);
     this._projectiles(dt, ctx);
+    if (this.state !== 'play') return this._camera(dt);
 
     // danni
     const box = p.box();
@@ -317,18 +397,15 @@ export class StoryMode {
       }
     }
 
-    // boss: si sveglia quando arrivi nell'arena
+    // boss (se il livello ne ha uno): si sveglia quando arrivi nella sua arena
     const boss = this.boss;
-    if (!boss.active && p.y > this.level.boss.trigger && !boss.dead) {
-      boss.active = true;
-      this.audio.playTheme(this.level.bossMusic);
-      this.say('Il Tifoso Supremo! Tre bottigliate e torna a sedersi.', 3);
-    }
-    if (boss.dead && this.state === 'play') {
-      this.state = 'won';
-      this.stateTimer = 3.2;
-      this.sfx('finish');
-      this.say('Livello completato! Emma: «Lo sapevo. Più o meno.»', 3.2);
+    if (boss) {
+      if (!boss.active && p.y > this.level.boss.trigger && !boss.dead) {
+        boss.active = true;
+        this.audio.playTheme(this.level.bossMusic);
+        this.say(this.level.boss.intro || 'Il boss!', 3);
+      }
+      if (boss.dead) this.win(this.level.winText || 'Livello completato!');
     }
 
     // effetti
@@ -347,14 +424,14 @@ export class StoryMode {
       const b = this.projectiles[i];
       b.update(dt);
       const bb = b.box();
-      let hit = this.solids.some((s) => overlap(bb, s));
-      for (const st of this.stewards) {
-        if (!hit && st.stun <= 0 && overlap(bb, st.box())) { st.hit(); hit = true; this.sfx('hit'); this.say('Steward stordito', 1.2); }
+      // prima i bersagli (nemici, leve, casse con monete), poi i muri
+      let hit = false;
+      for (const e of this.entities) {
+        if (!e.onBottle) continue;
+        const r = e.onBottle(bb, this);
+        if (r) { hit = true; if (typeof r === 'string') this.say(r, 1.4); break; }
       }
-      if (!hit && this.boss.active && !this.boss.dead && overlap(bb, this.boss.box())) {
-        hit = true;
-        if (this.boss.hit()) { this.sfx('hit'); if (!this.boss.dead) this.say(`Colpito! Ancora ${this.boss.hp}.`, 1.5); }
-      }
+      if (!hit) hit = this.solids.some((s) => overlap(bb, s));
       if (hit || b.done) {
         if (hit) { this.burst(b.x, b.y, 0x9fe0ff); this.sfx('break'); }
         this.scene.remove(b.group);
@@ -368,18 +445,23 @@ export class StoryMode {
     }
   }
 
+  /**
+   * Telecamera laterale. Di norma segue Whiskey; le zone del livello (camera: [{ rect, … }]) possono
+   * fissare o limitare l'inquadratura: x (numero fisso), clampX [a, b], follow (quota di x che segue),
+   * y (fisso) o yOff (sopra Whiskey), dist.
+   */
   _camera(dt) {
     const p = this.player;
-    let tx, ty, dist;
-    if (p.y > 44.5 && p.x > 190) {
-      // arena: inquadratura larga e quasi ferma, si vedono sempre boss e lanci
-      tx = 211 + (p.x - 211) * 0.25; ty = 52; dist = 27;
-    } else if (p.x > 194) {
-      // tunnel verticale: segue soprattutto l'altezza
-      tx = THREE.MathUtils.clamp(p.x, 206, 216); ty = p.y + 1.8; dist = 21;
-    } else {
-      tx = p.x + p.facing * 2.2; ty = Math.max(4.2, p.y + 2.4); dist = 19;
-      tx = Math.max(tx, 3);
+    let tx = Math.max(p.x + p.facing * 2.2, this.level.camMinX ?? 3), ty = Math.max(this.level.camMinY ?? 4.2, p.y + 2.4), dist = 19;
+    for (const z of this.level.camera || []) {
+      const [x0, y0, x1, y1] = z.rect;
+      if (p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
+      if (z.x !== undefined) tx = z.x + (p.x - z.x) * (z.follow ?? 0);
+      else if (z.clampX) tx = THREE.MathUtils.clamp(p.x, z.clampX[0], z.clampX[1]);
+      if (z.y !== undefined) ty = z.y;
+      else if (z.yOff !== undefined) ty = p.y + z.yOff;
+      if (z.dist) dist = z.dist;
+      break;
     }
     this.camX = THREE.MathUtils.damp(this.camX ?? tx, tx, 4, dt);
     this.camY = THREE.MathUtils.damp(this.camY ?? ty, ty, 4, dt);
@@ -425,8 +507,10 @@ export class StoryMode {
       maxLives: this.level.lives,
       ammo: this.ammo,
       maxAmmo: this.maxAmmo,
-      boss: this.boss && this.boss.active ? { hp: this.boss.hp, max: this.boss.maxHp } : null,
-      notice: this.notice
+      coins: this.coins,
+      boss: this.boss && this.boss.active ? { hp: this.boss.hp, max: this.boss.maxHp, name: this.level.boss.name } : null,
+      notice: this.notice,
+      ...this.extraHud // timer, allarme, badge… dal livello
     };
   }
 

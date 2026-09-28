@@ -155,10 +155,16 @@
 
   <!-- STORIA: HUD -->
   <section id="screen-story-hud" class="screen hud story-hud">
+    <div class="story-alarm" id="story-alarm" aria-hidden="true"></div>
     <div class="hud-top">
       <div class="story-stat"><span class="story-hearts" id="story-lives"></span></div>
-      <div class="story-boss hidden" id="story-boss"><span>Il Tifoso Supremo</span><div class="story-boss-bar"><i id="story-boss-fill"></i></div></div>
-      <div class="story-stat"><span class="story-bottle" aria-hidden="true"></span><b id="story-ammo">3</b><small id="story-ammo-max">/9</small></div>
+      <div class="story-boss hidden" id="story-boss"><span id="story-boss-name">Il Tifoso Supremo</span><div class="story-boss-bar"><i id="story-boss-fill"></i></div></div>
+      <div class="story-timer hidden" id="story-timer"><small>Chiusura</small><b id="story-timer-val">0.0</b></div>
+      <div class="story-side">
+        <div class="story-stat"><span class="story-bottle" aria-hidden="true"></span><b id="story-ammo">3</b><small id="story-ammo-max">/9</small></div>
+        <div class="story-stat hidden" id="story-coins-box"><span class="story-coin" aria-hidden="true"></span><b id="story-coins">0</b></div>
+        <div class="story-stat story-badge hidden" id="story-badge" title="Badge del deposito"><img id="story-badge-img" alt="Badge" /><small>Badge</small></div>
+      </div>
     </div>
     <div class="hud-notice" id="story-notice"></div>
     <div class="touch" id="story-touch">
@@ -227,7 +233,7 @@
       <div class="controls-legend">
         <h3>Comandi</h3>
         <p><b>Frecce / WASD</b> guida · <b>Spazio</b> derapata (tieni premuto in curva, rilascia per il turbo) · <b>Maiusc / E</b> usa l'oggetto · <b>C</b> guarda indietro · <b>Esc</b> pausa</p>
-        <p><b>Storia:</b> <b>Frecce / A D</b> cammina · <b>Spazio / K</b> salta (più a lungo lo tieni, più salti in alto) · <b>Su / Giù</b> sulle scale · <b>Maiusc / E / J</b> lancia una bottiglia</p>
+        <p><b>Storia:</b> <b>Frecce / A D</b> cammina · <b>Spazio / K</b> salta (più a lungo lo tieni, più salti in alto) · <b>Su / Giù</b> sulle scale · <b>Giù mentre corri</b> scivola · <b>Maiusc / E / J</b> lancia una bottiglia</p>
         <p>Su telefono e tablet compaiono i tasti sullo schermo. Funziona anche il gamepad.</p>
       </div>
     </div>
