@@ -12,54 +12,6 @@ const fmt = (t) => {
 };
 export { fmt };
 
-/**
- * Loghi con lo sfondo pieno (senza trasparenza): rende trasparente il colore di fondo preso dagli angoli,
- * con un bordo morbido, e ritaglia lo spazio vuoto intorno. Un logo già trasparente resta com'è.
- */
-function keyedLogo(url) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onerror = () => resolve(url);
-    img.onload = () => {
-      try {
-        const k = Math.min(1, 1400 / img.width);
-        const w = Math.round(img.width * k), h = Math.round(img.height * k);
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        const g = c.getContext('2d', { willReadFrequently: true });
-        g.drawImage(img, 0, 0, w, h);
-        const data = g.getImageData(0, 0, w, h);
-        const px = data.data;
-        const at = (x, y) => (y * w + x) * 4;
-        const corners = [at(2, 2), at(w - 3, 2), at(2, h - 3), at(w - 3, h - 3)];
-        if (corners.some((i) => px[i + 3] < 250)) return resolve(url); // già trasparente
-        const bg = [0, 1, 2].map((ch) => corners.reduce((s, i) => s + px[i + ch], 0) / 4);
-        let x0 = w, y0 = h, x1 = 0, y1 = 0;
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const i = at(x, y);
-            const d = Math.max(Math.abs(px[i] - bg[0]), Math.abs(px[i + 1] - bg[1]), Math.abs(px[i + 2] - bg[2]));
-            const a = Math.min(1, Math.max(0, (d - 14) / 36));
-            px[i + 3] = Math.round(a * 255);
-            if (a > 0.1) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-          }
-        }
-        if (x1 <= x0 || y1 <= y0) return resolve(url);
-        g.putImageData(data, 0, 0);
-        const pad = Math.round(w * 0.01);
-        x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
-        const out = document.createElement('canvas');
-        out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
-        out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
-        resolve(out.toDataURL('image/png'));
-      } catch {
-        resolve(url);
-      }
-    };
-    img.src = url;
-  });
-}
-
 export class UI {
   constructor(game) {
     this.game = game;
@@ -172,12 +124,11 @@ export class UI {
     // loghi: WiSiVERSE per boot e titolo, WisiKart per la sua sezione; se il file manca resta la scritta
     const swap = async (url, alt, ids) => {
       if (!(await Assets.exists(url))) return;
-      const src = await keyedLogo(url);
       for (const id of ids) {
         const mark = $(`#${id}`)?.querySelector('.wordmark');
         if (!mark) continue;
         const img = new Image();
-        img.src = src;
+        img.src = url;
         img.alt = alt;
         mark.replaceWith(img);
       }
