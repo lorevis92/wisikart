@@ -386,6 +386,8 @@ export class Hub {
     ring.position.set(entrance.door.x, 0.05, entrance.door.z);
     this.scene.add(ring);
     this.dynamic.push((t) => { ring.material.opacity = 0.45 + Math.sin(t * 3 + e.angle) * 0.25; });
+    // ingresso con faro (l'autovettore di Emma): colonna di luce e icona visibili da tutta la piazza
+    if (e.beacon) this._beacon(entrance, st, halfW, halfD);
     // ingresso chiuso: barriera di energia (nel vano per gli archi, sulla facciata per gli edifici) e lucchetto
     if (st === 'locked') {
       const w = e.arch ? halfW * 1.5 : Math.min(halfW * 1.2, 8), h = e.arch ? e.height * 0.75 : Math.min(e.height * 0.6, 6);
@@ -401,11 +403,13 @@ export class Hub {
         entrance.door = { x: x + toCenter.x * 1.6, z: z + toCenter.z * 1.6, r: 2.2 };
         ring.position.set(entrance.door.x, 0.05, entrance.door.z);
       }
-      // lucchetto che fluttua sopra l'ingresso
+      // lucchetto che fluttua sopra l'ingresso (con il faro c'è già l'icona grande)
+      if (!e.beacon) {
       const lock = this._padlock();
       lock.position.set(0, h + 1.2, front + 0.3);
       group.add(lock);
       this.dynamic.push((t) => { lock.position.y = h + 1.2 + Math.sin(t * 2 + e.angle) * 0.15; lock.rotation.y = Math.sin(t * 0.8) * 0.4; });
+      }
     }
     // medaglia migliore vinta in questo livello: un piccolo disco che gira sopra l'ingresso
     const medal = this.medals[e.id];
@@ -423,6 +427,58 @@ export class Hub {
       this.dynamic.push((t) => { disc.rotation.y = t * 1.5; disc.position.y = y + Math.sin(t * 2) * 0.2; });
     }
     this.entrances.push(entrance);
+  }
+
+  /**
+   * Faro sopra un ingresso: colonna di luce (rossa se chiuso, verde se aperto) e un'icona che si vede anche
+   * da lontano e attraverso gli edifici: lucchetto chiuso prima, lucchetto aperto (o spunta, se finito) dopo.
+   */
+  _beacon(en, st, halfW, halfD) {
+    const col = st === 'locked' ? 0xff5a6e : 0x43e0b0;
+    const x = en.x, z = en.z;
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 60, 14, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    beam.position.set(x, 30, z);
+    this.scene.add(beam);
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = st === 'locked' ? '#3a0c16' : '#0c2a22';
+    g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.fill();
+    g.lineWidth = 8;
+    g.strokeStyle = st === 'locked' ? '#ff5a6e' : '#43e0b0';
+    g.stroke();
+    g.fillStyle = g.strokeStyle;
+    if (st === 'done') {
+      g.lineWidth = 14; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(38, 66); g.lineTo(56, 84); g.lineTo(90, 46); g.stroke();
+    } else {
+      // lucchetto: corpo e arco (aperto se si può entrare)
+      g.fillRect(40, 60, 48, 36);
+      g.lineWidth = 9;
+      g.beginPath();
+      if (st === 'locked') g.arc(64, 60, 15, Math.PI, 0);
+      else { g.arc(64, 44, 15, Math.PI, 0); g.moveTo(79, 44); }
+      g.stroke();
+      if (st !== 'locked') { g.beginPath(); g.moveTo(49, 44); g.lineTo(49, 60); g.stroke(); }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true }));
+    icon.renderOrder = 20;
+    const y = Math.max(halfW, halfD) + en.height + 3.5;
+    icon.position.set(x, y, z);
+    icon.scale.setScalar(2.8);
+    this.scene.add(icon);
+    // anello a terra intorno all'autovettore
+    const ring = new THREE.Mesh(new THREE.RingGeometry(Math.max(halfW, halfD) + 0.6, Math.max(halfW, halfD) + 1.1, 48), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, 0.04, z);
+    this.scene.add(ring);
+    this.dynamic.push((t) => {
+      icon.position.y = y + Math.sin(t * 2) * 0.3;
+      icon.scale.setScalar(2.8 + Math.sin(t * 3) * 0.15);
+      beam.material.opacity = 0.22 + Math.sin(t * 2.5) * 0.1;
+    });
   }
 
   _padlock() {
@@ -595,7 +651,10 @@ export class Hub {
   }
 
   hud() {
-    return { world: this.world.name, subtitle: this.world.subtitle, prompt: this.prompt, notice: this.notice };
+    // obiettivo corrente: il primo del pianeta non ancora completato
+    const next = (this.world.objectives || []).find((o) => !this.completed[o.until]);
+    const objective = next ? next.text : this.world.objectivesDone || null;
+    return { world: this.world.name, subtitle: this.world.subtitle, prompt: this.prompt, notice: this.notice, objective };
   }
 
   dispose() {

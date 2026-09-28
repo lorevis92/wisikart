@@ -201,8 +201,8 @@ export class UI {
     $('#gm-title').textContent = ctx.title || 'Pausa';
     $('#pause-help').classList.toggle('hidden', !ctx.help);
     $('#pause-restart').classList.toggle('hidden', !ctx.restart);
+    $('#pause-hub').classList.toggle('hidden', !ctx.hub);
     if (ctx.restart) $('#pause-restart').textContent = ctx.restart;
-    $('#gm-confirm-text').textContent = ctx.confirm;
     this.gameMenuConfirm(false);
     this.overlay('pause', true);
     const rows = this.audioRows($('#gm-audio'));
@@ -213,7 +213,8 @@ export class UI {
   }
 
   /** Vista di conferma dell'uscita dentro il menu di gioco. */
-  gameMenuConfirm(on) {
+  gameMenuConfirm(on, text = '', yes = 'Sì, esci') {
+    if (on) { $('#gm-confirm-text').textContent = text; $('#gm-confirm-yes').textContent = yes; }
     $('#gm-main').classList.toggle('hidden', on);
     $('#gm-confirm').classList.toggle('hidden', !on);
     if (on) this.setFocusList([...$('#gm-confirm').querySelectorAll('.btn')]);
@@ -426,12 +427,18 @@ export class UI {
     $('#hub-keys').classList.toggle('hidden', this.game.input.isTouch);
     this._hubPrompt = undefined;
     this._hubNotice = undefined;
+    this._hubObjective = undefined;
     if (message) this.toast(message);
   }
 
   hubHud(h) {
     $('#hub-world').textContent = h.world;
     $('#hub-subtitle').textContent = h.subtitle;
+    if (h.objective !== this._hubObjective) {
+      this._hubObjective = h.objective;
+      $('#hub-objective').textContent = h.objective ? `Obiettivo: ${h.objective}` : '';
+      $('#hub-objective').classList.toggle('hidden', !h.objective);
+    }
     const key = h.prompt ? h.prompt.name + h.prompt.state : '';
     if (key !== this._hubPrompt) {
       this._hubPrompt = key;

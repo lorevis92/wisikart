@@ -239,6 +239,8 @@ class Game {
     return {
       title: from === 'cinematic' ? 'Video in pausa' : 'Pausa',
       help: from === 'story' && !!this.story?.level.briefing, // "Istruzioni" solo nei livelli della Storia
+      hub: from === 'story' || from === 'briefing', // "Torna in piazza"
+      confirmHub: this.story?.levelDone ? 'Tornare in piazza? Il livello è già completato e salvato.' : 'Tornare in piazza? I progressi di questo livello andranno persi.',
       restart: from === 'race' ? 'Ricomincia la gara' : from === 'story' ? 'Ricomincia il livello' : from === 'hub' ? 'Torna al centro della piazza' : null,
       confirm: kart ? 'Vuoi davvero uscire? I progressi di questa gara andranno persi.'
         : from === 'hub' || from === 'hubload' ? 'Vuoi davvero tornare al menu principale? I livelli completati restano salvati.'
@@ -298,14 +300,19 @@ class Game {
       if (from === 'race' && this.race) this.startRace(this.race.trackDef);
       else if (from === 'story' && this.story) this.startStory(this.story.level);
       else if (from === 'hub' && this.hub) { this.hub.spawnAt = null; this.hub._spawn(); }
-    } else if (a === 'quit') { this.menu.confirm = true; this.ui.gameMenuConfirm(true); }
+    } else if (a === 'quit') { this.menu.confirm = 'exit'; this.ui.gameMenuConfirm(true, this._menuCtx(from).confirm, 'Sì, esci'); }
+    else if (a === 'hub') { this.menu.confirm = 'hub'; this.ui.gameMenuConfirm(true, this._menuCtx(from).confirmHub, 'Sì, torna in piazza'); }
     else if (a === 'stay') this.menuBack();
     else if (a === 'exit') {
-      // Storia → menu principale, WisiKart → sottomenu WisiKart
+      // Storia → menu principale (o la piazza, con "Torna in piazza"), WisiKart → sottomenu WisiKart
+      const toHub = this.menu.confirm === 'hub';
+      const level = this.story?.level;
       this.menu = null;
       this.ui.gameMenu(null);
       this.ui.abortWaits();
-      if (from === 'race' || from === 'loading') this.toKartMenu(); else this.toMainMenu();
+      if (from === 'race' || from === 'loading') this.toKartMenu();
+      else if (toHub && level) { this.audio.sfx('back'); this._endStory(); this.openStory('', level.id); }
+      else this.toMainMenu();
     }
   }
 
@@ -478,6 +485,8 @@ class Game {
         if (livesGained) this.save.storyBonusLives = (this.save.storyBonusLives || 0) + livesGained;
         this._persist();
       },
+      // livelli con una scena dopo la vittoria (la rissa, prima di salire su Emma): si salva subito
+      onProgress: () => { this.save.story = { ...(this.save.story || {}), [level.id]: true }; this._persist(); },
       onComplete: (result) => this._storyComplete(level, result),
       onGameOver: () => this.startStory(level)
     });
@@ -528,8 +537,17 @@ class Game {
       await this.ui.medals({ level, medal: result.medal, best, isNewBest, stats: result.stats });
       if (flow !== this._flow) return;
     }
+    // livello che prosegue direttamente nel successivo (rissa → inseguimento: si è appena saliti su Emma)
+    const next = result && result.next ? this._levelById(result.next) : null;
+    if (next) { this.startStory(next); return; }
     // si ricompare in piazza davanti all'ingresso del livello appena finito (o all'arrivo, su un pianeta nuovo)
     this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.nextWorld ? null : level.id);
+  }
+
+  /** Un livello della Storia dal suo id (quello dell'ingresso in piazza). */
+  _levelById(id) {
+    for (const w of WORLDS) for (const e of w.entrances) if (e.id === id && e.level) return e.level;
+    return null;
   }
 
   _endStory() {

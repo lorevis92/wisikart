@@ -134,7 +134,7 @@
   <!-- STORIA: piazza 3D del pianeta -->
   <section id="screen-hub" class="screen hud hub-hud">
     <div class="hud-top">
-      <div class="hub-title"><b id="hub-world">Niaboc</b><span id="hub-subtitle"></span></div>
+      <div class="hub-title"><b id="hub-world">Niaboc</b><span id="hub-subtitle"></span><em class="hub-objective hidden" id="hub-objective"></em></div>
     </div>
     <div class="hud-notice" id="hub-notice"></div>
     <div class="hub-prompt" id="hub-prompt"><b id="hub-prompt-name"></b><span class="map-state" id="hub-prompt-state"></span></div>
@@ -220,6 +220,7 @@
         <button class="btn primary" data-pause="resume">Riprendi</button>
         <button class="btn hidden" data-pause="help" id="pause-help">Istruzioni</button>
         <button class="btn" data-pause="restart" id="pause-restart">Ricomincia</button>
+        <button class="btn hidden" data-pause="hub" id="pause-hub">Torna in piazza</button>
         <div class="audio-rows" id="gm-audio"></div>
         <button class="btn ghost" data-pause="quit" id="pause-quit">Esci</button>
       </div>
@@ -227,7 +228,7 @@
         <h2>Uscire?</h2>
         <p id="gm-confirm-text">Vuoi davvero uscire? I progressi di questo livello andranno persi.</p>
         <button class="btn primary" data-pause="stay">No, resto</button>
-        <button class="btn" data-pause="exit">Sì, esci</button>
+        <button class="btn" data-pause="exit" id="gm-confirm-yes">Sì, esci</button>
       </div>
     </div>
   </section>

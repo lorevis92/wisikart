@@ -10,6 +10,7 @@ import { INSEGUIMENTO } from './inseguimento.js';
 // verso +Z e vengono girati verso il centro. `arch: true` = si attraversa (portale, arco): i piloni fanno
 // da ostacolo e l'ingresso è nel vano; gli altri sono edifici con la porta sul davanti.
 // kind: 'level' (livello giocabile) o 'gate' (sfida senza livello, per ora solo un messaggio).
+// beacon: true = colonna di luce e icona (lucchetto chiuso/aperto) visibili da tutta la piazza.
 // requires: id dell'ingresso da completare prima (salvato in save.story); finché manca, lucchetto e `locked`.
 // Un pianeta alla volta (save.storyWorld): il Portale (nextWorld) porta da Niaboc a Retah.
 // L'ordine è obbligato: stadio → deposito → portale, poi su Retah rissa → inseguimento. Vicoli e biblioteca si apriranno quando Whiskey
@@ -24,6 +25,12 @@ export const WORLDS = [
     music: 'niaboc',
     radius: 34,
     spawn: { x: 0, z: 10, heading: Math.PI }, // guarda verso nord (lo stadio)
+    // obiettivo mostrato in alto a sinistra: il primo il cui livello (until) non è ancora completato
+    objectives: [
+      { until: 'stadio', text: 'Entra nello Stadio di Space Ball' },
+      { until: 'deposito', text: 'Trova Emma al Deposito Valvo & Go' },
+      { until: 'portale', text: 'Raggiungi il Portale prima del gong' }
+    ],
     entrances: [
       {
         id: 'stadio', kind: 'level', level: STADIO, angle: 0, dist: 27, height: 13,
@@ -71,6 +78,11 @@ export const WORLDS = [
     radius: 40,
     lake: { x: 27 },
     spawn: { x: -4, z: 24, heading: Math.PI }, // guarda verso nord (la tavola calda)
+    objectives: [
+      { until: 'rissa', text: 'Entra nella tavola calda' },
+      { until: 'inseguimento', text: 'Raggiungi Emma sul retro' }
+    ],
+    objectivesDone: 'Il viaggio verso Canair è in arrivo',
     decor: [
       // tre autovettori parcheggiati davanti e di lato alla tavola calda
       { model: 'assets/props/autovettore.glb', h: 2.2, x: -10.5, z: 1, rot: 70, r: 2.4 },
@@ -90,7 +102,7 @@ export const WORLDS = [
       },
       {
         // sul retro della tavola calda: ci si arriva girandole intorno
-        id: 'inseguimento', kind: 'level', level: INSEGUIMENTO, requires: 'rissa', angle: 0, dist: 25, height: 2.4,
+        id: 'inseguimento', kind: 'level', level: INSEGUIMENTO, requires: 'rissa', angle: 0, dist: 25, height: 2.4, beacon: true,
         model: 'assets/props/autovettore.glb',
         name: 'L’autovettore di Emma', desc: 'Parcheggiato sul retro. Motore caldo, pieno fatto, due blindati in agguato.',
         locked: 'Emma è chiusa dentro e non apre. Prima si esce vivi dalla tavola calda.'

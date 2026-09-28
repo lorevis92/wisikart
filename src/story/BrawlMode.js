@@ -3,9 +3,11 @@ import { Assets } from '../core/AssetLoader.js';
 import { loadRigged, riggedUrl, locomotionPose } from './Rig.js';
 import { Player } from './Player.js';
 import { EmmaVoice } from './emma.js';
+import { buildDiner, buildBackyard, NavGrid, collide } from './diner.js';
 
-// Livello brawler della Storia (il primo è la rissa alla tavola calda, story/rissa.js): arena fissa vista di
-// fronte, ci si muove a destra/sinistra e in profondità. Stessa interfaccia di StoryMode e FlightMode
+// Livello brawler della Storia (il primo è la rissa alla tavola calda, story/rissa.js): stanza 3D con arredi
+// solidi (story/diner.js), ci si muove a destra/sinistra e in profondità, i nemici girano intorno agli
+// ostacoli seguendo una griglia dei percorsi. Stessa interfaccia di StoryMode e FlightMode
 // (load → update → hud → dispose), così main.js li tratta allo stesso modo.
 
 const GRAV = 30;
@@ -14,6 +16,7 @@ const SPEED = 5.4; // destra/sinistra
 const DEPTH = 3.8; // in profondità
 const HIT_Z = 0.7; // tolleranza in profondità perché un colpo vada a segno
 const PICK_R = 1.15; // distanza per raccogliere sgabelli, piatti, bottiglie
+const BODY_R = 0.35; // ingombro dei personaggi contro gli arredi
 // mosse di Whiskey: durata, portata, danno, se manda a terra
 const MOVES = {
   p1: { dur: 0.28, reach: 1.3, dmg: 1 },
@@ -29,18 +32,20 @@ const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, rough
 const yawFor = (facing) => facing * (Math.PI / 2 - 0.45); // tre quarti verso la telecamera
 
 export class BrawlMode {
-  constructor({ level, character, audio, bonusLives = 0, onComplete, onGameOver }) {
+  constructor({ level, character, audio, bonusLives = 0, onComplete, onGameOver, onProgress }) {
+    this.onProgress = onProgress; // livello vinto (si salva) prima della scena sul retro
     this.level = level;
     this.character = character;
     this.audio = audio;
     this.onComplete = onComplete;
     this.onGameOver = onGameOver;
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.5, 200);
+    this.camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.5, 300);
+    this.camX = 0;
     this.t = 0;
     this.lives = level.lives + bonusLives; // + vite guadagnate con le monete durante un volo
     this.ammo = level.ammo;
-    this.state = 'intro'; // intro | fight | clear | exit | won | over | ended
+    this.state = 'intro'; // intro | fight | clear | exit | outro | board | over | ended
     this.stateTimer = 1.6;
     this.notice = null;
     this.noticeTimer = 0;
@@ -59,20 +64,28 @@ export class BrawlMode {
     const L = this.level;
     progress(L.loadingText || 'Preparo l’arena…');
     const M = L.models;
-    const [heroRig, stool, plate, jukebox, bottle, bg] = await Promise.all([
+    const keys = ['sgabello', 'piatto', 'bottle', 'jukebox', 'bancone', 'tavolo', 'divanetto', 'porta', 'lampada', 'diner', 'car'];
+    const [heroRig, sky, backSky, ...loaded] = await Promise.all([
       loadRigged(riggedUrl(this.character), 1.8),
-      Assets.model(M.sgabello.url, { targetHeight: M.sgabello.h }),
-      Assets.model(M.piatto.url, { targetHeight: M.piatto.h }),
-      Assets.model(M.jukebox.url, { targetHeight: M.jukebox.h }),
-      Assets.model(M.bottle.url, { targetHeight: M.bottle.h }),
-      Assets.texture(L.background)
+      Assets.texture(L.sky),
+      Assets.texture(L.sky),
+      ...keys.map((k) => Assets.model(M[k].url, { targetHeight: M[k].h }))
     ]);
-    this.protos = { stool, plate, bottle };
-    this._lights();
-    this._backdrop(bg);
-    this._floor();
-    this._jukebox(jukebox);
-    this._door();
+    const m = Object.fromEntries(keys.map((k, i) => [k, loaded[i]]));
+    this.protos = { stool: m.sgabello, plate: m.piatto, bottle: m.bottle };
+    // la stanza: arredi solidi, finestre sul lago, lampade; poi la griglia dei percorsi per i nemici
+    const room = buildDiner(this.scene, L.room, m, sky);
+    this.obstacles = room.obstacles;
+    this.door = room.door;
+    this.jukeGlow = room.jukeGlow;
+    this.jukeLight = room.jukeLight;
+    this.juke = { ...L.jukebox, group: room.jukebox, used: false, playing: 0 };
+    const A = L.arena;
+    this.nav = new NavGrid({ x0: A.x0 - 0.4, x1: A.x1 + 0.4, z0: A.z0 - 0.4, z1: A.z1 + 0.4 }, this.obstacles);
+    // il cortile sul retro, per la scena di fine rissa (una scena a parte, pronta da subito)
+    this.backScene = new THREE.Scene();
+    this.backyard = buildBackyard(this.backScene, { diner: m.diner, car: m.car, sky: backSky ? backSky.clone() : null });
+    this.roomScene = this.scene;
     progress('Arrivano i clienti…');
     // Whiskey
     this.hero = this._fighter(heroRig, null);
@@ -105,102 +118,10 @@ export class BrawlMode {
     }
     this.emma = new EmmaVoice(this.audio, L.voices);
     await this.emma.load();
-    this._placeProps();
+    this._placeProps(true);
     this._resetHero();
     this._placeCamera();
     progress('Pronti.');
-  }
-
-  _lights() {
-    this.scene.add(new THREE.HemisphereLight(0xffe2c4, 0x5a3a2a, 1.3));
-    const key = new THREE.DirectionalLight(0xfff0d8, 1.7);
-    key.position.set(-4, 14, 10);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    const c = key.shadow.camera;
-    c.left = -14; c.right = 14; c.top = 8; c.bottom = -8; c.near = 1; c.far = 40;
-    this.scene.add(key, key.target);
-    // insegne del locale: una luce calda a sinistra e una rosa sul juke-box
-    const warm = new THREE.PointLight(0xffb060, 18, 16, 1.6);
-    warm.position.set(-7, 3.5, 0);
-    const pink = new THREE.PointLight(0xff5fb0, 14, 10, 1.6);
-    pink.position.set(8, 3, -2);
-    this.scene.add(warm, pink);
-    this.jukeLight = pink;
-    this.scene.background = new THREE.Color('#2a1a14');
-  }
-
-  /** L'illustrazione del locale, dietro all'arena, a riempire l'inquadratura (vedi _fitBackdrop). */
-  _backdrop(tex) {
-    if (!tex) {
-      const c = document.createElement('canvas');
-      c.width = 16; c.height = 256;
-      const g = c.getContext('2d');
-      const grd = g.createLinearGradient(0, 0, 0, 256);
-      grd.addColorStop(0, '#5a2e22'); grd.addColorStop(0.55, '#a8643a'); grd.addColorStop(0.56, '#3a2a2a'); grd.addColorStop(1, '#6a4a3a');
-      g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
-      tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.userData.aspect = 1.79;
-    }
-    const aspect = tex.userData.aspect || (tex.image ? tex.image.width / tex.image.height : 1.79);
-    this.bg = new THREE.Mesh(new THREE.PlaneGeometry(aspect, 1), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false, depthWrite: false }));
-    this.bg.renderOrder = -10;
-    this.bgAspect = aspect;
-    this.bgZ = -7;
-    this.scene.add(this.bg);
-  }
-
-  /** Pavimento invisibile che raccoglie solo le ombre, più una fascia appena scura che segna l'arena. */
-  _floor() {
-    const A = this.level.arena;
-    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(40, 18), new THREE.ShadowMaterial({ opacity: 0.35 }));
-    shadow.rotation.x = -Math.PI / 2;
-    shadow.position.set(0, 0.005, -1);
-    shadow.receiveShadow = true;
-    this.scene.add(shadow);
-    const band = new THREE.Mesh(new THREE.PlaneGeometry(A.x1 - A.x0 + 3, A.z1 - A.z0 + 1.2), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12, depthWrite: false }));
-    band.rotation.x = -Math.PI / 2;
-    band.position.set((A.x0 + A.x1) / 2, 0.003, (A.z0 + A.z1) / 2);
-    this.scene.add(band);
-  }
-
-  _jukebox(model) {
-    const J = this.level.jukebox;
-    const g = new THREE.Group();
-    if (model) g.add(model);
-    else {
-      const box = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2, 0.8), std('#8a2a4a', { emissive: 0x401020, emissiveIntensity: 0.6 }));
-      box.position.y = 1;
-      g.add(box);
-    }
-    // alone luminoso: pulsa quando è pronto, si accende di colori quando parte
-    this.jukeGlow = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 32), new THREE.MeshBasicMaterial({ color: 0xff5fb0, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
-    this.jukeGlow.rotation.x = -Math.PI / 2;
-    this.jukeGlow.position.y = 0.02;
-    g.add(this.jukeGlow);
-    g.position.set(J.x, 0, J.z);
-    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    this.scene.add(g);
-    this.juke = { ...J, group: g, used: false, playing: 0 };
-  }
-
-  /** Porta della cucina: compare accesa quando la terza ondata è finita. */
-  _door() {
-    const E = this.level.exit;
-    const g = new THREE.Group();
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.6, 0.2), std('#3a2a22'));
-    frame.position.y = 1.3;
-    const light = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.3), new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0.85 }));
-    light.position.set(0, 1.2, 0.12);
-    const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.7, 3), new THREE.MeshBasicMaterial({ color: 0x43e0b0 }));
-    arrow.rotation.z = -Math.PI / 2;
-    arrow.position.set(-1.4, 1.3, 0.3);
-    g.add(frame, light, arrow);
-    g.position.set(E.x, 0, E.z - 0.6);
-    g.visible = false;
-    this.scene.add(g);
-    this.door = { group: g, arrow };
   }
 
   /** Personaggio (Whiskey o nemico): group (posizione) → root (verso) → tilt (a terra) → corpo. */
@@ -256,30 +177,37 @@ export class BrawlMode {
     f.baton = pivot;
   }
 
-  /** Sgabelli e piatti al loro posto (all'inizio e a ogni ondata). */
-  _placeProps() {
-    for (const p of this.props || []) if (p.group) this.scene.remove(p.group);
-    this.props = this.level.props.map((d) => {
+  /** Sgabelli e piatti: all'inizio tutti al loro posto; a ogni ondata ricompaiono quelli con respawn già usati. */
+  _placeProps(first = false) {
+    if (first) this.props = [];
+    const defs = this.level.props;
+    defs.forEach((d, i) => {
+      const cur = this.props[i];
+      if (!first && (!d.respawn || (cur && !cur.taken))) return;
+      if (cur && cur.group && cur.group.parent === this.scene) this.scene.remove(cur.group);
       const g = new THREE.Group();
       const proto = d.kind === 'stool' ? this.protos.stool : this.protos.plate;
-      if (proto) g.add(proto.clone(true));
-      else {
-        const m = d.kind === 'stool'
+      if (proto) {
+        const mdl = proto.clone(true);
+        if (d.kind === 'plate') { mdl.rotation.x = -Math.PI / 2; mdl.position.y = 0.06; } // il piatto sta disteso
+        g.add(mdl);
+      } else {
+        const mm = d.kind === 'stool'
           ? new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.25, 0.8, 12), std('#c23a3a'))
           : new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 16), std('#f0f0f0'));
-        m.position.y = d.kind === 'stool' ? 0.4 : 0.02;
-        g.add(m);
+        mm.position.y = d.kind === 'stool' ? 0.4 : 0.02;
+        g.add(mm);
       }
-      g.position.set(d.x, 0, d.z);
+      g.position.set(d.x, d.y || 0, d.z);
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       this.scene.add(g);
-      return { ...d, group: g, taken: false };
+      this.props[i] = { ...d, group: g, taken: false };
     });
   }
 
   _resetHero() {
     const h = this.hero;
-    h.x = -7; h.z = 0; h.y = 0; h.vx = h.vz = h.vy = 0;
+    h.x = -6; h.z = 0; h.y = 0; h.vx = h.vz = h.vy = 0;
     h.facing = 1;
     h.hp = this.level.health;
     h.invuln = 0; h.hurt = 0; h.down = 0; h.stuck = 0;
@@ -309,10 +237,13 @@ export class BrawlMode {
   _spawn(type) {
     const f = this.pool.find((p) => p.type === type && !p.alive);
     if (!f) return;
-    const A = this.level.arena;
-    const side = this.hero.x < 0 ? 1 : -1; // entrano dal lato opposto a Whiskey, o da tutti e due a turno
-    const s = this.spawnSide = this.enemies.length % 2 ? -side : side;
-    f.x = s * 12; f.z = A.z0 + 0.6 + Math.random() * (A.z1 - A.z0 - 1.2); f.y = 0;
+    // entrano dall'ingresso più lontano da Whiskey, poi a turno anche dall'altro
+    const S = this.level.spawns;
+    const far = S.reduce((a, b) => (Math.abs(a.x - this.hero.x) > Math.abs(b.x - this.hero.x) ? a : b));
+    const sp = this.enemies.length % 2 ? S.find((x) => x !== far) || far : far;
+    f.x = sp.x; f.z = sp.z + (Math.random() - 0.5) * 0.8; f.y = 0;
+    f.entryX = sp.tx;
+    const s = Math.sign(sp.x);
     f.vx = f.vy = f.vz = 0;
     f.hp = f.def.hp; f.maxHp = f.def.hp;
     f.state = 'enter'; f.timer = 0; f.cool = 1 + Math.random(); f.hurt = f.down = f.stun = 0;
@@ -335,19 +266,16 @@ export class BrawlMode {
     if (this.noticeTimer <= 0) this.notice = null;
     const ctl = this._controls(input);
 
-    if (this.state === 'won' || this.state === 'over') {
+    if (this.state === 'over') {
       this.stateTimer -= dt;
-      this._heroUpdate(dt, { ax: this.state === 'won' ? 1 : 0, ay: 0 });
+      this._heroUpdate(dt, { ax: 0, ay: 0 });
       this._enemiesUpdate(dt);
       this._effects(dt);
       this._placeCamera(dt);
-      if (this.stateTimer <= 0) {
-        const done = this.state === 'won' ? this.onComplete : this.onGameOver;
-        this.state = 'ended';
-        done && done();
-      }
+      if (this.stateTimer <= 0) { this.state = 'ended'; this.onGameOver && this.onGameOver(); }
       return;
     }
+    if (this.state === 'outro' || this.state === 'board') return this._outro(dt, ctl);
     if (this.state === 'ended') return;
 
     if (this.state === 'intro') {
@@ -367,13 +295,9 @@ export class BrawlMode {
     // uscita dalla cucina, vinta la terza ondata
     if (this.state === 'exit') {
       const E = this.level.exit, h = this.hero;
-      this.door.arrow.position.x = -1.4 + Math.sin(this.t * 6) * 0.2;
-      if (h.x > E.x - 0.9 && Math.abs(h.z - E.z) < 1.4) {
-        this.state = 'won';
-        this.stateTimer = 1.6;
-        this.audio.sfx('finish');
-        this.say('Fuori dalla cucina!', 2);
-      }
+      this.door.arrow.position.x = this.level.room.x1 - 1.6 + Math.sin(this.t * 6) * 0.25;
+      this.door.glow.material.opacity = 0.55 + Math.sin(this.t * 4) * 0.2;
+      if (h.x > E.x - 0.6 && Math.abs(h.z - E.z) < 1.2) this._startOutro();
     }
     this._placeCamera(dt);
   }
@@ -427,6 +351,7 @@ export class BrawlMode {
 
     h.x = THREE.MathUtils.clamp(h.x + h.vx * dt, A.x0, A.x1);
     h.z = THREE.MathUtils.clamp(h.z + h.vz * dt, A.z0, A.z1);
+    if (this.scene === this.roomScene) collide(h, BODY_R, this.obstacles);
     h.vy -= GRAV * dt;
     h.y = Math.max(0, h.y + h.vy * dt);
     if (h.y === 0 && h.vy < 0) h.vy = 0;
@@ -464,7 +389,7 @@ export class BrawlMode {
     let near = null, nd = PICK_R;
     for (const p of this.props) {
       if (p.taken) continue;
-      const d = Math.hypot(p.x - h.x, p.z - h.z);
+      const d = Math.hypot(p.x - h.x, p.z - h.z) - (p.y ? 0.5 : 0);
       if (d < nd) { nd = d; near = p; }
     }
     if (near) {
@@ -524,7 +449,8 @@ export class BrawlMode {
       }
       const J = this.juke;
       if (!hit && !J.used && Math.abs(J.x - p.x) < 0.8 && Math.abs(J.z - p.z) < 1.2) { this._jukeboxHit(); hit = true; }
-      if (hit || p.y < 0 || Math.abs(p.x) > 15) {
+      const wall = !hit && this.obstacles.some((o) => p.x > o.x0 && p.x < o.x1 && p.z > o.z0 && p.z < o.z1 && p.y < o.h);
+      if (hit || wall || p.y < 0 || Math.abs(p.x) > 15) {
         this._burst(p.x, Math.max(0.3, p.y), p.z, p.kind === 'stool' ? 0xd08a4a : 0xe8f7ff);
         this.audio.sfx(hit ? 'punch3' : 'break');
         if (hit) this.shake = Math.max(this.shake, 0.3);
@@ -616,6 +542,7 @@ export class BrawlMode {
   // ---------- nemici ----------
   _enemiesUpdate(dt) {
     const h = this.hero, A = this.level.arena;
+    this.nav.setGoal(h.x, h.z);
     const attacking = this.enemies.filter((e) => e.state === 'windup' || e.state === 'strike').length;
     let tokens = 2 - attacking;
     for (const e of this.enemies) {
@@ -627,9 +554,8 @@ export class BrawlMode {
       switch (e.state) {
         case 'enter': {
           // entra in scena camminando fino dentro l'arena
-          const tx = THREE.MathUtils.clamp(e.x, A.x0 + 1, A.x1 - 1);
-          wantX = Math.sign(tx - e.x);
-          if (Math.abs(tx - e.x) < 0.2) e.state = 'approach';
+          wantX = Math.sign(e.entryX - e.x);
+          if (Math.abs(e.entryX - e.x) < 0.25) e.state = 'approach';
           break;
         }
         case 'approach': {
@@ -639,8 +565,11 @@ export class BrawlMode {
           // quelli in attesa si allargano in profondità, così non stanno tutti in fila
           const idx = this.enemies.indexOf(e);
           const tz = THREE.MathUtils.clamp(h.z + (idx % 3 === 0 ? 0 : idx % 3 === 1 ? 0.9 : -0.9) * (e.cool > 0 ? 1 : 0), A.z0, A.z1);
-          if (Math.abs(tx - e.x) > 0.2) wantX = Math.sign(tx - e.x);
-          if (Math.abs(tz - e.z) > 0.15) wantZ = Math.sign(tz - e.z);
+          // strada libera: dritti al posto; sennò intorno a bancone, tavoli e divanetti
+          if (Math.abs(tx - e.x) > 0.2 || Math.abs(tz - e.z) > 0.15) {
+            const dir = this.nav.steer(e.x, e.z, tx, tz);
+            wantX = dir.x; wantZ = dir.z;
+          }
           e.facing = -side;
           const inPlace = Math.abs(tx - e.x) < 0.6 && Math.abs(h.z - e.z) < 0.45;
           if (D.net && e.netCool <= 0 && h.down <= 0) {
@@ -703,14 +632,15 @@ export class BrawlMode {
       const sp = D.speed;
       if (moving) {
         e.vx = THREE.MathUtils.damp(e.vx, wantX * sp, 10, dt);
-        e.vz = THREE.MathUtils.damp(e.vz, wantZ * sp * 0.7, 10, dt);
+        e.vz = THREE.MathUtils.damp(e.vz, wantZ * sp * 0.8, 10, dt);
       } else {
         e.vx *= Math.max(0, 1 - dt * 5);
         e.vz = 0;
       }
       e.x += e.vx * dt;
       e.z = THREE.MathUtils.clamp(e.z + e.vz * dt, A.z0, A.z1);
-      if (e.state !== 'enter') e.x = THREE.MathUtils.clamp(e.x, A.x0 - 0.5, A.x1 + 0.5);
+      if (e.state !== 'enter') e.x = THREE.MathUtils.clamp(e.x, A.x0, A.x1);
+      if (e.state !== 'dead') collide(e, BODY_R, this.obstacles); // gli arredi non si attraversano
       e.vy -= GRAV * dt;
       e.y = Math.max(0, e.y + e.vy * dt);
       if (e.y === 0 && e.vy < 0) e.vy = 0;
@@ -723,6 +653,7 @@ export class BrawlMode {
       const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
       if (d < 0.85 && d > 1e-4) { const k = (0.85 - d) / 2 / d; a.x -= dx * k; a.z -= dz * k; b.x += dx * k; b.z += dz * k; }
     }
+    for (const e of live) collide(e, BODY_R, this.obstacles);
     for (const e of this.enemies) if (e.alive) this._poseEnemy(e, dt);
     this.enemies = this.enemies.filter((e) => e.alive);
   }
@@ -831,7 +762,7 @@ export class BrawlMode {
         this.audio.sfx('lap');
       } else {
         this.state = 'exit';
-        this.door.group.visible = true;
+        this.door.arrow.visible = true;
         this.emma.clear();
         this.emma.say('fine', { important: true });
         this.say('Esci dalla cucina: la porta è a destra, sul fondo', 4);
@@ -939,38 +870,89 @@ export class BrawlMode {
   }
 
   _placeCamera(dt = 1) {
-    // telecamera fissa: si allontana un po' sugli schermi stretti perché l'arena ci stia tutta
+    if (this.scene !== this.roomScene) return this._backCamera(dt);
+    const k = Math.min(1, dt >= 1 ? 1 : dt * 2.5);
+    this.camX += (THREE.MathUtils.clamp(this.hero.x * 0.3, -3, 3) - this.camX) * k;
+    // sugli schermi stretti la telecamera si allontana perché la stanza ci stia
     const hfov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect);
-    const dist = Math.max(14.5, 12.2 / Math.tan(hfov / 2));
-    this.camera.position.set(0, 3.2 + dist * 0.14, dist);
-    this.camera.lookAt(0, 1.3, -0.6);
+    const far = Math.max(1, 9.5 / (Math.tan(hfov / 2) * 15.5));
+    this.camera.position.set(this.camX + 1.8 * far, 8.2 * far, -1.2 + 15 * far);
+    this.camera.lookAt(this.camX, 0.8, -1.2);
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - Math.min(dt, 0.05) * 2);
       this.camera.position.x += (Math.random() - 0.5) * this.shake * 0.4;
       this.camera.position.y += (Math.random() - 0.5) * this.shake * 0.4;
     }
-    this._fitBackdrop();
   }
 
-  /** Lo sfondo copre sempre tutta l'inquadratura, alla sua profondità. */
-  _fitBackdrop() {
-    const cam = this.camera;
-    const dir = new THREE.Vector3();
-    cam.getWorldDirection(dir);
-    const t = (this.bgZ - cam.position.z) / dir.z;
-    const center = cam.position.clone().addScaledVector(dir, t);
-    const d = t;
-    const viewH = 2 * d * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
-    const viewW = viewH * cam.aspect;
-    const h = Math.max(viewH * 1.15, (viewW * 1.15) / this.bgAspect);
-    this.bg.scale.set(h, h, 1);
-    this.bg.position.set(center.x, center.y + h * 0.04, this.bgZ);
+  // ---------- fine rissa: sul retro, fino all'autovettore di Emma ----------
+  /** Uscito dalla cucina: il livello è vinto (si salva subito), poi si passa nel cortile sul retro. */
+  _startOutro() {
+    this.state = 'outro';
+    this.stateTimer = 0;
+    this.levelDone = true;
+    this.onProgress && this.onProgress();
+    this.audio.sfx('finish');
+    this.flashAt = this.t;
+    for (const p of this.projectiles) this.scene.remove(p.group);
+    this.projectiles = [];
+    if (this.holding) { this.held.remove(this.holding.group); this.holding = null; }
+    // Whiskey passa nel cortile: esce dalla porta della cucina e va verso Emma
+    this.scene.remove(this.hero.group);
+    this.scene = this.backScene;
+    this.scene.add(this.hero.group);
+    const B = this.backyard;
+    const h = this.hero;
+    h.x = B.start.x; h.z = B.start.z; h.y = 0; h.vx = h.vz = h.vy = 0;
+    h.move = null; h.hurt = h.down = h.stuck = 0; h.invuln = 0;
+    this.say('Fuori dalla cucina: Emma aspetta sul retro', 2.4);
+    this._backCamera(1);
+  }
+
+  _outro(dt, ctl) {
+    const h = this.hero, B = this.backyard;
+    this.stateTimer += dt;
+    const M = B.marker;
+    M.arrow.position.y = 3.8 + Math.sin(this.t * 4) * 0.25;
+    M.arrow.rotation.y += dt * 2;
+    M.ring.material.opacity = 0.45 + Math.sin(this.t * 5) * 0.25;
+    M.beam.material.opacity = 0.3 + Math.sin(this.t * 3) * 0.1;
+    if (this.state === 'outro') {
+      // cammina da solo fino all'autovettore
+      const dx = B.target.x - h.x, dz = B.target.z - h.z, d = Math.hypot(dx, dz);
+      if (d > 0.2) { h.vx = (dx / d) * 3.8; h.vz = (dz / d) * 3.8; h.facing = Math.sign(dx) || 1; }
+      else { h.vx = h.vz = 0; this.state = 'board'; this.stateTimer = 0; this.audio.sfx('select'); }
+    } else {
+      // "Sali su Emma": un tasto, o si parte da soli dopo un istante (dal menu si può tornare in piazza)
+      h.vx = h.vz = 0;
+      if (ctl.jump || ctl.attack || ctl.item || this.stateTimer > 3.5) {
+        this.state = 'ended';
+        this.audio.sfx('go');
+        this.onComplete && this.onComplete({ next: this.level.next });
+        return;
+      }
+    }
+    h.x += h.vx * dt;
+    h.z += h.vz * dt;
+    if (Math.hypot(h.vx, h.vz) > 0.3) h.walk += dt * Math.hypot(h.vx, h.vz) * 1.7;
+    this._poseHero(dt);
+    // di tre quarti, verso Emma
+    h.root.rotation.y = Math.atan2(h.vx || 1, h.vz || 0.3);
+    this._placeCamera(dt);
+  }
+
+  _backCamera(dt) {
+    const h = this.hero;
+    const k = dt >= 1 ? 1 : Math.min(1, dt * 3);
+    const tx = h.x * 0.6 + 2, target = new THREE.Vector3(tx + 1.5, 4.2, 10.5);
+    this.camera.position.lerp(target, k);
+    this.camera.lookAt(tx, 1.3, -0.5);
   }
 
   resize(aspect) {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
-    if (this.bg) this._placeCamera(0);
+    if (this.hero) this._placeCamera(1);
   }
 
   hud() {
@@ -979,7 +961,7 @@ export class BrawlMode {
     let prompt = null;
     if (!this.holding && this.props && this.state === 'fight') {
       const h = this.hero;
-      const p = this.props.find((x) => !x.taken && Math.hypot(x.x - h.x, x.z - h.z) < PICK_R);
+      const p = this.props.find((x) => !x.taken && Math.hypot(x.x - h.x, x.z - h.z) - (x.y ? 0.5 : 0) < PICK_R);
       if (p) prompt = p.kind === 'stool' ? 'Lancia: raccogli lo sgabello' : 'Lancia: raccogli il piatto';
     }
     return {
@@ -990,12 +972,19 @@ export class BrawlMode {
       ammo: this.ammo,
       maxAmmo: this.level.maxAmmo,
       boss: b,
-      notice: this.notice || prompt,
+      notice: this.state === 'board' ? 'Sali su Emma: premi un tasto (o aspetta)' : this.notice || prompt,
+      callout: this.state === 'board' ? { text: 'Sali su Emma', key: 'board' } : null,
+      flash: this.flashAt || 0,
       subtitle: this.emma.subtitle
     };
   }
 
   dispose() {
+    this.scene = this.roomScene || this.scene;
+    for (const sc of [this.roomScene, this.backScene]) if (sc && sc !== this.scene) sc.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+    });
     this.scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
