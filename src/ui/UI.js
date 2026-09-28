@@ -135,18 +135,24 @@ export class UI {
     };
     await Promise.all([
       swap('assets/ui/wisiverse-logo.png', 'WiSiVERSE', ['boot-logo', 'title-logo']),
-      swap('assets/ui/logo.png', 'WisiKart', ['kart-logo', 'kart-card-logo'])
+      swap('assets/ui/logo.png', 'WisiKart', ['kart-logo'])
     ]);
-    // sfondo del titolo e card del menu principale
-    const bg = (sel, url, cls) => Assets.exists(url).then((ok) => {
+    // sfondo del titolo
+    Assets.exists('assets/ui/wisiverse-title.png').then((ok) => { if (ok) $('#title-bg').style.backgroundImage = 'url(assets/ui/wisiverse-title.png)'; });
+    // copertine del menu principale (titolo già nell'immagine): la card prende le proporzioni dell'immagine
+    const cover = (sel, url) => Assets.exists(url).then((ok) => {
       if (!ok) return;
-      const el = $(sel);
-      el.style.backgroundImage = `url(${url})`;
-      if (cls) el.classList.add(cls);
+      const img = new Image();
+      img.onload = () => {
+        const art = $(sel);
+        art.parentElement.style.setProperty('--ratio', (img.naturalWidth / img.naturalHeight).toFixed(4));
+        art.style.backgroundImage = `url(${url})`;
+        art.classList.add('has-img');
+      };
+      img.src = url;
     });
-    bg('#title-bg', 'assets/ui/wisiverse-title.png');
-    bg('#card-storia', 'assets/ui/card-storia.png', 'has-img');
-    bg('#card-kart', trackById.canair.preview, 'has-img');
+    cover('#card-storia', 'assets/ui/card-storia.png');
+    cover('#card-kart', 'assets/ui/card-wisikart.png');
   }
 
   // ---------- titolo: menu principale WiSiVERSE ----------

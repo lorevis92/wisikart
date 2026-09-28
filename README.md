@@ -11,7 +11,7 @@ Il repository, le cartelle e la chiave di salvataggio nel browser (`wisikart.sav
 
 ## Menu
 
-- **Menu principale** (titolo WiSiVERSE, sfondo `ui/wisiverse-title.png`, logo `ui/wisiverse-logo.png`): Storia (card `ui/card-storia.png`), WisiKart (card con il logo WisiKart e l'anteprima di Canair), Opzioni, Crediti. Storia porta direttamente alla piazza di Niaboc.
+- **Menu principale** (titolo WiSiVERSE, sfondo `ui/wisiverse-title.png`, logo `ui/wisiverse-logo.png`): Storia (copertina `ui/card-storia.png`), WisiKart (copertina `ui/card-wisikart.png`), Opzioni, Crediti. Le copertine hanno il titolo già nell'immagine: le card mostrano solo l'immagine intera (stessa altezza, larghezza in proporzione) e una piccola etichetta. Storia porta direttamente alla piazza di Niaboc.
 - **Sottomenu WisiKart** (logo WisiKart, video `video/intro.mp4` come sfondo): Gran Premio, Corsa singola, Prova a tempo, Torna al menu principale.
 - Uscendo da una gara (risultati o pausa) si torna al sottomenu WisiKart; uscendo dalla Storia (pausa della piazza o del livello) si torna al menu principale. Finito un livello si ricompare nella piazza, davanti al suo ingresso.
 
@@ -69,8 +69,8 @@ Tutti sotto `public/assets/`. Il file `public/assets/manifest.json` elenca ogni 
 | `tracks/<id>/sky.png` | cielo panoramico 16:9 | sfondo delle piste aperte (Canair, Niaboc, Retah) |
 | `tracks/<id>/preview.png` | anteprima | selezione pista, caricamento |
 | `ui/wisiverse-logo.png`, `ui/wisiverse-title.png` | logo e sfondo del WiSiVERSE | boot e menu principale |
-| `ui/card-storia.png` | card della Storia | menu principale |
-| `ui/logo.png`, `ui/title.png` | logo WisiKart e sua illustrazione | card WisiKart, sottomenu WisiKart (l'illustrazione se manca il video) |
+| `ui/card-storia.png`, `ui/card-wisikart.png` | copertine della Storia e di WisiKart | menu principale |
+| `ui/logo.png`, `ui/title.png` | logo WisiKart e sua illustrazione | sottomenu WisiKart (l'illustrazione se manca il video) |
 | `items/*.png` | icone oggetti | HUD |
 | `audio/voice/*.wav` | 6 battute di Emma (welcome, start, lastlap, hit, hitother, win) | annunci in gara |
 | `story/stadio/*` | sfondi (gradinate, campo, tunnel) e modelli (tifoso, steward, bottiglia) della Storia, elencati in `public/assets/story/manifest.json` | modalità Storia |
