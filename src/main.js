@@ -177,9 +177,10 @@ class Game {
   }
 
   /** Testi della pausa: riprendi / ricomincia / esci, secondo dove ci si trova. */
-  _pauseLabels(restart, quit) {
+  _pauseLabels(restart, quit, help = false) {
     document.querySelector('[data-pause="restart"]').textContent = restart;
     document.querySelector('[data-pause="quit"]').textContent = quit;
+    document.getElementById('pause-help').classList.toggle('hidden', !help); // "Istruzioni" solo nei livelli della Storia
   }
 
   pickCharacter(c) {
@@ -293,6 +294,7 @@ class Game {
       character: storyHero(),
       audio: this.audio,
       completed: this.save.story,
+      medals: this.save.storyMedals || {},
       spawnAt,
       onEnter: (e) => { if (e.kind === 'level') this.startStory(e.level); }
     });
@@ -326,20 +328,33 @@ class Game {
     this._endHub();
     // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js).
     // Le monete sono un totale unico della Storia, salvato a ogni raccolta (ogni 100, una vita in più).
-    const Mode = level.type === 'flight' ? FlightMode : StoryMode;
+    const flight = level.type === 'flight';
+    const Mode = flight ? FlightMode : StoryMode;
+    // vite guadagnate con le monete durante un volo (dove le vite non ci sono): valgono nel livello a piedi dopo
+    const bonusLives = flight ? 0 : this.save.storyBonusLives || 0;
+    if (!flight && bonusLives) { this.save.storyBonusLives = 0; this._persist(); }
     const story = new Mode({
       level,
       character: storyHero(),
       audio: this.audio,
       coins: this.save.storyCoins || 0,
-      onCoins: (n) => { this.save.storyCoins = n; this._persist(); },
-      onComplete: () => this._storyComplete(level),
+      bonusLives,
+      onCoins: (n, livesGained = 0) => {
+        this.save.storyCoins = n;
+        if (livesGained) this.save.storyBonusLives = (this.save.storyBonusLives || 0) + livesGained;
+        this._persist();
+      },
+      onComplete: (result) => this._storyComplete(level, result),
       onGameOver: () => this.startStory(level)
     });
     await story.load((t) => this.ui.loadingStatus(t));
     this.story = story;
     this._resize();
-    // niente comandi rimasti in memoria dal menu (tasti, touch, salto)
+    // istruzioni prima di partire (la scena del livello resta ferma dietro)
+    this.state = 'briefing';
+    await this.ui.briefing(level, this.input.lastDevice);
+    if (this.story !== story) return; // nel frattempo si è usciti
+    // niente comandi rimasti in memoria dal menu o dalle istruzioni (tasti, touch, salto)
     this.input.releaseAll();
     this.input.pausePressed = false;
     this.state = 'story';
@@ -347,15 +362,31 @@ class Game {
     this.audio.playTheme(level.music);
   }
 
-  async _storyComplete(level) {
+  /** result (livelli con medaglie): { medal, stats } calcolati dal livello. */
+  async _storyComplete(level, result = null) {
     this.save.story = { ...(this.save.story || {}), [level.id]: true };
+    // medaglia: si tiene la migliore per livello, ed è quella che si vede sull'ingresso in piazza
+    let best = null, isNewBest = false;
+    if (result && result.medal) {
+      const rank = { bronze: 1, silver: 2, gold: 3 };
+      this.save.storyMedals = this.save.storyMedals || {};
+      const old = this.save.storyMedals[level.id];
+      isNewBest = !old || rank[result.medal] > rank[old];
+      if (isNewBest) this.save.storyMedals[level.id] = result.medal;
+      best = this.save.storyMedals[level.id];
+    }
     this._persist();
     this._endStory();
-    // livelli con una cinematica finale (il tunnel del portale): prima il video, poi la piazza
+    // livelli con una cinematica finale (il tunnel del portale): prima il video
     if (level.cinematic) {
       this.state = 'cinematic';
       this.audio.stopMusic();
       await this.ui.cinematic(level.cinematic);
+    }
+    if (result && result.medal) {
+      this.state = 'medals';
+      this.audio.sfx('finish');
+      await this.ui.medals({ level, medal: result.medal, best, isNewBest, stats: result.stats });
     }
     // si ricompare in piazza davanti all'ingresso del livello appena finito; il salvataggio riapre il prossimo
     this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.id);
@@ -368,9 +399,21 @@ class Game {
   storyPause(on) {
     if (this.state !== 'story' && this.state !== 'storypaused') return;
     this.state = on ? 'storypaused' : 'story';
-    if (on) this._pauseLabels('Ricomincia il livello', 'Torna al menu principale');
+    if (on) this._pauseLabels('Ricomincia il livello', 'Torna al menu principale', true);
     this.ui.pause(on);
     if (!on) this.ui.storyHudStart(this.story?.level.type); // chiude l'overlay e rimette l'HUD
+  }
+
+  /** "Istruzioni" dal menu di pausa della Storia: riapre la schermata, poi torna alla pausa. */
+  async storyHelp() {
+    if (this.state !== 'storypaused' || !this.story) return;
+    this.state = 'storyhelp';
+    this.ui.overlay('pause', false);
+    await this.ui.briefing(this.story.level, this.input.lastDevice);
+    if (this.state !== 'storyhelp') return;
+    this.state = 'storypaused';
+    this.input.pausePressed = false;
+    this.ui.pause(true);
   }
 
   /** Uscita da una gara (risultati o pausa): si torna al sottomenu WisiKart. */
@@ -404,6 +447,7 @@ class Game {
     }
     if (this.state === 'storypaused') {
       const level = this.story.level;
+      if (a === 'help') { this.storyHelp(); return; }
       if (a === 'resume') this.storyPause(false);
       else {
         this.ui.pause(false);
@@ -439,7 +483,10 @@ class Game {
     this.input.update();
     // navigazione menu
     const ev = this.input.consumeMenu();
-    if (!['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'].includes(this.state)) {
+    // istruzioni e medaglie: qualsiasi tasto (anche del gamepad) le chiude
+    if (['briefing', 'storyhelp', 'medals'].includes(this.state)) {
+      if (ev.length && this.ui.closePanel) this.ui.closePanel();
+    } else if (!['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'].includes(this.state)) {
       for (const e of ev) {
         if (e === 'ok') this.ui.activateFocus();
         else if (e === 'back') {
@@ -475,7 +522,7 @@ class Game {
         this.ui.storyHud(this.story.hud());
         this.renderer.render(this.story.scene, this.story.camera);
       }
-    } else if (this.state === 'storypaused' && this.story) {
+    } else if ((this.state === 'storypaused' || this.state === 'briefing' || this.state === 'storyhelp') && this.story) {
       this.renderer.render(this.story.scene, this.story.camera);
     } else if (this.state === 'race' && this.race) {
       this.race.update(dt);

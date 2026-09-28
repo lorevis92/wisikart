@@ -14,6 +14,8 @@ const THEMES = {
   // Storia: stadio allegro e saltellante, boss minore e incalzante
   stadio: { bpm: 120, root: 55, chords: [[0, 4, 7, 11], [7, 11, 14, 17], [9, 12, 16, 19], [5, 9, 12, 16]], lead: 'pluck', drums: 'bounce' },
   boss: { bpm: 138, root: 50, chords: [[0, 3, 7, 10], [-2, 2, 5, 9], [-4, 0, 3, 7], [-5, -1, 2, 5]], lead: 'saw', drums: 'drive' },
+  // Livelli di volo: veloce, notturno, energico (negli ultimi 10 secondi il tempo accelera, vedi setTempo)
+  volo: { bpm: 144, root: 49, chords: [[0, 3, 7, 10], [-4, 0, 3, 7], [-2, 2, 5, 9], [-5, -2, 2, 5]], lead: 'saw', drums: 'drive' },
   // Deposito Valvo & Go: magazzino notturno, minore e meccanico; l'allarme dell'hangar corre e insiste
   valvo: { bpm: 108, root: 52, chords: [[0, 3, 7, 10], [0, 3, 7, 10], [-4, 0, 3, 7], [-2, 2, 5, 9]], lead: 'pluck', drums: 'drive' },
   allarme: { bpm: 152, root: 50, chords: [[0, 3, 7, 10], [1, 5, 8, 12], [0, 3, 7, 10], [-2, 1, 5, 8]], lead: 'saw', drums: 'drive' },
@@ -29,6 +31,7 @@ export class AudioEngine {
     this.voiceGain = null;
     this.engineGain = null;
     this.volumes = { music: 0.6, sfx: 0.8, voice: 1 };
+    this.tempo = 1; // moltiplicatore del tempo della musica (il finale teso dei voli lo alza)
     this.voices = {};
     this.theme = null;
     this.playingTheme = null;
@@ -100,10 +103,22 @@ export class AudioEngine {
     if (!this.ctx) return;
     if (this.playingTheme === name) return;
     this.playingTheme = name;
+    this.tempo = 1;
     this.theme = THEMES[name] || THEMES.menu;
     this._step = 0;
     this._next = this.ctx.currentTime + 0.05;
     if (!this._timer) this._timer = setInterval(() => this._schedule(), 60);
+  }
+
+  /** Accelera (o rallenta) il tema in corso senza farlo ripartire. */
+  setTempo(x) { this.tempo = x; }
+
+  /** Anello preso: una nota che sale di un semitono a ogni anello della catena. */
+  chime(step = 0) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, f = 660 * Math.pow(2, Math.min(step, 12) / 12);
+    this._osc('triangle', f, t, 0.12, 0.2, this.sfxGain);
+    this._osc('sine', f * 1.5, t + 0.06, 0.16, 0.14, this.sfxGain);
   }
 
   stopMusic() {
@@ -115,7 +130,7 @@ export class AudioEngine {
   _schedule() {
     if (!this.theme || !this.ctx) return;
     const ctx = this.ctx;
-    const spb = 60 / this.theme.bpm / 4; // sedicesimi
+    const spb = 60 / (this.theme.bpm * (this.tempo || 1)) / 4; // sedicesimi (tempo > 1 = accelera)
     while (this._next < ctx.currentTime + 0.25) {
       this._playStep(this._step, this._next, spb);
       this._next += spb;
@@ -219,6 +234,9 @@ export class AudioEngine {
       case 'lap': [523, 659, 784].forEach((f, i) => this._osc('triangle', f, t + i * 0.09, 0.14, 0.22, d)); break;
       case 'finish': [523, 659, 784, 1046].forEach((f, i) => this._osc('triangle', f, t + i * 0.12, 0.4, 0.25, d)); break;
       case 'wall': this._noise(t, 0.15, 0.3, d, 800); break;
+      // gong che batte come un cuore (due colpi bassi ravvicinati)
+      case 'gong': this._osc('sine', 62, t, 0.22, 0.5, d, { attack: 0.005, release: 0.18 }); this._osc('sine', 58, t + 0.2, 0.26, 0.4, d, { attack: 0.005, release: 0.2 }); break;
+      case 'whoosh': this._noise(t, 0.3, 0.25, d, 900); break;
       case 'jump': this._osc('triangle', 440, t, 0.06, 0.14, d); this._osc('triangle', 660, t + 0.05, 0.08, 0.12, d); break;
       case 'break': this._noise(t, 0.18, 0.28, d, 2200); this._osc('triangle', 1400, t, 0.05, 0.08, d); break;
     }

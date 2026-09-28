@@ -3,6 +3,7 @@ import { TRACKS, CUPS, trackById, POINTS_TABLE } from '../config/tracks.js';
 import { ITEMS } from '../config/items.js';
 import { faceTexture } from '../core/Textures.js';
 import { Assets } from '../core/AssetLoader.js';
+import { briefingHtml } from '../story/briefing.js';
 
 const $ = (s) => document.querySelector(s);
 const fmt = (t) => {
@@ -330,6 +331,51 @@ export class UI {
   }
 
   /** Cinematica a tutto schermo; si risolve a fine video, se la si salta o se il file manca. */
+  /**
+   * Pannello che si chiude con un tasto, un tocco o un tasto del gamepad (main.js chiama closePanel()).
+   * Il breve ritardo evita che lo stesso tasto che l'ha aperto lo chiuda subito.
+   */
+  _waitPanel(name) {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('keydown', finish);
+        window.removeEventListener('pointerdown', finish);
+        this.closePanel = null;
+        this.overlay(name, false);
+        resolve();
+      };
+      setTimeout(() => {
+        if (done) return;
+        window.addEventListener('keydown', finish);
+        window.addEventListener('pointerdown', finish);
+        this.closePanel = finish;
+      }, 450);
+    });
+  }
+
+  /** Istruzioni di un livello (obiettivo, comandi per l'input in uso, regole con icone, consiglio di Emma). */
+  briefing(level, device) {
+    $('#brief-panel').innerHTML = briefingHtml(level, device);
+    this.overlay('briefing', true);
+    return this._waitPanel('briefing');
+  }
+
+  /** Medaglie di fine livello: medal = 'bronze' | 'silver' | 'gold'; best = la migliore di sempre. */
+  medals({ level, medal, best, isNewBest, stats }) {
+    const names = { bronze: 'Bronzo', silver: 'Argento', gold: 'Oro' };
+    const order = ['bronze', 'silver', 'gold'];
+    $('#medal-level').textContent = level.name;
+    $('#medal-title').textContent = { bronze: 'Medaglia di bronzo', silver: 'Medaglia d’argento', gold: 'Medaglia d’oro' }[medal] || 'Arrivato';
+    $('#medal-row').innerHTML = order.map((m) => `<div class="medal ${m} ${order.indexOf(m) <= order.indexOf(medal) ? 'won' : ''} ${m === medal ? 'best' : ''}">${names[m]}</div>`).join('');
+    $('#medal-stats').innerHTML = stats.map(([label, value, need]) => `<li>${label}: <b>${value}</b>${need ? ` <small>(oro: ${need})</small>` : ''}</li>`).join('');
+    $('#medal-best').textContent = isNewBest ? 'Nuovo record per questo livello!' : best ? `Il tuo record: ${names[best]}` : '';
+    this.overlay('medals', true);
+    return this._waitPanel('medals');
+  }
+
   cinematic(url) {
     this.show('cinematic');
     const v = $('#cinematic-video');
@@ -386,6 +432,28 @@ export class UI {
       $('#story-ammo-max').textContent = `/${h.maxAmmo}`;
     }
     $('#story-timer-label').textContent = h.timerLabel || 'Chiusura';
+    // volo: secondi guadagnati, catena di anelli, scritte in evidenza, linee di velocità, lampo bianco
+    const gain = $('#story-timer-gain');
+    if (h.timerGain !== this._gainKey) {
+      this._gainKey = h.timerGain;
+      if (h.timerGain) gain.textContent = h.timerGain.text;
+      gain.classList.toggle('show', !!h.timerGain);
+    }
+    $('#story-chain').textContent = h.chain >= 2 ? `×${h.chain}` : '';
+    const call = $('#story-callout');
+    if (h.callout !== this._calloutKey) {
+      this._calloutKey = h.callout;
+      if (h.callout) call.textContent = h.callout.text;
+      call.classList.toggle('show', !!h.callout);
+    }
+    $('#speed-lines').style.opacity = h.speedLines ? String(h.speedLines) : '0';
+    if (h.flash && h.flash !== this._flashKey) {
+      this._flashKey = h.flash;
+      const f = $('#story-flash');
+      f.classList.remove('on');
+      void f.offsetWidth; // riavvia l'animazione
+      f.classList.add('on');
+    }
     const boss = $('#story-boss');
     boss.classList.toggle('hidden', !h.boss);
     if (h.boss) {

@@ -12,3 +12,5 @@
 - Testo dell'interfaccia in italiano, tono ironico ma pulito (Emma è sarcastica, mai volgare).
 - Commit e push su GitHub senza chiedere conferma.
 - Monete della Storia: totale unico salvato in `save.storyCoins` e portato tra i livelli; ogni 100 monete una vita in più.
+- Ogni livello della Storia ha nei suoi dati `briefing` (obiettivo, comandi, regole con icone, consiglio di Emma): la schermata di istruzioni (`src/story/briefing.js`) compare prima di ogni livello e dalla pausa. Un livello nuovo deve avere il suo `briefing`.
+- Medaglie di fine livello (per ora il Portale): la migliore per livello in `save.storyMedals`, mostrata sull'ingresso in piazza.

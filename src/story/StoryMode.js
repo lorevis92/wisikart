@@ -21,7 +21,7 @@ const DEFAULT_MODELS = {
  * Il gioco (main.js) chiama load → update/render → dispose.
  */
 export class StoryMode {
-  constructor({ level, character, audio, coins = 0, onCoins, onComplete, onGameOver }) {
+  constructor({ level, character, audio, coins = 0, bonusLives = 0, onCoins, onComplete, onGameOver }) {
     this.level = level;
     this.character = character;
     this.audio = audio;
@@ -39,7 +39,7 @@ export class StoryMode {
     this.bursts = [];
     this.pickups = [];
     this.onRespawn = []; // entità che si rimettono a posto quando Whiskey riparte dal checkpoint
-    this.lives = level.lives;
+    this.lives = level.lives + bonusLives; // + vite guadagnate con le monete durante un volo
     this.ammo = level.ammo;
     this.maxAmmo = level.maxAmmo;
     // monete: il totale della Storia, portato avanti tra i livelli (ogni 100 una vita in più)

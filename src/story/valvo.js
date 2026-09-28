@@ -26,6 +26,20 @@ export const VALVO = {
   killY: -8,
   background: '#0a0c1a',
   completeMessage: 'Livello completato: Deposito Valvo & Go. Emma è con te, e il Portale di Niaboc è aperto.',
+  briefing: {
+    goal: 'Raggiungi l’autovettore in fondo all’hangar',
+    controls: 'platform',
+    rules: [
+      { icon: 'conveyor', text: 'I nastri ti trascinano e cambiano verso: quando le frecce lampeggiano, sta per girare.' },
+      { icon: 'cart', text: 'I carrelli-droide pattugliano i corridoi: evitali o stordiscili con una bottigliata.' },
+      { icon: 'steam', text: 'Il vapore verso l’alto ti lancia sulle grate; quello di lato ti respinge.' },
+      { icon: 'lever', text: 'Colpisci le leve con una bottiglia per aprire le paratie.' },
+      { icon: 'badge', text: 'Il badge apre l’hangar e fa scattare l’allarme.' },
+      { icon: 'shutter', text: 'Le saracinesche scendono una dopo l’altra: corri e scivola sotto (giù mentre corri).' },
+      { icon: 'coin', text: 'Le casse dorate hanno monete: ogni 100, una vita in più.' }
+    ],
+    tip: 'Nell’hangar non fermarti a guardare il timer. Guardalo mentre corri.'
+  },
   lights: { sky: 0xbfd0ff, ground: 0x2a2a3a, hemi: 1.1, key: 0xfff1dd, keyI: 1.4, rim: 0x6aa8ff },
 
   models: {

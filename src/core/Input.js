@@ -24,6 +24,9 @@ export class Input {
     this.jumpPressed = false;
     this.upPressed = false;
     this.isTouch = matchMedia('(pointer: coarse)').matches;
+    // ultimo tipo di input usato: decide quali tasti mostrare nelle istruzioni
+    this.lastDevice = this.isTouch ? 'touch' : 'keyboard';
+    window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') this.lastDevice = 'touch'; });
     this.menuEvents = [];
     window.addEventListener('keydown', (e) => this._key(e, true));
     window.addEventListener('keyup', (e) => this._key(e, false));
@@ -63,11 +66,13 @@ export class Input {
       if (!b.pressed && (b.value || 0) < 0.1) cal.armed[i] = true;
       return cal.armed[i] ? { pressed: b.pressed, value: b.value || 0 } : { pressed: false, value: 0 };
     });
+    if (buttons.some((b) => b.pressed) || axes.some((a) => a !== 0)) this.lastDevice = 'gamepad';
     return { axes, buttons };
   }
 
   _key(e, down) {
     const k = e.code && e.code !== 'Unidentified' ? e.code : KEY_FALLBACK[e.key] || e.key;
+    if (down) this.lastDevice = 'keyboard';
     if (down && !e.repeat) {
       if (k === 'ShiftLeft' || k === 'ShiftRight' || k === 'KeyE' || k === 'KeyJ') this.itemPressed = true;
       if (k === 'Escape' || k === 'KeyP') this.pausePressed = true;

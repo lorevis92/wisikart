@@ -22,7 +22,8 @@ const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
  * onEnter(entrance) viene chiamato per i livelli giocabili; i messaggi "chiuso" / "in arrivo" li gestisce la piazza.
  */
 export class Hub {
-  constructor({ world, character, audio, completed = {}, spawnAt = null, onEnter }) {
+  constructor({ world, character, audio, completed = {}, medals = {}, spawnAt = null, onEnter }) {
+    this.medals = medals; // la medaglia migliore per livello, mostrata sull'ingresso
     this.world = world;
     this.character = character;
     this.audio = audio;
@@ -290,6 +291,21 @@ export class Hub {
       lock.position.set(0, h + 1.2, front + 0.3);
       group.add(lock);
       this.dynamic.push((t) => { lock.position.y = h + 1.2 + Math.sin(t * 2 + e.angle) * 0.15; lock.rotation.y = Math.sin(t * 0.8) * 0.4; });
+    }
+    // medaglia migliore vinta in questo livello: un piccolo disco che gira sopra l'ingresso
+    const medal = this.medals[e.id];
+    if (medal) {
+      const colors = { bronze: 0xc07a3a, silver: 0xd8dde8, gold: 0xf5b942 };
+      const disc = new THREE.Group();
+      const face = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.16, 28), new THREE.MeshStandardMaterial({ color: colors[medal], metalness: 0.85, roughness: 0.25, emissive: colors[medal], emissiveIntensity: 0.25 }));
+      face.rotation.x = Math.PI / 2;
+      const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 0.06), new THREE.MeshStandardMaterial({ color: 0x2b62d9 }));
+      ribbon.position.y = 1.2;
+      disc.add(face, ribbon);
+      const y = e.arch ? e.height + 1.5 : e.height * 0.9 + 1.5;
+      disc.position.set(0, y, e.arch ? 0 : ((halfW + halfD) / 2) * 0.9);
+      group.add(disc);
+      this.dynamic.push((t) => { disc.rotation.y = t * 1.5; disc.position.y = y + Math.sin(t * 2) * 0.2; });
     }
     this.entrances.push(entrance);
   }

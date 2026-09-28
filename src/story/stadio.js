@@ -23,6 +23,19 @@ export const STADIO = {
   maxAmmo: 9,
   killY: -8,
   winText: 'Livello completato! Emma: «Lo sapevo. Più o meno.»',
+  briefing: {
+    goal: 'Attraversa lo stadio e batti il Tifoso Supremo',
+    controls: 'platform',
+    rules: [
+      { icon: 'bottle', text: 'Le bottiglie sono la tua arma: munizioni limitate, si ricaricano a bottigliera e casse.' },
+      { icon: 'crumble', text: 'I sedili crepati crollano poco dopo che ci sali: non fermarti.' },
+      { icon: 'fan', text: 'I tifosi si scavalcano; le sciarpe si saltano quando sono giù, si passano sotto quando sono su.' },
+      { icon: 'drop', text: 'Dagli spalti piovono bottiglie e secchi: l’ombra a terra dice dove.' },
+      { icon: 'boss', text: 'Il Tifoso Supremo lancia sedili sul bersaglio rosso. Tre bottigliate e torna a sedersi.' },
+      { icon: 'coin', text: 'Ogni 100 monete, una vita in più.' }
+    ],
+    tip: 'Il salto più lungo è quello che tieni premuto. Anche la pazienza, ma quella non la tieni mai.'
+  },
   completeMessage: 'Livello completato: Stadio di Space Ball. Il Deposito Valvo & Go è aperto.',
 
   // telecamera: arena larga e quasi ferma; tunnel verticale che segue l'altezza

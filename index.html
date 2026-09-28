@@ -156,14 +156,17 @@
   <!-- STORIA: HUD -->
   <section id="screen-story-hud" class="screen hud story-hud">
     <div class="story-alarm" id="story-alarm" aria-hidden="true"></div>
+    <div class="speed-lines" id="speed-lines" aria-hidden="true"></div>
+    <div class="story-flash" id="story-flash" aria-hidden="true"></div>
+    <div class="story-callout" id="story-callout"></div>
     <div class="hud-top">
       <div class="story-stat" id="story-lives-box"><span class="story-hearts" id="story-lives"></span></div>
       <div class="story-stat hidden" id="story-speed-box"><b id="story-speed">0</b><small>km/h</small></div>
       <div class="story-boss hidden" id="story-boss"><span id="story-boss-name">Il Tifoso Supremo</span><div class="story-boss-bar"><i id="story-boss-fill"></i></div></div>
-      <div class="story-timer hidden" id="story-timer"><small id="story-timer-label">Chiusura</small><b id="story-timer-val">0.0</b></div>
+      <div class="story-timer hidden" id="story-timer"><small id="story-timer-label">Chiusura</small><b id="story-timer-val">0.0</b><span class="timer-gain" id="story-timer-gain"></span></div>
       <div class="story-side">
         <div class="story-stat" id="story-ammo-box"><span class="story-bottle" aria-hidden="true"></span><b id="story-ammo">3</b><small id="story-ammo-max">/9</small></div>
-        <div class="story-stat hidden" id="story-rings-box"><span class="story-ring" aria-hidden="true"></span><b id="story-rings">0</b><small id="story-rings-total">/12</small></div>
+        <div class="story-stat hidden" id="story-rings-box"><span class="story-ring" aria-hidden="true"></span><b id="story-rings">0</b><small id="story-rings-total">/12</small><em class="chain" id="story-chain"></em></div>
         <div class="story-stat hidden" id="story-coins-box"><span class="story-coin" aria-hidden="true"></span><b id="story-coins">0</b></div>
         <div class="story-stat story-badge hidden" id="story-badge" title="Badge del deposito"><img id="story-badge-img" alt="Badge" /><small>Badge</small></div>
       </div>
@@ -186,6 +189,23 @@
     </div>
   </section>
 
+  <!-- STORIA: istruzioni prima di ogni livello (contenuto dai dati del livello, vedi story/briefing.js) -->
+  <section id="screen-briefing" class="screen overlay briefing">
+    <div class="brief-panel" id="brief-panel"></div>
+  </section>
+
+  <!-- STORIA: medaglie di fine livello -->
+  <section id="screen-medals" class="screen overlay medals">
+    <div class="medal-panel">
+      <small id="medal-level"></small>
+      <h2 id="medal-title">Medaglia</h2>
+      <div class="medal-row" id="medal-row"></div>
+      <ul class="medal-stats" id="medal-stats"></ul>
+      <p class="medal-best" id="medal-best"></p>
+      <p class="brief-go">Premi un tasto per continuare</p>
+    </div>
+  </section>
+
   <!-- STORIA: cinematica (il tunnel del portale) -->
   <section id="screen-cinematic" class="screen cinematic">
     <video id="cinematic-video" playsinline class="cinematic-video"></video>
@@ -197,6 +217,7 @@
     <div class="panel">
       <h2>Pausa</h2>
       <button class="btn primary" data-pause="resume">Riprendi</button>
+      <button class="btn hidden" data-pause="help" id="pause-help">Istruzioni</button>
       <button class="btn" data-pause="restart">Ricomincia la gara</button>
       <button class="btn ghost" data-pause="quit">Torna al menu</button>
     </div>
