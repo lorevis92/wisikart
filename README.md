@@ -1,8 +1,23 @@
-# WisiKart
+# WiSiVERSE
 
-Il kart racer del WiSiVERSE: sei Whiskey, quattro circuiti, due coppe. Gioco completo in browser (three.js + Vite): menu, Gran Premio, corsa singola, prova a tempo, opzioni, crediti, gara con oggetti, avversari IA, derapate e mini‑turbo, voce di Emma, musica generata in tempo reale.
+Il mondo di Whiskey, in browser (three.js + Vite). Il gioco ha due parti, scelte dal menu principale:
 
-## Circuiti
+- **Storia** (la parte principale, selezionata all'avvio): Whiskey a piedi tra i pianeti, a cominciare dalla piazza 3D di Niaboc e dallo Stadio di Space Ball.
+- **WisiKart**: la sezione delle gare in kart, con sei Whiskey, quattro circuiti e due coppe (Gran Premio, corsa singola, prova a tempo), avversari IA, oggetti, derapate e mini‑turbo.
+
+Più opzioni e crediti; voce di Emma e musica generata in tempo reale in tutto il gioco.
+
+Il repository, le cartelle e la chiave di salvataggio nel browser (`wisikart.save.v1`) mantengono il vecchio nome WisiKart, così record e progressi non si perdono.
+
+## Menu
+
+- **Menu principale** (titolo WiSiVERSE, sfondo `ui/wisiverse-title.png`, logo `ui/wisiverse-logo.png`): Storia (card `ui/card-storia.png`), WisiKart (card con il logo WisiKart e l'anteprima di Canair), Opzioni, Crediti. Storia porta direttamente alla piazza di Niaboc.
+- **Sottomenu WisiKart** (logo WisiKart, video `video/intro.mp4` come sfondo): Gran Premio, Corsa singola, Prova a tempo, Torna al menu principale.
+- Uscendo da una gara (risultati o pausa) si torna al sottomenu WisiKart; uscendo dalla Storia (pausa della piazza o del livello) si torna al menu principale. Finito un livello si ricompare nella piazza, davanti al suo ingresso.
+
+## WisiKart
+
+### Circuiti
 
 | Circuito | Tema | Lunghezza | Note |
 |---|---|---|---|
@@ -11,7 +26,7 @@ Il kart racer del WiSiVERSE: sei Whiskey, quattro circuiti, due coppe. Gioco com
 | **Niaboc – Deposito Valvo Go** | aperto, notte | 2,4 km | città sotto le due lune: palazzi con finestre accese e neon, lampioni, deposito Valvo Go, portale al neon sopra la pista, blindato |
 | **Lago di Retah** | aperto, pianeta piatto | 2,7 km | lago calmo a sinistra della seconda metà, tavola calda con autovettori parcheggiati, blindati dei cacciatori di taglie, relitto |
 
-## Coppe (Gran Premio)
+### Coppe (Gran Premio)
 
 Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8, 6, 4, 2, 1; a fine coppa la classifica mostra i punti gara per gara.
 
@@ -20,7 +35,7 @@ Nel Gran Premio, dopo il personaggio si sceglie la coppa. Punti per gara: 10, 8,
 
 ## Storia
 
-Modalità separata dal kart (voce **Storia** nel menu), che parte da una **piazza 3D di Niaboc** da attraversare a piedi, in terza persona come un mini Super Mario 64: cielo notturno con le due lune, palette e palazzi della pista di Niaboc, fontana al centro. Cinque ingressi, attivati camminandoci dentro (nessun menu): **Stadio di Space Ball** (`story/niaboc/stadio-esterno.glb`, carica il livello), **Portale di Niaboc** (`props/portale-niaboc.glb`, sigillato da una barriera finché non vinci lo stadio), **Deposito Valvo Go** (`props/valvo-go.glb`), **Vicoli notturni** (`story/niaboc/arco-vicoli.glb`) e **Biblioteca** (`story/niaboc/biblioteca.glb`), questi ultimi "in arrivo". La piazza è descritta in `src/story/worlds.js`. Comandi in piazza: Frecce / WASD, Spazio o K per saltare, Q / E per girare la telecamera.
+La parte principale del WiSiVERSE (prima voce del menu principale), separata dalle gare: parte da una **piazza 3D di Niaboc** da attraversare a piedi, in terza persona come un mini Super Mario 64: cielo notturno con le due lune, palette e palazzi della pista di Niaboc, fontana al centro. Cinque ingressi, attivati camminandoci dentro (nessun menu): **Stadio di Space Ball** (`story/niaboc/stadio-esterno.glb`, carica il livello), **Portale di Niaboc** (`props/portale-niaboc.glb`, sigillato da una barriera finché non vinci lo stadio), **Deposito Valvo Go** (`props/valvo-go.glb`), **Vicoli notturni** (`story/niaboc/arco-vicoli.glb`) e **Biblioteca** (`story/niaboc/biblioteca.glb`), questi ultimi "in arrivo". La piazza è descritta in `src/story/worlds.js`. Comandi in piazza: Frecce / WASD, Spazio o K per saltare, Q / E per girare la telecamera.
 
 Whiskey è l'ultimo personaggio scelto nel kart (altrimenti la Monna), con i modelli **con scheletro** `story/characters/<id>.glb`: camminata, corsa, salto, scale e lancio sono animati sulle ossa vere (`src/story/Rig.js`, nomi in stile Mixamo con riconoscimento anche di nomi diversi). Senza file resta la versione procedurale con la faccia di `faceTexture`.
 
@@ -51,11 +66,13 @@ Tutti sotto `public/assets/`. Il file `public/assets/manifest.json` elenca ogni 
 | `props/*.glb` | valvo-go, autovettore, tavola-calda, blindato, oremo-giovane, oremo-anziano, portale-niaboc, relitto | scenografia dei circuiti |
 | `tracks/<id>/sky.png` | cielo panoramico 16:9 | sfondo delle piste aperte (Canair, Niaboc, Retah) |
 | `tracks/<id>/preview.png` | anteprima | selezione pista, caricamento |
-| `ui/logo.png`, `ui/title.png` | logo e sfondo del titolo | boot e schermata iniziale |
+| `ui/wisiverse-logo.png`, `ui/wisiverse-title.png` | logo e sfondo del WiSiVERSE | boot e menu principale |
+| `ui/card-storia.png` | card della Storia | menu principale |
+| `ui/logo.png`, `ui/title.png` | logo WisiKart e sua illustrazione | card WisiKart, sottomenu WisiKart (l'illustrazione se manca il video) |
 | `items/*.png` | icone oggetti | HUD |
 | `audio/voice/*.wav` | 6 battute di Emma (welcome, start, lastlap, hit, hitother, win) | annunci in gara |
 | `story/stadio/*` | sfondi (gradinate, campo, tunnel) e modelli (tifoso, steward, bottiglia) della Storia, elencati in `public/assets/story/manifest.json` | modalità Storia |
-| `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del titolo, finale del Gran Premio, griglia di partenza di Omega 65 |
+| `video/intro.mp4`, `finale.mp4`, `griglia.mp4` | video | sfondo del sottomenu WisiKart, finale del Gran Premio, griglia di partenza di Omega 65 |
 | `tracks/<id>/griglia.mp4` | video della griglia di partenza (Niaboc, Canair, Retah) | schermata di caricamento della pista |
 
 Se un modello GLB guarda dalla parte sbagliata, cambia `modelRotY` in `src/config/characters.js` (valori tipici: `0`, `Math.PI`, `±Math.PI/2`). L'altezza dei modelli viene normalizzata automaticamente.

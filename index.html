@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>WisiKart</title>
-  <meta name="description" content="WisiKart — il kart racer del WiSiVERSE. Sei Whiskey, due circuiti, una fuga." />
+  <title>WiSiVERSE</title>
+  <meta name="description" content="WiSiVERSE — il mondo di Whiskey: la Storia a piedi tra i pianeti e WisiKart, le gare in kart." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%235b8cf0'/%3E%3Cpath d='M14 40q18 18 36 0q-18 6-36 0z' fill='%23fff'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,28 +17,51 @@
   <!-- BOOT -->
   <section id="screen-boot" class="screen active">
     <div class="boot-inner">
-      <div class="logo-block" id="boot-logo"><span class="wordmark">WisiKart</span></div>
+      <div class="logo-block" id="boot-logo"><span class="wordmark">WiSiVERSE</span></div>
       <div class="boot-bar"><div id="boot-progress"></div></div>
       <p id="boot-text">Carico il WiSiVERSE…</p>
-      <button id="boot-start" class="btn primary hidden">Entra in pista</button>
+      <button id="boot-start" class="btn primary hidden">Entra nel WiSiVERSE</button>
     </div>
   </section>
 
-  <!-- TITOLO + MENU -->
+  <!-- TITOLO + MENU PRINCIPALE -->
   <section id="screen-title" class="screen">
-    <video id="title-video" muted loop playsinline class="bg-video"></video>
     <div class="title-bg" id="title-bg"></div>
     <div class="title-inner">
-      <div class="logo-block big" id="title-logo"><span class="wordmark">WisiKart</span><span class="sub">Coppa della Fuga</span></div>
-      <nav class="menu" id="main-menu">
-        <button class="btn menu-item" data-action="gp">Gran Premio<small>Due gare, una sola fuga</small></button>
+      <div class="logo-block big" id="title-logo"><span class="wordmark">WiSiVERSE</span></div>
+      <nav class="main-menu" id="main-menu">
+        <div class="main-cards">
+          <button class="menu-item main-card" data-action="story">
+            <span class="card-art" id="card-storia"><span class="card-fallback">Storia</span></span>
+            <span class="card-meta"><b>Storia</b><small>Whiskey a piedi tra i pianeti · Niaboc</small></span>
+          </button>
+          <button class="menu-item main-card" data-action="kart">
+            <span class="card-art kart-art" id="card-kart"><span class="kart-card-logo" id="kart-card-logo"><span class="wordmark">WisiKart</span></span></span>
+            <span class="card-meta"><b>WisiKart</b><small>Gran Premio, corsa singola, prova a tempo</small></span>
+          </button>
+        </div>
+        <div class="main-small">
+          <button class="btn menu-item" data-action="options">Opzioni</button>
+          <button class="btn menu-item" data-action="credits">Crediti</button>
+        </div>
+      </nav>
+      <p class="hint" id="title-hint">Frecce per scegliere · Invio per entrare</p>
+    </div>
+  </section>
+
+  <!-- WISIKART: sottomenu delle gare -->
+  <section id="screen-kart" class="screen">
+    <video id="kart-video" muted loop playsinline class="bg-video"></video>
+    <div class="title-bg" id="kart-bg"></div>
+    <div class="title-inner">
+      <div class="logo-block big" id="kart-logo"><span class="wordmark">WisiKart</span><span class="sub">Il kart racer del WiSiVERSE</span></div>
+      <nav class="menu" id="kart-menu">
+        <button class="btn menu-item" data-action="gp">Gran Premio<small>Scegli la coppa e somma i punti</small></button>
         <button class="btn menu-item" data-action="single">Corsa singola<small>Scegli pista e personaggio</small></button>
         <button class="btn menu-item" data-action="time">Prova a tempo<small>Solo tu e il cronometro</small></button>
-        <button class="btn menu-item" data-action="story">Storia<small>Whiskey a piedi, livello per livello</small></button>
-        <button class="btn menu-item" data-action="options">Opzioni</button>
-        <button class="btn menu-item" data-action="credits">Crediti</button>
+        <button class="btn ghost menu-item" data-action="main">Torna al menu principale</button>
       </nav>
-      <p class="hint" id="title-hint">Frecce o WASD per muoverti · Spazio per derapare · Maiusc per l'oggetto</p>
+      <p class="hint" id="kart-hint">Frecce o WASD per guidare · Spazio per derapare · Maiusc per l'oggetto</p>
     </div>
   </section>
 
@@ -217,9 +240,9 @@
       <h2>Crediti</h2>
     </header>
     <div class="credits-body">
-      <p><b>WisiKart</b> è un gioco del WiSiVERSE.</p>
+      <p><b>WiSiVERSE</b>: il mondo di Whiskey. La <b>Storia</b> si gioca a piedi, pianeta dopo pianeta, a cominciare da Niaboc; <b>WisiKart</b> è la sezione delle gare in kart.</p>
       <p>Personaggi, mondo e storia: Lorenzo — dai quadri della serie <i>Whiskey</i> e dal romanzo di Whiskey.</p>
-      <p>I sei piloti: La Monna Whiskey, il Bacco, Whiskey con l'orecchino di perla, Whiskey viandante, Whiskey che divora i figli, Whiskey col panciotto.</p>
+      <p>I sei Whiskey: La Monna Whiskey, il Bacco, Whiskey con l'orecchino di perla, Whiskey viandante, Whiskey che divora i figli, Whiskey col panciotto.</p>
       <p>Emma, la voce del navigatore Logego Space Drive, non guiderà al posto tuo.</p>
       <p class="tiny">Motore: three.js · Musica ed effetti generati in tempo reale · Illustrazioni, modelli 3D e voce prodotti con Higgsfield.</p>
     </div>

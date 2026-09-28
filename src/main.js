@@ -45,6 +45,10 @@ class Game {
     this.input.bindTouch(document.getElementById('story-touch'));
     this.input.bindTouch(document.getElementById('hub-touch'));
     document.querySelectorAll('#main-menu .menu-item').forEach((b) => b.addEventListener('click', () => this.menuAction(b.dataset.action)));
+    document.querySelectorAll('#kart-menu .menu-item').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.action === 'main') { this.audio.sfx('back'); this.state = 'title'; this.ui.title(); }
+      else this.menuAction(b.dataset.action);
+    }));
     document.querySelectorAll('[data-pause]').forEach((b) => b.addEventListener('click', () => this.pauseAction(b.dataset.pause)));
     document.getElementById('boot-start').addEventListener('click', () => this.enter());
     this._loop = this._loop.bind(this);
@@ -146,6 +150,8 @@ class Game {
       this.ui.options(this.settings, (s) => { Object.assign(this.settings, s); this.audio.setVolumes(this.settings); this._persist(); this._resize(); });
     } else if (action === 'story') {
       this.openStory();
+    } else if (action === 'kart') {
+      this.openKartMenu();
     } else if (action === 'credits') {
       this.state = 'credits';
       this.ui.credits();
@@ -157,8 +163,21 @@ class Game {
 
   back() {
     this.audio.sfx('back');
-    if (this.state === 'chars' || this.state === 'options' || this.state === 'credits') { this.state = 'title'; this.ui.title(); }
+    if (this.state === 'options' || this.state === 'credits' || this.state === 'kartmenu') { this.state = 'title'; this.ui.title(); }
+    else if (this.state === 'chars') this.openKartMenu(); // la scelta del pilota sta dentro WisiKart
     else if (this.state === 'tracks' || this.state === 'cups') { this.state = 'chars'; this.ui.characters(this.mode, (c) => this.pickCharacter(c)); }
+  }
+
+  /** Sottomenu WisiKart: Gran Premio, Corsa singola, Prova a tempo. */
+  openKartMenu() {
+    this.state = 'kartmenu';
+    this.ui.kartMenu();
+  }
+
+  /** Testi della pausa: riprendi / ricomincia / esci, secondo dove ci si trova. */
+  _pauseLabels(restart, quit) {
+    document.querySelector('[data-pause="restart"]').textContent = restart;
+    document.querySelector('[data-pause="quit"]').textContent = quit;
   }
 
   pickCharacter(c) {
@@ -245,11 +264,11 @@ class Game {
       this.gp.finished = last;
       if (!last) actions.push(['Prossima gara', () => { this.gp.raceIndex++; this.startRace(trackById[this.gp.tracks[this.gp.raceIndex]]); }, true]);
       else actions.push(['Nuova coppa', () => { this.pickCharacter(this.playerChar); }, true]);
-      actions.push(['Torna al menu', () => this.toTitle()]);
+      actions.push(['Torna a WisiKart', () => this.toKartMenu()]);
     } else {
       actions.push(['Rigioca', () => this.startRace(this.race.trackDef), true]);
       actions.push(['Cambia pista', () => { this.state = 'tracks'; this.ui.tracks(this.mode, (t) => this.startRace(t), this.save.bestLaps || {}); }]);
-      actions.push(['Torna al menu', () => this.toTitle()]);
+      actions.push(['Torna a WisiKart', () => this.toKartMenu()]);
     }
     this.ui.results({ results: e.results, lapTimes: e.lapTimes, bestLap: e.bestLap, totalTime: e.totalTime, mode: this.mode, gp: this.gp, playerChar: this.playerChar, actions, isNewBest });
   }
@@ -292,7 +311,7 @@ class Game {
   hubPause(on) {
     if (this.state !== 'hub' && this.state !== 'hubpaused') return;
     this.state = on ? 'hubpaused' : 'hub';
-    document.querySelector('[data-pause="restart"]').textContent = on ? 'Torna al centro della piazza' : 'Ricomincia la gara';
+    if (on) this._pauseLabels('Torna al centro della piazza', 'Torna al menu principale');
     this.ui.pause(on);
     if (!on) this.ui.hubStart();
   }
@@ -336,16 +355,26 @@ class Game {
   storyPause(on) {
     if (this.state !== 'story' && this.state !== 'storypaused') return;
     this.state = on ? 'storypaused' : 'story';
-    document.querySelector('[data-pause="restart"]').textContent = on ? 'Ricomincia il livello' : 'Ricomincia la gara';
+    if (on) this._pauseLabels('Ricomincia il livello', 'Torna al menu principale');
     this.ui.pause(on);
     if (!on) this.ui.storyHudStart(); // chiude l'overlay e rimette l'HUD
   }
 
-  toTitle() {
+  /** Uscita da una gara (risultati o pausa): si torna al sottomenu WisiKart. */
+  toKartMenu() {
     this.audio.sfx('back');
     if (this.race) { this.race.dispose(); this.race = null; }
     this.composer = null;
     this.scene.clear();
+    this.audio.playTheme('menu');
+    this.openKartMenu();
+  }
+
+  /** Uscita dalla Storia (piazza o livello): si torna al menu principale. */
+  toMainMenu() {
+    this.audio.sfx('back');
+    this._endStory();
+    this._endHub();
     this.state = 'title';
     this.audio.playTheme('menu');
     this.ui.title();
@@ -355,10 +384,9 @@ class Game {
     this.audio.sfx('select');
     if (this.state === 'hubpaused') {
       this.ui.pause(false);
-      document.querySelector('[data-pause="restart"]').textContent = 'Ricomincia la gara';
       if (a === 'resume') this.hubPause(false);
       else if (a === 'restart') { this.hub.spawnAt = null; this.hub._spawn(); this.hubPause(false); }
-      else { this._endHub(); this.state = 'title'; this.audio.playTheme('menu'); this.ui.title(); }
+      else this.toMainMenu();
       return;
     }
     if (this.state === 'storypaused') {
@@ -366,21 +394,21 @@ class Game {
       if (a === 'resume') this.storyPause(false);
       else {
         this.ui.pause(false);
-        document.querySelector('[data-pause="restart"]').textContent = 'Ricomincia la gara';
         if (a === 'restart') this.startStory(level);
-        else this.openStory('', level.id); // si esce dal portone dello stadio
+        else this.toMainMenu();
       }
       return;
     }
     if (a === 'resume') this.togglePause(false);
     else if (a === 'restart') { this.togglePause(false); this.startRace(this.race.trackDef); }
-    else if (a === 'quit') { this.togglePause(false); this.toTitle(); }
+    else if (a === 'quit') { this.togglePause(false); this.toKartMenu(); }
   }
 
   togglePause(on) {
     if (this.state !== 'race' && this.state !== 'paused') return;
     this.paused = on;
     this.state = on ? 'paused' : 'race';
+    if (on) this._pauseLabels('Ricomincia la gara', 'Torna a WisiKart');
     this.ui.pause(on);
     if (on) this.audio.stopEngine(); else this.audio.startEngine();
   }
