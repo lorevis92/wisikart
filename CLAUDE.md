@@ -11,4 +11,4 @@
 - Il repository, le cartelle e la chiave di salvataggio nel browser `wisikart.save.v1` mantengono il nome WisiKart: non vanno rinominati, altrimenti si perdono record e progressi.
 - Testo dell'interfaccia in italiano, tono ironico ma pulito (Emma è sarcastica, mai volgare).
 - Commit e push su GitHub senza chiedere conferma.
-- Monete della Storia: totale unico salvato in save.storyCoins e portato tra i livelli; ogni 100 monete una vita in più.
+- Monete della Storia: totale unico salvato in `save.storyCoins` e portato tra i livelli; ogni 100 monete una vita in più.
