@@ -69,6 +69,17 @@
     "retah/tavolo.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_115609_feacab61-57e9-406e-897b-71a5a6061960.glb",
     "retah/divanetto.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_115613_9fc85ac4-14cf-4ce6-bf60-e71a6e67f221.glb",
     "retah/porta-cucina.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_115617_c228a5fe-d0b2-4064-b37a-6458a03f1687.glb",
-    "retah/lampada.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_115621_e31fde47-d64c-4a85-8473-52536421d1f0.glb"
+    "retah/lampada.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260928_115621_e31fde47-d64c-4a85-8473-52536421d1f0.glb",
+    "retah/capo-radio.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011557_677fab08-ddf7-4637-9667-3d3144214f0f.png",
+    "voce/capo-arrivo.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_005446_d8f652e0-4f48-4654-8d78-78c23f75f436.wav",
+    "voce/capo-minaccia1.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_005445_76539551-c140-4918-ba25-a6c0e14a8ee5.wav",
+    "voce/capo-minaccia2.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_005446_42ec7c96-49e5-479b-9504-13102cd95622.wav",
+    "voce/capo-minaccia3.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_005445_74f48364-170b-454e-9ec7-cd814ec02f57.wav",
+    "voce/capo-cannone.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_005446_08988078-56af-4bc8-83d2-b7af76ecc17a.wav",
+    "voce/capo-spazio-vettore.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_005446_8158543b-34ea-42cc-a5ad-93be736527d5.wav",
+    "voce/insegui-chi-parla.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011045_5af5f4df-1081-4579-87f4-8ab22c24956f.wav",
+    "voce/insegui-accosta.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011045_fc4b8ea8-d043-4759-aaa5-510585fd1b5a.wav",
+    "voce/insegui-taglia-strada.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011045_655f7f3a-ff06-4aac-9f4a-f31cc775feb8.wav",
+    "voce/insegui-guarda-indietro.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011045_99193d1b-a218-4338-86af-ac93809369d2.wav"
   }
 }

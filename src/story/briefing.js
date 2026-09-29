@@ -39,6 +39,9 @@ export const ICONS = {
   cannon: svg('<rect x="4" y="6" width="40" height="8" rx="4" fill="#2a2e3e"/><rect x="6" y="8" width="28" height="4" rx="2" fill="#7fd4ff"/><path d="M24 18l-6 26h12z" fill="#9fe8ff" opacity=".7"/><path d="M24 18v26" stroke="#fff" stroke-width="2"/>'),
   cover: svg('<path d="M4 42h40" stroke="#b89468" stroke-width="3"/><path d="M28 42c-2-10 2-18 8-22 4 6 6 14 2 22z" fill="#6a7a3a"/><path d="M6 12l14 12" stroke="#9fe8ff" stroke-width="4" opacity=".8"/><ellipse cx="18" cy="36" rx="6" ry="3" fill="#d99a2b"/><path d="M36 4v12" stroke="#43e0b0" stroke-width="2"/><circle cx="36" cy="4" r="2" fill="#43e0b0"/>'),
   heart: svg('<path d="M24 40S8 30 8 19a8 8 0 0 1 16-3 8 8 0 0 1 16 3c0 11-16 21-16 21z" fill="#ff5a6e"/><path d="M34 8v6M31 11h6" stroke="#fff" stroke-width="2"/>'),
+  mirror: svg('<rect x="6" y="12" width="36" height="16" rx="6" fill="#1b1f3a" stroke="#c9cfdc" stroke-width="3"/><rect x="12" y="18" width="7" height="5" rx="1" fill="#5a5f70"/><rect x="28" y="17" width="8" height="6" rx="1" fill="#5a5f70"/><circle cx="13" cy="20" r="1.3" fill="#fff4d8"/><circle cx="29" cy="19" r="1.3" fill="#fff4d8"/><path d="M24 30v8M18 38h12" stroke="#c9cfdc" stroke-width="3"/>'),
+  flank: svg('<ellipse cx="18" cy="30" rx="7" ry="4" fill="#d99a2b"/><rect x="28" y="20" width="16" height="12" rx="3" fill="#5a5f70"/><path d="M26 24l-5 3 5 3" fill="none" stroke="#ff4a5a" stroke-width="2.5"/><path d="M14 22l-6-4M14 38l-6 4" stroke="#43e0b0" stroke-width="2.5" stroke-linecap="round"/>'),
+  mines: svg('<circle cx="10" cy="26" r="5" fill="#ff2a3a"/><circle cx="24" cy="20" r="5" fill="#ff2a3a"/><circle cx="38" cy="26" r="5" fill="#ff2a3a"/><path d="M24 44V30" stroke="#43e0b0" stroke-width="2.5" stroke-dasharray="3 2"/><path d="M20 34l4-5 4 5" fill="none" stroke="#43e0b0" stroke-width="2.5"/>'),
   vortex: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#7fa4ff" stroke-width="3"/><path d="M24 12a12 12 0 1 1-12 12 8 8 0 1 1 8 8 4 4 0 1 1 4-4" fill="none" stroke="#c9d6ff" stroke-width="2.5"/>')
 };
 
@@ -121,8 +124,33 @@ export const CONTROLS = {
     ]
   }
 };
-// l'inseguimento si guida come il Portale
-CONTROLS.chase = CONTROLS.flight;
+// inseguimento: come il Portale, più "guarda indietro" (tenuto) e il freno su un tasto suo
+CONTROLS.chase = {
+  keyboard: [
+    ['Sterza', [K('←'), K('→')], [K('A'), K('D')]],
+    ['Quota su / giù', [K('↑'), K('↓')], [K('W'), K('S')]],
+    ['Spara (tieni per la raffica)', [K('Spazio')], [K('K')]],
+    ['Guarda indietro e spara ai blindati (tieni)', [K('Maiusc')], [K('E')], [K('J')]],
+    ['Frena', [K('Q')], [K('X')]],
+    ['Menu di gioco · silenzio', [K('Esc')], [K('M')]]
+  ],
+  touch: [
+    ['Sterza', [T('◀'), T('▶')]],
+    ['Quota su / giù', [T('▲'), T('▼')]],
+    ['Spara', [T('Spara')]],
+    ['Guarda indietro (tieni)', [T('Indietro')]],
+    ['Frena', [T('Frena')]],
+    ['Menu di gioco', [T('II')]]
+  ],
+  gamepad: [
+    ['Sterza', [P('levetta')]],
+    ['Quota su / giù', [P('levetta su/giù')], [P('croce')]],
+    ['Spara', [P('A')]],
+    ['Guarda indietro (tieni)', [P('Y')], [P('LB')]],
+    ['Frena', [P('X')], [P('LT')]],
+    ['Menu di gioco', [P('Start')]]
+  ]
+};
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

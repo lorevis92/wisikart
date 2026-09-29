@@ -554,8 +554,12 @@ export class UI {
     $('#story-warn').classList.remove('show');
     const flight = type === 'flight' || type === 'chase';
     $('#story-tbtn-jump').textContent = flight ? 'Spara' : 'Salta';
-    $('#story-tbtn-item').textContent = flight ? 'Frena' : 'Lancia';
-    $('#story-tbtn-attack').classList.toggle('hidden', type !== 'brawl'); // rissa: c'è anche il pugno
+    // inseguimento: Lancia diventa "Indietro" (guarda indietro, tenuto) e il terzo tasto frena
+    $('#story-tbtn-item').textContent = type === 'chase' ? 'Indietro' : flight ? 'Frena' : 'Lancia';
+    $('#story-tbtn-attack').textContent = type === 'chase' ? 'Frena' : 'Pugno';
+    $('#story-tbtn-attack').classList.toggle('hidden', type !== 'brawl' && type !== 'chase');
+    for (const id of ['#story-mirror', '#story-pursuit', '#story-radio', '#story-lookback']) $(id).classList.add('hidden');
+    this._radioKey = null;
     this._storyNotice = null;
     this._storyLives = null;
     this._storySub = null;
@@ -644,6 +648,29 @@ export class UI {
       if (sub) el.textContent = sub;
       el.classList.toggle('show', !!sub);
     }
+    // inseguimento: specchietto, vicinanza dei blindati, radio del capo, visuale all'indietro
+    $('#story-mirror').classList.toggle('hidden', !h.mirror);
+    $('#story-pursuit').classList.toggle('hidden', !h.pursuit);
+    if (h.pursuit) {
+      $('#story-pursuit-fill').style.width = `${Math.round(h.pursuit.near * 100)}%`;
+      $('#story-pursuit').classList.toggle('close', h.pursuit.near > 0.7);
+      $('#story-pursuit-where').textContent = h.pursuit.where;
+    }
+    if (h.heat) {
+      $('#story-heat-fill').style.width = `${Math.round(h.heat.v * 100)}%`;
+      $('#story-heat-fill').classList.toggle('hot', h.heat.hot);
+    }
+    const radioKey = h.radio ? h.radio.portrait : null;
+    if (radioKey !== this._radioKey) {
+      this._radioKey = radioKey;
+      if (h.radio) {
+        const img = $('#story-radio-img');
+        if (!img.getAttribute('src')) img.src = h.radio.portrait;
+        $('#story-radio-name').textContent = h.radio.name;
+      }
+      $('#story-radio').classList.toggle('hidden', !h.radio);
+    }
+    $('#story-lookback').classList.toggle('hidden', !h.lookBack);
     // salute dentro la vita (rissa)
     $('#story-health').classList.toggle('hidden', h.health === undefined);
     if (h.health !== undefined) $('#story-health-fill').style.width = `${(h.health / h.maxHealth) * 100}%`;

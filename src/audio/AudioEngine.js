@@ -367,6 +367,43 @@ export class AudioEngine {
     noise.start(t); noise.stop(stopAt);
   }
 
+  /**
+   * Motore di un veicolo nemico (i blindati dell'inseguimento): dente di sega grave filtrato, con volume,
+   * posizione destra/sinistra e giri regolabili a ogni fotogramma. Passa dagli Effetti, come il motore del kart.
+   * Ritorna { set(volume, pan, pitch), stop() } oppure null senza audio.
+   */
+  hum(freq = 48) {
+    if (!this.ctx) return null;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = freq;
+    const o2 = ctx.createOscillator(); o2.type = 'square'; o2.frequency.value = freq * 0.5;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 320; f.Q.value = 1.2;
+    const g = ctx.createGain(); g.gain.value = 0;
+    const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    const g2 = ctx.createGain(); g2.gain.value = 0.35;
+    o.connect(f); o2.connect(g2); g2.connect(f); f.connect(g);
+    if (p) { g.connect(p); p.connect(this.sfxGain); } else g.connect(this.sfxGain);
+    o.start(t); o2.start(t);
+    let stopped = false;
+    return {
+      set: (vol, pan = 0, pitch = 1) => {
+        if (stopped) return;
+        const now = ctx.currentTime;
+        g.gain.setTargetAtTime(vol, now, 0.12);
+        if (p) p.pan.setTargetAtTime(pan, now, 0.1);
+        o.frequency.setTargetAtTime(freq * pitch, now, 0.2);
+        o2.frequency.setTargetAtTime(freq * 0.5 * pitch, now, 0.2);
+        f.frequency.setTargetAtTime(260 + vol * 900, now, 0.2);
+      },
+      stop: () => {
+        if (stopped) return;
+        stopped = true;
+        g.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+        setTimeout(() => { try { o.stop(); o2.stop(); } catch {} }, 500);
+      }
+    };
+  }
+
   // Motore: triangolo + sub sinusoidale, lowpass chiuso. Passa da engineGain → sfxGain,
   // quindi lo slider "Effetti" lo regola (a zero lo spegne).
   startEngine() {

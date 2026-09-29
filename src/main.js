@@ -258,6 +258,7 @@ class Game {
     this.state = 'menu';
     this.audio.sfx('select');
     if (from === 'race') this.audio.stopEngine();
+    if (this.story && this.story.pause) this.story.pause(true); // motori dei blindati & co.
     this.ui.pauseVideos(true);
     this.ui.gameMenu({ ...this._menuCtx(from), focusAudio });
     return true;
@@ -270,6 +271,7 @@ class Game {
     this.ui.gameMenu(null);
     this.state = from;
     this.ui.pauseVideos(false);
+    if (this.story && this.story.pause) this.story.pause(false);
     // niente comandi rimasti in memoria dal menu (salto, lancio, tasti tenuti)
     this.input.releaseAll();
     this.input.pausePressed = false;
@@ -639,6 +641,7 @@ class Game {
       if (this.state === 'story' && this.story) {
         this.ui.storyHud(this.story.hud());
         this.renderer.render(this.story.scene, this.story.camera);
+        if (this.story.renderOverlay) this.story.renderOverlay(this.renderer); // specchietto dell'inseguimento
       }
     } else if (this.state === 'race' && this.race) {
       this.race.update(dt);

@@ -160,6 +160,12 @@ export class Input {
     // freno (livelli di volo): lo stesso tasto dell'oggetto, tenuto
     this.brakeHeld = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('KeyE') || k.has('KeyJ') || !!this.touch.item ||
       !!(gp && (gp.buttons[2]?.pressed || gp.buttons[3]?.pressed || (gp.buttons[6]?.value || 0) > 0.3));
+    // inseguimento: guarda indietro (tenuto: Maiusc / E / J / C, tasto touch Indietro, Y o LB) e freno (Q / X,
+    // tasto touch Frena, X o grilletto sinistro del gamepad)
+    this.lookHeld = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('KeyE') || k.has('KeyJ') || k.has('KeyC') || !!this.touch.item ||
+      !!(gp && (gp.buttons[3]?.pressed || gp.buttons[4]?.pressed));
+    this.chaseBrake = k.has('KeyQ') || k.has('KeyX') || !!this.touch.attack ||
+      !!(gp && (gp.buttons[2]?.pressed || (gp.buttons[6]?.value || 0) > 0.3));
     // smorzamento dello sterzo per la tastiera
     const target = Math.max(-1, Math.min(1, st));
     this.steer += (target - this.steer) * (target === 0 ? 0.35 : 0.22);
