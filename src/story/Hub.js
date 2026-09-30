@@ -4,6 +4,7 @@ import * as T from '../core/Textures.js';
 import { trackById } from '../config/tracks.js';
 import { Player } from './Player.js';
 import { loadRigged, riggedUrl } from './Rig.js';
+import { attachGuitar } from './hero.js';
 
 // Movimento nella piazza
 const SPEED = 7.5;
@@ -73,6 +74,7 @@ export class Hub {
     progress('Whiskey scende in piazza…');
     const rigged = await loadRigged(riggedUrl(this.character), 1.8);
     this.avatar = new Player(this.character, rigged);
+    if (this.character.guitar) await attachGuitar(this.avatar.root); // vinta a Infinity Guitars
     this.avatarRoot = new THREE.Group();
     this.avatarRoot.add(this.avatar.group);
     this.scene.add(this.avatarRoot);
@@ -234,7 +236,7 @@ export class Hub {
     const c = document.createElement('canvas');
     c.width = c.height = 256;
     const g = c.getContext('2d');
-    g.fillStyle = this.pal.sand;
+    g.fillStyle = this.world.ground || this.pal.sand; // terreno del pianeta (Retah sabbia, Canair erba secca)
     g.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 2600; i++) {
       const k = ((i * 97) % 100) / 100;
@@ -310,11 +312,21 @@ export class Hub {
   /** Veicoli e rottami fermi (autovettori parcheggiati, blindati minacciosi, relitto inclinato): solo scena e ostacoli. */
   async _decor() {
     await Promise.all((this.world.decor || []).map(async (d) => {
-      const model = await Assets.model(d.model, { targetHeight: d.h });
+      const model = d.model ? await Assets.model(d.model, { targetHeight: d.h }) : null;
       const g = new THREE.Group();
       if (model) {
         model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
         g.add(model);
+      } else if (d.shape === 'cliff') {
+        // falesia: il promontorio Utgenra, rocce ammucchiate sempre più strette verso l'alto
+        const rock = std(this.pal.rock || '#a3774a', { roughness: 0.95, flatShading: true });
+        for (let i = 0; i < 9; i++) {
+          const r = d.h * (0.45 - i * 0.04);
+          const b = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), rock);
+          b.position.set(((i * 37) % 7 - 3) * 1.5, i * d.h * 0.11 + r * 0.4, ((i * 13) % 5 - 2) * 1.5);
+          b.scale.set(1.3, 0.9, 1.1);
+          g.add(b);
+        }
       } else {
         const b = new THREE.Mesh(new THREE.BoxGeometry(d.h * 2, d.h, d.h * 1.2), std('#6a5a4a'));
         b.position.y = d.h / 2;
@@ -339,7 +351,7 @@ export class Hub {
     const x = Math.sin(a) * e.dist, z = -Math.cos(a) * e.dist;
     const toCenter = new THREE.Vector3(-x, 0, -z).normalize();
     const tangent = new THREE.Vector3(-toCenter.z, 0, toCenter.x);
-    const model = await Assets.model(e.model, { targetHeight: e.height });
+    const model = e.model ? await Assets.model(e.model, { targetHeight: e.height }) : null;
     const group = new THREE.Group();
     group.position.set(x, 0, z);
     group.rotation.y = Math.atan2(toCenter.x, toCenter.z); // il davanti (+Z) guarda il centro
@@ -350,9 +362,14 @@ export class Hub {
       group.add(model);
       const box = new THREE.Box3().setFromObject(model);
       halfW = (box.max.x - box.min.x) / 2; halfD = (box.max.z - box.min.z) / 2;
+    } else if (e.procedural === 'shop') {
+      // Infinity Guitars: negozio con vetrina e una chitarra gigante sull'insegna
+      const s = this._shop(e.height);
+      group.add(s);
+      halfW = e.height * 0.7; halfD = e.height * 0.5;
     } else {
       // segnaposto: un blocco o un arco semplice
-      const m = std('#4a3f7a', { emissive: 0x2a1a5a, emissiveIntensity: 0.4 });
+      const m = std(e.procedural === 'path' ? '#8a6a4a' : '#4a3f7a', { emissive: e.procedural === 'path' ? 0x000000 : 0x2a1a5a, emissiveIntensity: 0.4, flatShading: e.procedural === 'path' });
       if (e.arch) {
         for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(1.4, e.height, 1.4), m); p.position.set(s * e.height * 0.35, e.height / 2, 0); group.add(p); }
         const top = new THREE.Mesh(new THREE.BoxGeometry(e.height * 0.84, 1.2, 1.4), m); top.position.y = e.height - 0.6; group.add(top);
@@ -479,6 +496,40 @@ export class Hub {
       icon.scale.setScalar(2.8 + Math.sin(t * 3) * 0.15);
       beam.material.opacity = 0.22 + Math.sin(t * 2.5) * 0.1;
     });
+  }
+
+  /** Il negozio Infinity Guitars (procedurale): muri, vetrina illuminata, insegna e chitarra gigante. */
+  _shop(h) {
+    const g = new THREE.Group();
+    const w = h * 1.4, d = h;
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h * 0.75, d), std('#b8563a', { roughness: 0.8 }));
+    walls.position.y = h * 0.375;
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(w * 1.08, 0.4, d * 1.1), std('#3a2a22'));
+    roof.position.y = h * 0.75 + 0.2;
+    const shop = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.7, h * 0.35), new THREE.MeshStandardMaterial({ color: 0x2a1a10, emissive: 0xffb45a, emissiveIntensity: 0.9 }));
+    shop.position.set(0, h * 0.28, d / 2 + 0.02);
+    // insegna
+    const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+    const x = c.getContext('2d');
+    x.fillStyle = '#1b1030'; x.fillRect(0, 0, 512, 96);
+    x.fillStyle = '#ff5fb0'; x.font = 'bold 52px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('INFINITY GUITARS', 256, 50);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.85, w * 0.16), new THREE.MeshBasicMaterial({ map: tex }));
+    sign.position.set(0, h * 0.62, d / 2 + 0.05);
+    // chitarra gigante sul tetto
+    const gt = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.18, h * 0.22, 0.4, 20), std('#e84c5a', { roughness: 0.4 }));
+    body.rotation.x = Math.PI / 2;
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(h * 0.06, h * 0.5, 0.2), std('#5a3a22'));
+    neck.position.y = h * 0.35;
+    gt.add(body, neck);
+    gt.position.set(w * 0.25, h * 0.75 + h * 0.3, 0);
+    gt.rotation.z = -0.5;
+    g.add(walls, roof, shop, sign, gt);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    this.dynamic.push((t) => { gt.rotation.z = -0.5 + Math.sin(t * 1.5) * 0.08; shop.material.emissiveIntensity = 0.8 + Math.sin(t * 3) * 0.15; });
+    return g;
   }
 
   _padlock() {

@@ -17,6 +17,8 @@ export const PLAYER_H = 1.7;
 const SLIDE_H = 0.85;
 const SLIDE_T = 0.6;
 const SLIDE_V = 9.5;
+// appigli (scalata): appesi con le mani, ci si sposta di lato
+const HANG_SPEED = 3.2;
 
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05, ...extra });
 
@@ -40,6 +42,8 @@ export class Player {
     this.walkPhase = 0;
     this.sliding = 0;
     this.boosted = false;
+    this.hanging = null; // fila di appigli a cui si è appesi
+    this.hangCool = 0;
     this.group = new THREE.Group();
     this.squash = 0;
     if (rigged) this._buildRig(rigged);
@@ -158,6 +162,7 @@ export class Player {
     this.standingOn = null;
     this.sliding = 0;
     this.boosted = false;
+    this.hanging = null;
   }
 
   /** Altezza attuale: più bassa durante la scivolata (si passa sotto saracinesche e ostacoli bassi). */
@@ -194,6 +199,41 @@ export class Player {
     this.throwAnim = Math.max(0, this.throwAnim - dt);
     if (ctl.jumpPressed) this.jumpBuffer = BUFFER;
     else this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
+    this.hangCool = Math.max(0, this.hangCool - dt);
+
+    // ---- appigli: appesi con le mani (level.holds: file { x0, x1, y } con y = altezza delle mani) ----
+    if (this.hanging) {
+      const H = this.hanging;
+      this.vx = ctl.ax * HANG_SPEED;
+      this.x += this.vx * dt;
+      this.y = H.y - PLAYER_H - 0.1;
+      this.vy = 0;
+      this.onGround = false;
+      this.standingOn = null;
+      if (Math.abs(ctl.ax) > 0.1) this.facing = Math.sign(ctl.ax);
+      const off = this.x < H.x0 - 0.2 || this.x > H.x1 + 0.2;
+      if (ctl.jumpPressed || off || (ctl.ay < -0.5 && this.hangT > 0.25)) {
+        // si lascia: con Salta si dà una spinta verso l'alto, con Giù (o finiti gli appigli) si cade
+        this.hanging = null;
+        this.hangCool = 0.35;
+        if (ctl.jumpPressed && !off) { this.vy = JUMP_V * 0.72; events.push('jump'); }
+      } else {
+        this.hangT += dt;
+        this.walkPhase += Math.abs(this.vx) * dt * 2.4;
+        this._pose(dt);
+        return events;
+      }
+    } else if (!this.climbing && !this.onGround && this.hangCool <= 0 && level.holds) {
+      for (const H of level.holds) {
+        const hands = this.y + PLAYER_H + 0.1;
+        if (this.x >= H.x0 && this.x <= H.x1 && hands > H.y - 0.45 && hands < H.y + 0.35) {
+          this.hanging = H; this.hangT = 0; this.vx = 0; this.vy = 0; this.boosted = false; this.sliding = 0;
+          events.push('grab');
+          this._pose(dt);
+          return events;
+        }
+      }
+    }
 
     // ---- scale ----
     const ladder = this._ladderAt(level.ladders);
@@ -322,7 +362,7 @@ export class Player {
   _pose(dt) {
     this.group.position.set(this.x, this.y, 0);
     // tre quarti verso la telecamera, così la faccia si vede sempre; sulla scala di spalle
-    const targetYaw = this.climbing ? Math.PI : this.facing * (Math.PI / 2 - 0.55);
+    const targetYaw = this.climbing ? Math.PI : this.hanging ? this.facing * 0.5 : this.facing * (Math.PI / 2 - 0.55);
     this.root.rotation.y = THREE.MathUtils.damp(this.root.rotation.y, targetYaw, 14, dt);
     if (this.body) return this._poseRig(dt);
     const [la, ra] = this.arms, [ll, rl] = this.legs;
@@ -355,12 +395,12 @@ export class Player {
    */
   _poseRig(dt) {
     const run = Math.min(1, Math.abs(this.vx) / RUN);
-    const air = this.climbing || this.onGround ? null : THREE.MathUtils.clamp(this.vy / JUMP_V, -1, 1);
+    const air = this.climbing || this.hanging || this.onGround ? null : THREE.MathUtils.clamp(this.vy / JUMP_V, -1, 1);
     const throwT = this.throwAnim > 0 ? this.throwAnim / 0.28 : 0;
-    const phase = this.walkPhase * (this.climbing ? 1 : 2.2);
+    const phase = this.walkPhase * (this.climbing || this.hanging ? 1 : 2.2);
     let bob = this.onGround ? Math.abs(Math.sin(phase)) * 0.05 * run : 0;
     if (this.rig) {
-      this.rig.apply(locomotionPose({ phase, run: this.onGround ? run : 0, air, climb: !!this.climbing, throwT }));
+      this.rig.apply(locomotionPose({ phase, run: this.onGround ? run : 0, air: this.hanging ? null : air, climb: !!this.climbing || !!this.hanging, throwT }));
       // gambe non animabili (scheletro con le ginocchia sopra l'anca): braccia e busto sulle ossa, e un
       // dondolio del corpo al posto dei passi
       const s = Math.sin(phase);

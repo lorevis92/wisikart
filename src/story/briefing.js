@@ -42,6 +42,19 @@ export const ICONS = {
   mirror: svg('<rect x="6" y="12" width="36" height="16" rx="6" fill="#1b1f3a" stroke="#c9cfdc" stroke-width="3"/><rect x="12" y="18" width="7" height="5" rx="1" fill="#5a5f70"/><rect x="28" y="17" width="8" height="6" rx="1" fill="#5a5f70"/><circle cx="13" cy="20" r="1.3" fill="#fff4d8"/><circle cx="29" cy="19" r="1.3" fill="#fff4d8"/><path d="M24 30v8M18 38h12" stroke="#c9cfdc" stroke-width="3"/>'),
   flank: svg('<ellipse cx="18" cy="30" rx="7" ry="4" fill="#d99a2b"/><rect x="28" y="20" width="16" height="12" rx="3" fill="#5a5f70"/><path d="M26 24l-5 3 5 3" fill="none" stroke="#ff4a5a" stroke-width="2.5"/><path d="M14 22l-6-4M14 38l-6 4" stroke="#43e0b0" stroke-width="2.5" stroke-linecap="round"/>'),
   mines: svg('<circle cx="10" cy="26" r="5" fill="#ff2a3a"/><circle cx="24" cy="20" r="5" fill="#ff2a3a"/><circle cx="38" cy="26" r="5" fill="#ff2a3a"/><path d="M24 44V30" stroke="#43e0b0" stroke-width="2.5" stroke-dasharray="3 2"/><path d="M20 34l4-5 4 5" fill="none" stroke="#43e0b0" stroke-width="2.5"/>'),
+  // Canair: ritmico e scalata
+  lanes: svg('<rect x="4" y="4" width="40" height="40" rx="6" fill="#1b1f3a"/><path d="M14 4v40M24 4v40M34 4v40" stroke="#3a3f5c" stroke-width="1.5"/><circle cx="9" cy="14" r="4" fill="#43e0b0"/><circle cx="19" cy="26" r="4" fill="#ff5a6e"/><circle cx="29" cy="20" r="4" fill="#f5b942"/><circle cx="39" cy="34" r="4" fill="#7fa4ff"/><path d="M4 36h40" stroke="#fff" stroke-width="2.5"/>'),
+  hold: svg('<rect x="19" y="6" width="10" height="28" rx="4" fill="#f5b942" opacity=".6"/><circle cx="24" cy="34" r="7" fill="#f5b942" stroke="#fff" stroke-width="2"/><path d="M6 40h36" stroke="#fff" stroke-width="2.5"/>'),
+  combo: svg('<text x="24" y="24" font-size="15" font-weight="700" text-anchor="middle" fill="#ffe066">×4</text><text x="24" y="40" font-size="10" font-weight="700" text-anchor="middle" fill="#43e0b0">COMBO</text><path d="M8 8l4 4M40 8l-4 4" stroke="#fff" stroke-width="2"/>'),
+  pass: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#3a3f5c" stroke-width="6"/><path d="M24 7a17 17 0 0 1 14 26" fill="none" stroke="#43e0b0" stroke-width="6"/><text x="24" y="29" font-size="12" font-weight="700" text-anchor="middle" fill="#fff">55%</text>'),
+  guitar: svg('<circle cx="18" cy="32" r="9" fill="#e84c5a"/><circle cx="26" cy="26" r="7" fill="#e84c5a"/><circle cx="21" cy="30" r="3" fill="#1b1030"/><path d="M26 24l14-16" stroke="#5a3a22" stroke-width="4" stroke-linecap="round"/><path d="M38 6l4 2" stroke="#c9cfdc" stroke-width="3"/>'),
+  audience: svg('<circle cx="12" cy="20" r="5" fill="#ff9a5a"/><circle cx="24" cy="17" r="5" fill="#ffd45a"/><circle cx="36" cy="20" r="5" fill="#43e0b0"/><path d="M6 36c0-6 12-6 12 0M18 34c0-6 12-6 12 0M30 36c0-6 12-6 12 0" fill="#5a5f70"/><rect x="6" y="40" width="36" height="5" rx="2.5" fill="#1b1f3a"/><rect x="6" y="40" width="22" height="5" rx="2.5" fill="#ffd45a"/>'),
+  retry: svg('<path d="M36 16a14 14 0 1 0 2 12" fill="none" stroke="#ff5a6e" stroke-width="4" stroke-linecap="round"/><path d="M38 6v10H28" fill="none" stroke="#ff5a6e" stroke-width="4" stroke-linecap="round"/>'),
+  crumbleRock: svg('<rect x="6" y="20" width="36" height="9" rx="2" fill="#9a7a52"/><path d="M18 20l3 5-2 4M30 20l-3 4 2 5" stroke="#e8d8b0" stroke-width="1.8" fill="none"/><path d="M12 36l2 2M24 38l1 3M34 36l-2 3" stroke="#7a5a3a" stroke-width="3" stroke-linecap="round"/>'),
+  holds: svg('<path d="M4 14h40" stroke="#d8c090" stroke-width="2.5"/><circle cx="12" cy="15" r="3" fill="#c9a070"/><circle cx="24" cy="15" r="3" fill="#c9a070"/><circle cx="36" cy="15" r="3" fill="#c9a070"/><circle cx="24" cy="26" r="5" fill="#5b8cf0"/><path d="M20 22l-2-6M28 22l2-6" stroke="#5b8cf0" stroke-width="2.5"/><path d="M34 32l6 0M37 29l3 3-3 3" stroke="#fff" stroke-width="2" fill="none"/>'),
+  wind: svg('<path d="M4 16h26a5 5 0 1 0-5-5M4 26h34a5 5 0 1 1-5 5M4 36h20" stroke="#e8f4ff" stroke-width="3" fill="none" stroke-linecap="round"/>'),
+  boulder: svg('<path d="M20 4h8v34h-8z" fill="#3a2818" opacity=".6"/><circle cx="24" cy="22" r="8" fill="#6a5038"/><path d="M24 34v8M20 38l4 5 4-5" stroke="#ff5a6e" stroke-width="2.5" fill="none"/>'),
+  bench: svg('<rect x="8" y="24" width="32" height="5" rx="2" fill="#b8a080"/><rect x="8" y="14" width="32" height="6" rx="2" fill="#b8a080"/><rect x="11" y="29" width="4" height="10" fill="#9a8468"/><rect x="33" y="29" width="4" height="10" fill="#9a8468"/><path d="M24 4v6" stroke="#43e0b0" stroke-width="2.5"/>'),
   vortex: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#7fa4ff" stroke-width="3"/><path d="M24 12a12 12 0 1 1-12 12 8 8 0 1 1 8 8 4 4 0 1 1 4-4" fill="none" stroke="#c9d6ff" stroke-width="2.5"/>')
 };
 
@@ -124,6 +137,25 @@ export const CONTROLS = {
     ]
   }
 };
+// livelli ritmici: quattro corsie
+CONTROLS.rhythm = {
+  keyboard: [
+    ['Corsie da sinistra a destra', [K('D')], [K('F')], [K('J')], [K('K')]],
+    ['Nota lunga: tieni premuto fino alla fine della scia', [K('D')], [K('F')], [K('J')], [K('K')]],
+    ['Menu di gioco (il brano si ferma) · silenzio', [K('Esc')], [K('M')]]
+  ],
+  touch: [
+    ['Tocca la corsia quando la nota arriva sulla linea', [T('1')], [T('2')], [T('3')], [T('4')]],
+    ['Nota lunga: tieni il dito giù', [T('●')]],
+    ['Menu di gioco', [T('II')]]
+  ],
+  gamepad: [
+    ['Corsie da sinistra a destra', [P('X')], [P('A')], [P('B')], [P('Y')]],
+    ['Nota lunga: tieni premuto', [P('X')], [P('A')], [P('B')], [P('Y')]],
+    ['Menu di gioco', [P('Start')]]
+  ]
+};
+
 // inseguimento: come il Portale, più "guarda indietro" (tenuto) e il freno su un tasto suo
 CONTROLS.chase = {
   keyboard: [

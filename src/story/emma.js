@@ -4,11 +4,11 @@ import { Assets } from '../core/AssetLoader.js';
  * Le battute nei livelli della Storia (Emma, e chi parla alla radio, come il capo dei cacciatori): una alla
  * volta, con sottotitolo. Quelle importanti aspettano il loro turno in una piccola coda (così una minaccia e
  * la risposta di Emma si alternano senza sovrapporsi), le altre si saltano se qualcuno sta già parlando.
- * lines = { chiave: { url, text, who? } } — who: 'emma' (predefinito) o 'capo'.
+ * lines = { chiave: { url, text, who? } } — who: 'emma' (predefinito), 'capo' o 'proprietario'.
  * Se la voce è spenta (menu, tasto M) la battuta non si sente ma il sottotitolo resta, per un tempo stimato
  * dalla lunghezza del testo; se la si spegne mentre parla, la battuta si interrompe e la coda si svuota.
  */
-const NAMES = { emma: 'Emma', capo: 'Capo' };
+const NAMES = { emma: 'Emma', capo: 'Capo', proprietario: 'Proprietario' };
 
 export class EmmaVoice {
   constructor(audio, lines) {

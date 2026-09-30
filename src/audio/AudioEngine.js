@@ -24,6 +24,116 @@ const THEMES = {
   results: { bpm: 104, root: 57, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [2, 5, 9, 12]], lead: 'soft', drums: 'light' }
 };
 
+// ---------------------------------------------------------------------------------------------------------
+// Brani dei livelli ritmici (Canair): generati dal motore come i temi, ma note per nota. buildSong() produce
+// UNA lista di eventi (chitarra, basso, accordi, batteria) con i tempi esatti in secondi: la stessa lista la
+// suona playSong() e da quella stessa lista (le note della chitarra) nasce la mappa del minigioco. Così le note
+// da premere cadono esattamente dove si sentono. Accordi in semitoni sulla tonica; ogni sezione ha battute,
+// giro di accordi (uno per battuta), densità della melodia (1 rada … 3 fitta), probabilità di note tenute
+// (hold) e batteria; il seme (seed) è scelto perché le note si distribuiscano su tutte e quattro le corsie e
+// l'esibizione cresca davvero da una sezione all'altra. Il motivo si ripete ogni due battute sugli accordi del momento (per questo "resta in testa").
+export const SONGS = {
+  prova1: {
+    title: 'Prova 1 · Corde nuove', bpm: 92, root: 57, seed: 1,
+    sections: [{ name: 'Corde nuove', bars: 12, chords: [[0, 4, 7, 12], [5, 9, 12, 17], [7, 11, 14, 19], [5, 9, 12, 17]], density: 1, hold: 0, drums: 'light' }]
+  },
+  prova2: {
+    title: 'Prova 2 · Il manico veloce', bpm: 104, root: 55, seed: 4,
+    sections: [{ name: 'Il manico veloce', bars: 14, chords: [[0, 4, 7, 12], [-3, 0, 4, 9], [5, 9, 12, 17], [7, 11, 14, 19]], density: 2, hold: 0.08, drums: 'bounce' }]
+  },
+  prova3: {
+    title: 'Prova 3 · Accordi tenuti', bpm: 110, root: 52, seed: 2,
+    sections: [{ name: 'Accordi tenuti', bars: 16, chords: [[0, 3, 7, 12], [-4, 0, 3, 8], [3, 7, 10, 15], [-2, 2, 5, 10]], density: 2.6, hold: 0.32, drums: 'drive' }]
+  },
+  // l'esibizione al piazzale: tre sezioni in crescendo, l'ultima è "Love u mamma" (pop-rock, I–V–vi–IV)
+  esibizione: {
+    title: 'Tramonto a tripla stella', bpm: 116, root: 50, seed: 1,
+    sections: [
+      { name: 'Primo sole', bars: 12, chords: [[0, 4, 7, 12], [-3, 0, 4, 9], [5, 9, 12, 17], [7, 11, 14, 19]], density: 1.4, hold: 0.15, drums: 'light' },
+      { name: 'Secondo sole', bars: 14, chords: [[-3, 0, 4, 9], [5, 9, 12, 17], [0, 4, 7, 12], [7, 11, 14, 19]], density: 2.2, hold: 0.18, drums: 'bounce' },
+      { name: 'Love u mamma', bars: 20, chords: [[0, 4, 7, 12], [7, 11, 14, 19], [9, 12, 16, 21], [5, 9, 12, 17]], density: 3, hold: 0.14, drums: 'drive', hook: true }
+    ]
+  }
+};
+
+/** Generatore pseudo-casuale con seme: lo stesso brano esce sempre uguale (musica e note). */
+function seeded(seed) {
+  let s = seed * 9301 + 49297;
+  return () => { s = (s * 16807) % 2147483647; return (s % 100000) / 100000; };
+}
+
+/**
+ * Costruisce un brano (o una sola sezione, per l'esibizione): { title, bpm, beat, duration, notes, events }.
+ * notes = [{ t, lane (0-3), dur }] in secondi (dur > 0 = nota tenuta), ricavate dalle note della chitarra;
+ * events = tutto quello che si suona, compresi 4 colpi di conteggio prima dell'attacco.
+ */
+export function buildSong(name, sectionIndex = null) {
+  const S = SONGS[name];
+  const beat = 60 / S.bpm, step = beat / 2; // passo: ottavi
+  const sections = sectionIndex === null ? S.sections : [S.sections[sectionIndex]];
+  const rnd = seeded(S.seed + (sectionIndex || 0) * 7);
+  const events = [], notes = [];
+  let t = 4 * beat; // conteggio: quattro colpi, poi si parte
+  for (let i = 0; i < 4; i++) events.push({ type: 'click', t: i * beat, accent: i === 0 });
+  for (const sec of sections) {
+    // motivo di due battute (16 ottavi): posizioni, nota dell'accordo (= corsia), durata in ottavi
+    const makeMotif = () => {
+      const cand = [];
+      for (let p = 0; p < 16; p++) {
+        const onBeat = p % 2 === 0, strong = p % 4 === 0;
+        const keep = sec.density >= 2.5 ? (onBeat ? 0.85 : 0.45) : sec.density >= 1.8 ? (onBeat ? 0.78 : 0.12) : (strong ? 0.8 : onBeat ? 0.25 : 0);
+        if (p === 0 || rnd() < keep) cand.push(p);
+      }
+      const motif = [];
+      let tone = Math.floor(rnd() * 4);
+      for (let k = 0; k < cand.length; k++) {
+        const p = cand[k];
+        if (motif.length && p < motif[motif.length - 1].p + motif[motif.length - 1].len) continue; // niente sovrapposizioni
+        tone = (tone + (rnd() < 0.5 ? 3 : 1) * (rnd() < 0.3 ? 2 : 1)) % 4; // la melodia gira sulle quattro note dell'accordo (= corsie)
+        let len = 1;
+        if (p % 4 === 0 && rnd() < sec.hold) len = rnd() < 0.7 ? 4 : 6; // nota tenuta (sui battiti forti): due o tre battiti
+        len = Math.min(len, 16 - p);
+        motif.push({ p, tone, len });
+      }
+      return motif;
+    };
+    const motif = makeMotif();
+    const fill = makeMotif(); // variazione ogni quattro coppie di battute (non nel ritornello)
+    for (let bar = 0; bar < sec.bars; bar++) {
+      const chord = sec.chords[bar % sec.chords.length];
+      const bt = t + bar * 4 * beat;
+      // accordo tenuto e basso
+      events.push({ type: 'pad', t: bt, chord: chord.map((c) => S.root + c), dur: 4 * beat });
+      for (let b = 0; b < 4; b++) {
+        const drive = sec.drums === 'drive';
+        events.push({ type: 'bass', t: bt + b * beat, midi: S.root - 12 + chord[0] + (b === 3 && bar % 2 ? 7 : 0), dur: beat * 0.9 });
+        if (drive) events.push({ type: 'bass', t: bt + b * beat + step, midi: S.root - 12 + chord[0], dur: step * 0.9 });
+        // batteria: cassa, rullante sul 2 e sul 4, charleston
+        if (b === 0 || (b === 2 && sec.drums !== 'light') || (drive && b % 1 === 0)) events.push({ type: 'kick', t: bt + b * beat });
+        if ((b === 1 || b === 3) && sec.drums !== 'light') events.push({ type: 'snare', t: bt + b * beat });
+        events.push({ type: 'hat', t: bt + b * beat, open: false });
+        if (sec.drums !== 'light') events.push({ type: 'hat', t: bt + b * beat + step, open: b === 3 });
+      }
+      // melodia della chitarra: il motivo sugli accordi di questa battuta
+      const pair = Math.floor(bar / 2), half = bar % 2;
+      const src = !sec.hook && pair % 4 === 3 && half === 1 ? fill : motif;
+      for (const n of src) {
+        if (Math.floor(n.p / 8) !== half) continue;
+        const nt = bt + (n.p % 8) * step;
+        const dur = n.len * step;
+        const midi = S.root + 12 + chord[n.tone];
+        events.push({ type: 'lead', t: nt, midi, dur: n.len > 1 ? dur : step * 0.9, held: n.len > 1 });
+        notes.push({ t: nt, lane: n.tone, dur: n.len > 1 ? dur : 0 });
+      }
+    }
+    t += sec.bars * 4 * beat;
+    events.push({ type: 'crash', t });
+  }
+  events.sort((a, b) => a.t - b.t);
+  notes.sort((a, b) => a.t - b.t);
+  return { name, title: sectionIndex === null ? S.title : S.sections[sectionIndex].name, bpm: S.bpm, beat, duration: t + beat, notes, events };
+}
+
 export class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -137,9 +247,81 @@ export class AudioEngine {
     return b.duration;
   }
 
+  // ---- brani dei livelli ritmici ----
+  /** Suona un brano costruito con buildSong() a partire da `from` secondi (per riprendere dopo il menu). */
+  playSong(song, from = 0) {
+    if (!this.ctx) return;
+    this.stopMusic();
+    const idx = song.events.findIndex((e) => e.t >= from);
+    this.song = { data: song, idx: idx < 0 ? song.events.length : idx, t0: this.ctx.currentTime + 0.12 - from };
+    this._songTimer = setInterval(() => this._scheduleSong(), 40);
+    this._scheduleSong();
+  }
+
+  /** Tempo del brano in corso, in secondi (null se non suona niente): il minigioco si sincronizza su questo. */
+  songTime() { return this.song && this.ctx ? this.ctx.currentTime - this.song.t0 : null; }
+
+  stopSong() {
+    this.song = null;
+    if (this._songTimer) { clearInterval(this._songTimer); this._songTimer = null; }
+  }
+
+  _scheduleSong() {
+    const S = this.song;
+    if (!S || !this.ctx) return;
+    const ev = S.data.events, horizon = this.ctx.currentTime + 0.3;
+    while (S.idx < ev.length && S.t0 + ev[S.idx].t < horizon) {
+      const e = ev[S.idx++];
+      const when = Math.max(this.ctx.currentTime, S.t0 + e.t);
+      this._songEvent(e, when);
+    }
+  }
+
+  /** Un evento del brano: chitarra (pizzicata o tenuta), basso, accordo, batteria, conteggio. */
+  _songEvent(e, t) {
+    const d = this.musicGain;
+    switch (e.type) {
+      case 'lead': {
+        // "chitarra": dente di sega e triangolo in un passa-basso che si chiude (pizzico) o resta aperto (tenuta)
+        const f = NOTE(e.midi), ctx = this.ctx;
+        const out = ctx.createGain();
+        out.gain.setValueAtTime(0.0001, t);
+        out.gain.exponentialRampToValueAtTime(0.2, t + 0.008);
+        out.gain.exponentialRampToValueAtTime(e.held ? 0.12 : 0.03, t + (e.held ? 0.25 : e.dur));
+        if (e.held) out.gain.setValueAtTime(0.12, t + e.dur - 0.08);
+        out.gain.exponentialRampToValueAtTime(0.0001, t + e.dur + 0.12);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(3200, t);
+        lp.frequency.exponentialRampToValueAtTime(e.held ? 1400 : 700, t + 0.2);
+        lp.connect(out); out.connect(d);
+        for (const [type, mul, det] of [['sawtooth', 1, -5], ['sawtooth', 1, 5], ['triangle', 2, 0]]) {
+          const o = ctx.createOscillator();
+          o.type = type; o.frequency.value = f * mul; o.detune.value = det;
+          o.connect(lp); o.start(t); o.stop(t + e.dur + 0.15);
+        }
+        break;
+      }
+      case 'bass': this._osc('triangle', NOTE(e.midi), t, e.dur, 0.24, d, { release: 0.05 }); break;
+      case 'pad': for (const m of e.chord) this._osc('triangle', NOTE(m), t, e.dur, 0.04, d, { attack: 0.2, release: 0.4 }); break;
+      case 'kick': {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+        g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        o.connect(g); g.connect(d); o.start(t); o.stop(t + 0.22);
+        break;
+      }
+      case 'snare': this._noise(t, 0.14, 0.28, d, 1800); break;
+      case 'hat': this._noise(t, e.open ? 0.12 : 0.04, 0.08, d, 8000); break;
+      case 'crash': this._noise(t, 0.9, 0.18, d, 4000); break;
+      case 'click': this._osc('square', e.accent ? 1320 : 990, t, 0.05, 0.12, this.sfxGain); break;
+    }
+  }
+
   // ---- musica ----
   playTheme(name) {
     if (!this.ctx) return;
+    if (this.song) this.stopSong();
     if (this.playingTheme === name) return;
     this.playingTheme = name;
     this.tempo = 1;
@@ -161,6 +343,7 @@ export class AudioEngine {
   }
 
   stopMusic() {
+    this.stopSong(); // anche un brano ritmico in corso
     this.playingTheme = null;
     this.theme = null;
     if (this._timer) { clearInterval(this._timer); this._timer = null; }
@@ -287,6 +470,10 @@ export class AudioEngine {
       // inseguimento: allarme missile, esplosione, raggio del cannone ionico
       case 'warn': this._osc('square', 990, t, 0.09, 0.14, d); this._osc('square', 990, t + 0.14, 0.09, 0.14, d); break;
       case 'boom': this._noise(t, 0.6, 0.6, d, 200); this._osc('sine', 70, t, 0.5, 0.45, d, { attack: 0.005, release: 0.4 }); break;
+      // esibizione: applausi (tanti battiti di mani sparsi) e note giudicate
+      case 'applause': for (let i = 0; i < 60; i++) this._noise(t + Math.random() * 2.4, 0.03, 0.12 + Math.random() * 0.1, d, 1500 + Math.random() * 2500); break;
+      case 'perfect': this._osc('sine', 1760, t, 0.06, 0.06, d); break;
+      case 'miss': this._osc('sawtooth', 110, t, 0.12, 0.08, d); break;
       case 'beam': this._noise(t, 1.0, 0.35, d, 300); this._osc('sawtooth', 90, t, 1.0, 0.25, d, { attack: 0.05, release: 0.6 }); this._osc('sine', 1800, t, 0.8, 0.08, d); break;
     }
   }

@@ -80,6 +80,23 @@
     "voce/insegui-chi-parla.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_230026_19eb8e2a-2401-47d8-a3ad-5a429e9e7308.wav",
     "voce/insegui-accosta.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011045_fc4b8ea8-d043-4759-aaa5-510585fd1b5a.wav",
     "voce/insegui-taglia-strada.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_011045_655f7f3a-ff06-4aac-9f4a-f31cc775feb8.wav",
-    "voce/insegui-guarda-indietro.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_230025_eab7617b-524d-4938-b06d-43f6d9e294a1.wav"
+    "voce/insegui-guarda-indietro.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_230025_eab7617b-524d-4938-b06d-43f6d9e294a1.wav",
+    "canair/negozio.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_230459_1bc10d67-f9ed-49ef-8577-179a5b2f7bc9.png",
+    "canair/proprietario.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231908_7d9cefdc-556c-4fbd-9541-15b6a95c3ac0.glb",
+    "canair/chitarra.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231913_dfbad5df-4f25-4e48-a0dc-cbea95de9ecf.glb",
+    "canair/masso.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231920_c16f020d-522c-4698-af21-4a1bcfab3716.glb",
+    "canair/appiglio.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231927_73fc4350-21f6-49e7-bdc7-7e16085d9acc.glb",
+    "voce/chitarre-arrivo.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_fe76b5c1-930c-4004-a2ef-b8525f8b41cf.wav",
+    "voce/chitarre-bene.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_afb9c79b-f85b-4543-901e-5ec5c4c34bae.wav",
+    "voce/chitarre-male.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_eb9d384d-195c-478b-ae5c-b981fb6f4fed.wav",
+    "voce/chitarre-premio.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_a60f8b47-cef0-4f89-9361-0683c36b1249.wav",
+    "voce/salita-arrivo.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_91cd19d0-ddc6-405f-9da3-259a6ae284ad.wav",
+    "voce/salita-vento.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_8f611d31-66b1-48f0-a0e6-3758c079625f.wav",
+    "voce/salita-masso.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_232043_c3e52edc-6d27-456b-974a-53e6b64ac498.wav",
+    "voce/salita-vetta.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_3a9d4dbb-2ced-4a12-ad94-63fdc78db481.wav",
+    "voce/esibizione-arrivo.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_be632d63-3ff6-4cb9-8781-692db4120c44.wav",
+    "voce/esibizione-cresce.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_143ec81f-e84e-40a9-9a17-dd859c793096.wav",
+    "voce/esibizione-cala.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_232043_9ac4f311-58c9-42a9-8e51-89dd3f89b6ab.wav",
+    "voce/esibizione-lovemamma.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260929_231946_066e0313-c55d-4979-925e-d6ebecd66343.wav"
   }
 }

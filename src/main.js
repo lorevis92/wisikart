@@ -19,14 +19,15 @@ import { storyHero } from './story/hero.js';
 import { FlightMode } from './story/FlightMode.js';
 import { BrawlMode } from './story/BrawlMode.js';
 import { ChaseMode } from './story/ChaseMode.js';
+import { RhythmMode } from './story/RhythmMode.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 // stati da cui si apre il menu di gioco (Esc, Start, tasto II): piazza, livelli, gare, caricamenti, video
-const MENU_FROM = ['race', 'loading', 'story', 'storyload', 'briefing', 'storyhelp', 'hub', 'hubload', 'cinematic', 'medals'];
+const MENU_FROM = ['race', 'loading', 'story', 'storyload', 'briefing', 'storyhelp', 'hub', 'hubload', 'cinematic', 'medals', 'finale'];
 // stati di gioco in cui le frecce non navigano un menu
 const GAMEPLAY = ['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'];
 // motore di ogni tipo di livello della Storia
-const MODES = { flight: FlightMode, chase: ChaseMode, brawl: BrawlMode };
+const MODES = { flight: FlightMode, chase: ChaseMode, brawl: BrawlMode, rhythm: RhythmMode };
 
 class Game {
   constructor() {
@@ -440,7 +441,7 @@ class Game {
     this.save.story = this.save.story || {};
     const hub = new Hub({
       world,
-      character: storyHero(),
+      character: storyHero({ guitar: !!this.save.storyGuitar }),
       audio: this.audio,
       completed: this.save.story,
       medals: this.save.storyMedals || {},
@@ -472,13 +473,13 @@ class Game {
     // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js).
     // Le monete sono un totale unico della Storia, salvato a ogni raccolta (ogni 100, una vita in più).
     const Mode = MODES[level.type] || StoryMode;
-    const flight = level.type === 'flight' || level.type === 'chase';
+    const flight = level.type === 'flight' || level.type === 'chase' || level.type === 'rhythm'; // livelli senza vite
     // vite guadagnate con le monete durante un volo (dove le vite non ci sono): valgono nel livello a piedi dopo
     const bonusLives = flight ? 0 : this.save.storyBonusLives || 0;
     if (!flight && bonusLives) { this.save.storyBonusLives = 0; this._persist(); }
     const story = new Mode({
       level,
-      character: storyHero(),
+      character: storyHero({ guitar: !!this.save.storyGuitar }),
       audio: this.audio,
       coins: this.save.storyCoins || 0,
       bonusLives,
@@ -514,6 +515,8 @@ class Game {
     this.save.story = { ...(this.save.story || {}), [level.id]: true };
     // livello che chiude un pianeta (il Portale): si atterra sul prossimo e da lì si riparte
     if (level.nextWorld) this.save.storyWorld = level.nextWorld;
+    // sblocchi: la chitarra di Infinity Guitars (da qui Whiskey la porta sempre sulla schiena)
+    if (level.unlock === 'guitar') this.save.storyGuitar = true;
     // medaglia: si tiene la migliore per livello, ed è quella che si vede sull'ingresso in piazza
     let best = null, isNewBest = false;
     if (result && result.medal) {
@@ -532,6 +535,14 @@ class Game {
       this.audio.stopMusic();
       await this.ui.cinematic(level.cinematic);
       if (flow !== this._flow) return; // uscito dal menu durante il video
+    }
+    // fine della prima parte (esibizione al piazzale): applausi e schermata di chiusura
+    if (result && result.finale && level.finale) {
+      this._setState('finale');
+      this.audio.stopMusic();
+      this.audio.sfx('applause');
+      await this.ui.finale(level.finale);
+      if (flow !== this._flow) return;
     }
     if (result && result.medal) {
       this._setState('medals');
@@ -618,7 +629,7 @@ class Game {
       else for (const e of ev) { if (e === 'back') this.menuBack(); else if (e === 'ok') this.ui.activateFocus(); else this.ui.moveFocus(e); }
     } else if (pause && this.openMenu()) {
       // aperto: gli altri tasti di questo frame non contano
-    } else if (['briefing', 'storyhelp', 'medals'].includes(this.state)) {
+    } else if (['briefing', 'storyhelp', 'medals', 'finale'].includes(this.state)) {
       // istruzioni e medaglie: qualsiasi tasto (anche del gamepad) le chiude
       if (ev.length && this.ui.closePanel) this.ui.closePanel();
     } else if (!GAMEPLAY.includes(this.state)) {

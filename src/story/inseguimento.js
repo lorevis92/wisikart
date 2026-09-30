@@ -26,7 +26,8 @@ export const INSEGUIMENTO = {
   radioPortrait: 'assets/story/retah/capo-radio.png',
   radioName: 'Capo dei cacciatori',
   cinematic: 'assets/video/intro.mp4', // il tuffo nello spazio vettore
-  completeMessage: 'Dentro lo spazio vettore un attimo prima del colpo. Il viaggio verso Canair è in arrivo.',
+  completeMessage: 'Fuori dallo spazio vettore: benvenuto su Canair. Infinity Guitars è a due passi.',
+  nextWorld: 'canair', // dopo la cinematica si atterra su Canair
 
   hearts: 5, // salute: a zero si riparte dall'ultimo checkpoint
   endT: 0.965, // l'imbocco dello spazio vettore (la partenza è a startT del circuito)

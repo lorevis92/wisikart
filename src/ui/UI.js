@@ -21,6 +21,16 @@ export class UI {
     this.noticeTimer = null;
     this.centerTimer = null;
     this._waits = new Set(); // pannelli e video in attesa di un tasto (vedi abortWaits)
+    // zone touch delle corsie dei livelli ritmici
+    document.querySelectorAll('#rhythm-touch [data-lane]').forEach((z) => {
+      const i = +z.dataset.lane;
+      const on = (e) => { e.preventDefault(); game.input.setTouchLane(i, true); };
+      const off = (e) => { e.preventDefault(); game.input.setTouchLane(i, false); };
+      z.addEventListener('pointerdown', on);
+      z.addEventListener('pointerup', off);
+      z.addEventListener('pointercancel', off);
+      z.addEventListener('pointerleave', off);
+    });
     document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => game.back()));
     $('#toast');
   }
@@ -506,6 +516,106 @@ export class UI {
     return this._waitPanel('briefing');
   }
 
+  /** Fine della prima parte della Storia: applausi, testo e un accenno al produttore (immagine fissa). */
+  finale(f) {
+    $('#finale-title').textContent = f.title;
+    $('#finale-text').textContent = f.text;
+    $('#finale-producer').textContent = f.producer || '';
+    const img = $('#finale-img');
+    img.style.backgroundImage = '';
+    if (f.image) Assets.exists(f.image).then((ok) => { if (ok) img.style.backgroundImage = `url(${f.image})`; });
+    this.overlay('finale', true);
+    return this._waitPanel('finale');
+  }
+
+  /**
+   * Corsie del ritmico sul canvas: quattro colonne, note che scendono verso la linea di giudizio, scie delle
+   * note tenute, lampo delle corsie premute, scritta del giudizio, conteggio iniziale. r = hud().rhythm.
+   */
+  _drawRhythm(r) {
+    const cv = $('#rhythm-canvas');
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = Math.round(cv.clientWidth * dpr), H = Math.round(cv.clientHeight * dpr);
+    if (!W || !H) return;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const g = cv.getContext('2d');
+    const COL = ['#43e0b0', '#ff5a6e', '#f5b942', '#7fa4ff'];
+    const lw = W / 4, hitY = H * 0.86;
+    const y = (dt) => hitY - (dt / r.approach) * hitY;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(8,10,28,0.55)';
+    g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 4; i++) {
+      // colonna, con il lampo quando la corsia è premuta
+      g.fillStyle = r.lanes[i] ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.03)';
+      g.fillRect(i * lw + 2 * dpr, 0, lw - 4 * dpr, H);
+      if (r.flash[i] > 0) {
+        const grd = g.createLinearGradient(0, hitY, 0, hitY - H * 0.4);
+        grd.addColorStop(0, COL[i]); grd.addColorStop(1, 'rgba(0,0,0,0)');
+        g.globalAlpha = r.flash[i] * 0.6; g.fillStyle = grd; g.fillRect(i * lw, hitY - H * 0.4, lw, H * 0.4); g.globalAlpha = 1;
+      }
+    }
+    // linea di giudizio e bersagli
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    g.fillRect(0, hitY - 2 * dpr, W, 4 * dpr);
+    for (let i = 0; i < 4; i++) {
+      g.beginPath(); g.arc(i * lw + lw / 2, hitY, lw * 0.3, 0, Math.PI * 2);
+      g.lineWidth = 3 * dpr; g.strokeStyle = COL[i]; g.globalAlpha = r.lanes[i] ? 1 : 0.55; g.stroke(); g.globalAlpha = 1;
+    }
+    // note (le tenute con la scia fino alla fine)
+    for (const n of r.notes) {
+      const cx = n.lane * lw + lw / 2, ny = y(n.dt);
+      if (n.state === 'hit' || n.state === 'done') continue;
+      const faded = n.state === 'miss' || n.state === 'broken';
+      g.globalAlpha = faded ? 0.3 : 1;
+      if (n.dur > 0) {
+        const ey = y(n.dt + n.dur);
+        const top = Math.max(0, ey), bottom = n.state === 'hold' ? hitY : Math.min(H, ny);
+        g.fillStyle = COL[n.lane];
+        g.globalAlpha = faded ? 0.2 : n.state === 'hold' ? 0.85 : 0.55;
+        g.fillRect(cx - lw * 0.12, top, lw * 0.24, Math.max(0, bottom - top));
+        g.globalAlpha = faded ? 0.3 : 1;
+      }
+      if (n.state !== 'hold' && ny > -20 && ny < H + 20) {
+        g.beginPath(); g.arc(cx, ny, lw * 0.26, 0, Math.PI * 2);
+        g.fillStyle = COL[n.lane]; g.fill();
+        g.lineWidth = 3 * dpr; g.strokeStyle = 'rgba(255,255,255,0.9)'; g.stroke();
+      }
+      g.globalAlpha = 1;
+    }
+    // tasti delle corsie sotto la linea
+    const dev = this.game.input.lastDevice;
+    const labels = dev === 'gamepad' ? ['X', 'A', 'B', 'Y'] : dev === 'touch' ? ['', '', '', ''] : ['D', 'F', 'J', 'K'];
+    g.font = `bold ${Math.round(15 * dpr)}px Fredoka, sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(255,255,255,0.75)'; g.fillText(labels[i], i * lw + lw / 2, hitY + (H - hitY) / 2); }
+    // giudizio e conteggio
+    if (r.judge) {
+      const col = r.judge.kind === 'perfect' ? '#ffe066' : r.judge.kind === 'good' ? '#43e0b0' : '#ff5a6e';
+      g.globalAlpha = Math.max(0, 1 - r.judge.age / 0.6);
+      g.font = `bold ${Math.round(26 * dpr)}px Fredoka, sans-serif`;
+      g.fillStyle = col;
+      g.fillText(r.judge.text, W / 2, hitY - H * 0.22 - r.judge.age * 40 * dpr);
+      g.globalAlpha = 1;
+    }
+    if (r.count) {
+      g.font = `bold ${Math.round(64 * dpr)}px Fredoka, sans-serif`;
+      g.fillStyle = '#ffffff';
+      g.fillText(String(r.count), W / 2, H * 0.4);
+    }
+    // avanzamento del brano
+    g.fillStyle = 'rgba(255,255,255,0.2)'; g.fillRect(0, 0, W, 4 * dpr);
+    g.fillStyle = '#f5b942'; g.fillRect(0, 0, W * r.progress, 4 * dpr);
+    $('#rhythm-title').textContent = r.title;
+    $('#rhythm-unit').textContent = r.unit;
+    $('#rhythm-score').textContent = r.score;
+    $('#rhythm-combo').textContent = r.combo;
+    $('#rhythm-mult').textContent = r.mult > 1 ? ` ×${r.mult}` : '';
+    const acc = Math.round(r.acc * 100);
+    $('#rhythm-acc').textContent = `${acc}%`;
+    $('#rhythm-acc').classList.toggle('ok', r.pass !== undefined && r.pass !== null && r.acc >= r.pass);
+  }
+
   /** Medaglie di fine livello: medal = 'bronze' | 'silver' | 'gold'; best = la migliore di sempre. */
   medals({ level, medal, best, isNewBest, stats }) {
     const names = { bronze: 'Bronzo', silver: 'Argento', gold: 'Oro' };
@@ -558,6 +668,10 @@ export class UI {
     $('#story-tbtn-item').textContent = type === 'chase' ? 'Indietro' : flight ? 'Frena' : 'Lancia';
     $('#story-tbtn-attack').textContent = type === 'chase' ? 'Frena' : 'Pugno';
     $('#story-tbtn-attack').classList.toggle('hidden', type !== 'brawl' && type !== 'chase');
+    // ritmico: niente tasti touch del platform, ci sono le zone delle corsie
+    if (type === 'rhythm') $('#story-touch').classList.remove('on');
+    $('#rhythm').classList.add('hidden');
+    $('#audience').classList.add('hidden');
     for (const id of ['#story-mirror', '#story-pursuit', '#story-radio', '#story-lookback']) $(id).classList.add('hidden');
     this._radioKey = null;
     this._storyNotice = null;
@@ -671,6 +785,16 @@ export class UI {
       $('#story-radio').classList.toggle('hidden', !h.radio);
     }
     $('#story-lookback').classList.toggle('hidden', !h.lookBack);
+    // livelli ritmici: corsie, punteggio; esibizione: barra del pubblico
+    $('#rhythm').classList.toggle('hidden', !h.rhythm);
+    if (h.rhythm) this._drawRhythm(h.rhythm);
+    $('#audience').classList.toggle('hidden', !h.audience);
+    if (h.audience) {
+      $('#audience-fill').style.width = `${Math.round(h.audience.v * 100)}%`;
+      $('#audience-low').style.left = `${h.audience.low * 100}%`;
+      $('#audience').classList.toggle('low', h.audience.v < h.audience.low);
+      $('#audience').classList.toggle('high', h.audience.v >= h.audience.high);
+    }
     // salute dentro la vita (rissa)
     $('#story-health').classList.toggle('hidden', h.health === undefined);
     if (h.health !== undefined) $('#story-health-fill').style.width = `${(h.health / h.maxHealth) * 100}%`;

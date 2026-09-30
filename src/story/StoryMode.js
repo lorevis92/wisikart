@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { Assets } from '../core/AssetLoader.js';
 import { Player, PLAYER_H } from './Player.js';
 import { loadRigged, riggedUrl } from './Rig.js';
+import { EmmaVoice } from './emma.js';
+import { attachGuitar } from './hero.js';
 import { CrumbleRow, Fan, Scarf, Dropper, Pendulum, Pickup, Steward, Boss, ThrownBottle, goalMesh, seatMesh, overlap } from './entities.js';
 
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
@@ -93,6 +95,10 @@ export class StoryMode {
     // Whiskey: il personaggio con scheletro (story/characters/<id>.glb); senza file, la versione procedurale
     this.player = new Player(this.character, charModel);
     this.scene.add(this.player.group);
+    // la chitarra vinta a Infinity Guitars: sempre sulla schiena
+    if (this.character.guitar) await attachGuitar(this.player.root);
+    // battute del livello (Emma), con sottotitoli: mode.line('chiave')
+    if (L.voices) { this.emma = new EmmaVoice(this.audio, L.voices); await this.emma.load(); }
     this._respawn(true);
     progress('Pronti.');
   }
@@ -169,6 +175,7 @@ export class StoryMode {
     this.solids = L.solids.map(({ r, style }) => ({ x0: r[0], x1: r[1], y0: r[2], y1: r[3], style }));
     this.platforms = (L.platforms || []).map(({ r, style }) => ({ x0: r[0], x1: r[1], y: r[2], style, active: true }));
     this.ladders = L.ladders || [];
+    this.holds = L.holds || []; // appigli per le traversate (scalata)
     const seatCols = ['#f29a2e', '#a24cf0', '#1fbfae'];
     const mats = {
       stand: std('#3b3270'), standTop: std('#5a4aa8'),
@@ -178,7 +185,9 @@ export class StoryMode {
       // deposito: pavimento industriale, lamiere, cemento
       floor: std('#3a3f52', { metalness: 0.5, roughness: 0.55 }), floorEdge: std('#f2c230', { emissive: 0x6a4a00, emissiveIntensity: 0.4 }),
       metal: std('#4a5068', { metalness: 0.7, roughness: 0.4 }), concrete: std('#565a66', { roughness: 0.95 }),
-      crate: std('#8a5a32', { roughness: 0.85 })
+      crate: std('#8a5a32', { roughness: 0.85 }),
+      // promontorio: roccia e cenge
+      rock: std('#8a6a4a', { roughness: 0.95, flatShading: true }), ledge: std('#a3845a', { roughness: 0.9 }), plaza: std('#c9b08a', { roughness: 0.85 })
     };
     for (const s of this.solids) {
       const w = s.x1 - s.x0, h = s.y1 - s.y0;
@@ -263,6 +272,9 @@ export class StoryMode {
 
   say(text, time = 2.4) { this.notice = text; this.noticeTimer = time; }
 
+  /** Battuta del livello (level.voices), con sottotitolo; important = aspetta il suo turno. */
+  line(key, opts) { if (this.emma) this.emma.say(key, opts); }
+
   addAmmo(n, kind) {
     this.ammo = Math.min(this.maxAmmo, this.ammo + n);
     this.sfx('pickup');
@@ -303,12 +315,13 @@ export class StoryMode {
   }
 
   /** Livello vinto: messaggio, voce facoltativa di Emma, poi si torna alla piazza. */
-  win(message, { voice = null, time = 3.2 } = {}) {
+  win(message, { voice = null, line = null, time = 3.2 } = {}) {
     if (this.state !== 'play') return;
     this.state = 'won';
     this.stateTimer = time;
     this.sfx('finish');
     if (voice) this.audio.voice(voice);
+    if (line && this.emma) { this.emma.clear(); this.emma.say(line, { important: true }); }
     this.say(message, time);
   }
 
@@ -342,7 +355,7 @@ export class StoryMode {
     p.vx = (p.x < fromX ? -1 : 1) * 6;
   }
 
-  _fell() { this.fail('Emma: «Il vuoto non è una scorciatoia.»'); }
+  _fell() { this.fail(this.level.fallText || 'Emma: «Il vuoto non è una scorciatoia.»'); }
 
   _gameOver() {
     this.state = 'over';
@@ -355,6 +368,10 @@ export class StoryMode {
     const ctx = { t: this.t, player: this.player, mode: this };
     this.noticeTimer = Math.max(0, this.noticeTimer - dt);
     if (this.noticeTimer <= 0) this.notice = null;
+    if (this.emma) {
+      this.emma.update(dt);
+      if (!this.saidIntro && this.level.introLine) { this.saidIntro = true; this.emma.say(this.level.introLine, { important: true }); }
+    }
 
     if (this.state === 'over' || this.state === 'won') {
       this.stateTimer -= dt;
@@ -378,6 +395,7 @@ export class StoryMode {
     if (ev.includes('slide')) this.sfx('move');
 
     // lancio della bottiglia
+    if (input.itemPressed && !this.maxAmmo) input.itemPressed = false;
     if (input.itemPressed) {
       input.itemPressed = false;
       if (this.ammo > 0 && p.throwAnim <= 0 && !p.climbing && !p.sliding) {
@@ -399,6 +417,8 @@ export class StoryMode {
     for (const h of this.hazards) if (h.hurts(box)) { this._hurt(h.x ?? h.bx ?? p.x - p.facing); break; }
     for (const s of this.seats) if (s.hurts(box)) { this._hurt(s.x); break; }
     if (p.y < this.level.killY) this._fell();
+    // scalata: cadendo troppo sotto l'ultimo checkpoint si riparte da lì (niente discese infinite)
+    else if (this.level.fallLimit && p.y < this.level.checkpoints[this.checkpoint].y - this.level.fallLimit) this.fail(this.level.fallText || 'Emma: «Giù per la parete. Si riparte dalla panchina.»');
 
     // checkpoint
     const cps = this.level.checkpoints;
@@ -473,13 +493,15 @@ export class StoryMode {
       if (z.y !== undefined) ty = z.y;
       else if (z.yOff !== undefined) ty = p.y + z.yOff;
       if (z.dist) dist = z.dist;
+      this.lookDown = z.lookDown || 0; // la telecamera guarda un po' in basso (scalata: si vede la città sotto)
       break;
     }
     this.camX = THREE.MathUtils.damp(this.camX ?? tx, tx, 4, dt);
     this.camY = THREE.MathUtils.damp(this.camY ?? ty, ty, 4, dt);
     this.camDist = THREE.MathUtils.damp(this.camDist, dist, 2.5, dt);
-    this.camera.position.set(this.camX, this.camY + 0.6, this.camDist);
-    this.camera.lookAt(this.camX, this.camY, 0);
+    const down = this.lookDown || 0;
+    this.camera.position.set(this.camX, this.camY + 0.6 + down * 0.6, this.camDist);
+    this.camera.lookAt(this.camX, this.camY - down, 0);
     this._updateBackgrounds();
   }
 
@@ -518,11 +540,12 @@ export class StoryMode {
       lives: this.lives,
       maxLives: Math.max(this.level.lives, this.lives), // le vite extra delle monete si aggiungono ai cuori
       lifeUp: this.t - this.lifeUpAt < 1.5,
-      ammo: this.ammo,
+      ammo: this.maxAmmo ? this.ammo : undefined, // livelli senza bottiglie (scalata): niente contatore
       maxAmmo: this.maxAmmo,
       coins: this.coins,
       boss: this.boss && this.boss.active ? { hp: this.boss.hp, max: this.boss.maxHp, name: this.level.boss.name } : null,
       notice: this.notice,
+      subtitle: this.emma ? this.emma.subtitle : null,
       ...this.extraHud // timer, allarme, badge… dal livello
     };
   }

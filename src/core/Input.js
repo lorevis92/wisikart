@@ -5,6 +5,10 @@ const KEY_FALLBACK = {
 };
 for (const ch of 'abcdefghijklmnopqrstuvwxyz') KEY_FALLBACK[ch] = KEY_FALLBACK[ch.toUpperCase()] = 'Key' + ch.toUpperCase();
 
+// corsie dei livelli ritmici: tasti e pulsanti del gamepad (X, A, B, Y), da sinistra a destra
+const LANE_KEYS = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
+const LANE_PAD = [2, 0, 1, 3];
+
 export class Input {
   constructor() {
     this.keys = new Set();
@@ -19,6 +23,11 @@ export class Input {
     this.attackPressed = false; // pugno (rissa): F / L, tasto X del gamepad, tasto touch
     this.touch = { left: false, right: false, accel: false, drift: false, jump: false, up: false, down: false, item: false, attack: false };
     this.brakeHeld = false;
+    // livelli ritmici: quattro corsie (D F J K, quattro zone touch, X A B Y del gamepad), tenute e appena premute
+    this.lanes = [false, false, false, false];
+    this.lanePressed = [false, false, false, false];
+    this.touchLanes = [false, false, false, false];
+    this._padLanes = [false, false, false, false];
     // modalità Storia (platform): assi grezzi e salto con fronte di salita
     this.axisX = 0;
     this.axisY = 0;
@@ -43,6 +52,14 @@ export class Input {
     for (const k in this.touch) this.touch[k] = false;
     this.jumpHeld = false;
     this.jumpPressed = this.upPressed = this.itemPressed = this.attackPressed = false;
+    for (let i = 0; i < 4; i++) this.lanePressed[i] = this.touchLanes[i] = false;
+  }
+
+  /** Zona touch di una corsia premuta o rilasciata (la disegna la UI sopra le corsie). */
+  setTouchLane(i, on) {
+    if (on && !this.touchLanes[i]) this.lanePressed[i] = true;
+    this.touchLanes[i] = on;
+    if (on) this.lastDevice = 'touch';
   }
 
   /**
@@ -80,6 +97,8 @@ export class Input {
       if (k === 'Escape' || k === 'KeyP') this.pausePressed = true;
       if (k === 'KeyM') this.mutePressed = true;
       if (k === 'KeyF' || k === 'KeyL') this.attackPressed = true;
+      const lane = LANE_KEYS.indexOf(k);
+      if (lane >= 0) this.lanePressed[lane] = true;
       // navigazione menu
       if (k === 'ArrowUp' || k === 'KeyW') this.menuEvents.push('up');
       if (k === 'ArrowDown' || k === 'KeyS') this.menuEvents.push('down');
@@ -166,6 +185,13 @@ export class Input {
       !!(gp && (gp.buttons[3]?.pressed || gp.buttons[4]?.pressed));
     this.chaseBrake = k.has('KeyQ') || k.has('KeyX') || !!this.touch.attack ||
       !!(gp && (gp.buttons[2]?.pressed || (gp.buttons[6]?.value || 0) > 0.3));
+    // corsie: tenute (tastiera, touch, gamepad) e fronti di salita del gamepad
+    for (let i = 0; i < 4; i++) {
+      const pad = !!(gp && gp.buttons[LANE_PAD[i]]?.pressed);
+      if (pad && !this._padLanes[i]) this.lanePressed[i] = true;
+      this._padLanes[i] = pad;
+      this.lanes[i] = k.has(LANE_KEYS[i]) || this.touchLanes[i] || pad;
+    }
     // smorzamento dello sterzo per la tastiera
     const target = Math.max(-1, Math.min(1, st));
     this.steer += (target - this.steer) * (target === 0 ? 0.35 : 0.22);

@@ -177,6 +177,14 @@
     <div class="story-pursuit hidden" id="story-pursuit"><small>Blindati</small><span class="pursuit-bar"><i id="story-pursuit-fill"></i></span><b id="story-pursuit-where">dietro</b><small>Arma</small><span class="heat-bar"><i id="story-heat-fill"></i></span></div>
     <div class="story-radio hidden" id="story-radio"><span class="radio-face"><img id="story-radio-img" alt="" /><span class="radio-static"></span></span><span class="radio-tag"><i></i><b id="story-radio-name">Radio</b></span></div>
     <div class="story-lookback hidden" id="story-lookback">Guardi indietro · sterzo impreciso</div>
+    <!-- livelli ritmici: quattro corsie (disegnate da UI.js), zone touch, punteggio; barra del pubblico -->
+    <div class="rhythm hidden" id="rhythm">
+      <div class="rhythm-head"><b id="rhythm-title"></b><span id="rhythm-unit"></span></div>
+      <canvas id="rhythm-canvas"></canvas>
+      <div class="rhythm-touch" id="rhythm-touch"><span data-lane="0"></span><span data-lane="1"></span><span data-lane="2"></span><span data-lane="3"></span></div>
+      <div class="rhythm-stats"><span>Punti <b id="rhythm-score">0</b></span><span>Combo <b id="rhythm-combo">0</b><em id="rhythm-mult"></em></span><span>Precisione <b id="rhythm-acc">0%</b></span></div>
+    </div>
+    <div class="audience hidden" id="audience"><small>Pubblico</small><span class="audience-bar"><i id="audience-fill"></i><u id="audience-low"></u></span></div>
     <div class="touch" id="story-touch">
       <div class="touch-left">
         <button class="tbtn" data-touch="left">◀</button>
@@ -207,6 +215,18 @@
       <div class="medal-row" id="medal-row"></div>
       <ul class="medal-stats" id="medal-stats"></ul>
       <p class="medal-best" id="medal-best"></p>
+      <p class="brief-go">Premi un tasto per continuare</p>
+    </div>
+  </section>
+
+  <!-- STORIA: fine della prima parte (dopo l'esibizione al piazzale) -->
+  <section id="screen-finale" class="screen overlay finale">
+    <div class="finale-panel">
+      <div class="finale-img" id="finale-img"></div>
+      <small>WiSiVERSE · Storia</small>
+      <h2 id="finale-title">Fine della prima parte</h2>
+      <p id="finale-text"></p>
+      <p class="finale-producer" id="finale-producer"></p>
       <p class="brief-go">Premi un tasto per continuare</p>
     </div>
   </section>

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Assets } from '../core/AssetLoader.js';
 import { loadRigged, riggedUrl, locomotionPose } from './Rig.js';
 import { Player } from './Player.js';
+import { attachGuitar } from './hero.js';
 import { EmmaVoice } from './emma.js';
 import { buildDiner, buildBackyard, NavGrid, collide } from './diner.js';
 
@@ -92,6 +93,7 @@ export class BrawlMode {
     if (!heroRig) { const pl = new Player(this.character, null); this.hero.tilt.add(pl.group); }
     this.hero.hp = L.health;
     this.hero.baseH = 1.8;
+    if (this.character.guitar) await attachGuitar(this.hero.root);
     this.scene.add(this.hero.group);
     this.held = new THREE.Group(); // oggetto sollevato sopra la testa
     this.held.position.y = 2.1;
