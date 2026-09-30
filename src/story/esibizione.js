@@ -4,7 +4,8 @@
 // del pubblico: parte quasi vuota, sale con le note buone e perfette, scende con quelle mancate; a zero la
 // sezione riparte da capo. Le combo alte fanno piovere monete (contano per il totale della Storia).
 // Finale: applausi e la chiusura della prima parte della Storia (finale: schermata in main.js / UI.js).
-// Il palco sta sul circuito di Canair di WisiKart, tra la strada e le statue (stageT, stageSide). Motore: RhythmMode.js.
+// Il palco sta nel piazzale in cima al promontorio, lo stesso della piazza di Canair (canair-world.js): statue e
+// fontana della pista Canair di WisiKart, paese sotto, sentiero con le lanterne. Motore: RhythmMode.js.
 
 const VOCE = 'assets/story/voce/';
 
@@ -19,9 +20,7 @@ export const ESIBIZIONE = {
   completeMessage: 'Fine della prima parte della Storia. Canair ti ha sentito suonare.',
 
   scene: 'stage',
-  track: 'canair',
-  stageT: 0.33, // accanto alle statue di Oremo (vedi le props del circuito)
-  stageSide: -11,
+  track: 'canair', // solo per i colori (palette del circuito di Canair)
   song: 'esibizione',
   sections: [0, 1, 2],
   // barra del pubblico: partenza, variazioni per nota (perfetto, buono, tenuta completa, mancata), soglie

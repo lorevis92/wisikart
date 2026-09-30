@@ -5,6 +5,7 @@ import { trackById } from '../config/tracks.js';
 import { Player } from './Player.js';
 import { loadRigged, riggedUrl } from './Rig.js';
 import { attachGuitar } from './hero.js';
+import { buildCanair, canairTerrain, labelSprite } from './canair-world.js';
 
 // Movimento nella piazza
 const SPEED = 7.5;
@@ -50,6 +51,7 @@ export class Hub {
   state(e) {
     if (e.requires && !this.completed[e.requires]) return 'locked';
     if (e.kind === 'level') return this.completed[e.id] ? 'done' : 'open';
+    if (e.kind === 'passage' || e.kind === 'view') return 'open'; // passaggi e punti panoramici: sempre liberi
     return 'soon';
   }
 
@@ -64,6 +66,11 @@ export class Hub {
       this._lake();
       this._bushes();
       await this._decor();
+      // Canair: un unico mondo con il paese, la parete, il piazzale in cima e il sentiero di discesa
+      if (this.world.canair) {
+        this.terrain = canairTerrain();
+        await buildCanair(this, this.world.canair);
+      }
     } else {
       this._ground();
       this._city();
@@ -100,7 +107,10 @@ export class Hub {
     moon.castShadow = true;
     moon.shadow.mapSize.set(2048, 2048);
     const c = moon.shadow.camera;
-    c.left = c.bottom = -45; c.right = c.top = 45; c.near = 10; c.far = 160;
+    // mondi grandi (Canair: paese e promontorio) hanno bisogno di un'ombra più ampia
+    const ext = this.world.shadowExtent || 45;
+    c.left = c.bottom = -ext; c.right = c.top = ext; c.near = 10; c.far = 160 + ext * 2;
+    if (this.world.shadowCenter) { const sc = this.world.shadowCenter; moon.target.position.set(sc.x, 0, sc.z); moon.position.add(new THREE.Vector3(sc.x, 0, sc.z)); }
     moon.shadow.bias = -0.0008;
     this.scene.add(moon, moon.target);
   }
@@ -347,13 +357,21 @@ export class Hub {
   }
 
   async _entrance(e) {
-    const a = THREE.MathUtils.degToRad(e.angle);
-    const x = Math.sin(a) * e.dist, z = -Math.cos(a) * e.dist;
-    const toCenter = new THREE.Vector3(-x, 0, -z).normalize();
+    let x, z, y = 0, toCenter;
+    if (e.pos) {
+      // posizione esplicita (anche in quota); face = verso in cui guarda il davanti, in gradi (0 = nord, 180 = sud)
+      x = e.pos.x; z = e.pos.z; y = e.pos.y || 0;
+      const f = THREE.MathUtils.degToRad(e.pos.face ?? 180);
+      toCenter = new THREE.Vector3(Math.sin(f), 0, -Math.cos(f));
+    } else {
+      const a = THREE.MathUtils.degToRad(e.angle);
+      x = Math.sin(a) * e.dist; z = -Math.cos(a) * e.dist;
+      toCenter = new THREE.Vector3(-x, 0, -z).normalize();
+    }
     const tangent = new THREE.Vector3(-toCenter.z, 0, toCenter.x);
     const model = e.model ? await Assets.model(e.model, { targetHeight: e.height }) : null;
     const group = new THREE.Group();
-    group.position.set(x, 0, z);
+    group.position.set(x, y, z);
     group.rotation.y = Math.atan2(toCenter.x, toCenter.z); // il davanti (+Z) guarda il centro
     this.scene.add(group);
     let halfW = e.height * 0.5, halfD = e.height * 0.5;
@@ -362,6 +380,30 @@ export class Hub {
       group.add(model);
       const box = new THREE.Box3().setFromObject(model);
       halfW = (box.max.x - box.min.x) / 2; halfD = (box.max.z - box.min.z) / 2;
+    } else if (e.procedural === 'stage') {
+      // palco dell'esibizione sul piazzale: pedana tonda con le luci
+      const deck = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 0.6, 32), std('#5a3a2a', { roughness: 0.8 }));
+      deck.position.y = 0.3;
+      group.add(deck);
+      for (let i = 0; i < 6; i++) {
+        const a2 = (i / 6) * Math.PI * 2;
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: [0xff5a6e, 0xf5b942, 0x43e0b0][i % 3] }));
+        b.position.set(Math.cos(a2) * 3.3, 0.65, Math.sin(a2) * 3.3);
+        group.add(b);
+      }
+      halfW = halfD = 3.2;
+    } else if (e.procedural === 'railing') {
+      // belvedere: un tratto di parapetto con un cannocchiale
+      const stone = std('#b8a080');
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.0, 0.4), stone);
+      rail.position.set(0, 0.5, -1.2);
+      const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.9, 10), std('#c9a040', { metalness: 0.7, roughness: 0.3 }));
+      scope.rotation.x = Math.PI / 2 - 0.3;
+      scope.position.set(0, 1.4, -1);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 6), std('#2a2a38'));
+      pole.position.set(0, 0.8, -1);
+      group.add(rail, scope, pole);
+      halfW = 1.2; halfD = 0.6;
     } else if (e.procedural === 'shop') {
       // Infinity Guitars: negozio con vetrina e una chitarra gigante sull'insegna
       const s = this._shop(e.height);
@@ -378,7 +420,7 @@ export class Hub {
         const b = new THREE.Mesh(new THREE.BoxGeometry(e.height, e.height * 0.8, e.height), m); b.position.y = e.height * 0.4; group.add(b);
       }
     }
-    const entrance = { ...e, x, z, group, toCenter, tangent, armed: true };
+    const entrance = { ...e, x, z, y, group, toCenter, tangent, armed: true };
     if (e.arch) {
       // si attraversa: due piloni come ostacolo, l'ingresso è nel vano
       const span = halfW * 0.82;
@@ -400,7 +442,8 @@ export class Hub {
     const st = this.state(e);
     const ring = new THREE.Mesh(new THREE.RingGeometry(entrance.door.r * 0.75, entrance.door.r, 40), new THREE.MeshBasicMaterial({ color: colors[st], transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(entrance.door.x, 0.05, entrance.door.z);
+    ring.position.set(entrance.door.x, y + 0.05, entrance.door.z);
+    ring.visible = !(e.kind === 'passage' && st === 'open'); // un passaggio aperto non ha niente da segnare
     this.scene.add(ring);
     this.dynamic.push((t) => { ring.material.opacity = 0.45 + Math.sin(t * 3 + e.angle) * 0.25; });
     // ingresso con faro (l'autovettore di Emma): colonna di luce e icona visibili da tutta la piazza
@@ -418,7 +461,7 @@ export class Hub {
         this.segments.push({ ax: x - tangent.x * hw, az: z - tangent.z * hw, bx: x + tangent.x * hw, bz: z + tangent.z * hw, r: 0.5 });
         // il messaggio "chiuso" scatta avvicinandosi alla barriera dal lato della piazza
         entrance.door = { x: x + toCenter.x * 1.6, z: z + toCenter.z * 1.6, r: 2.2 };
-        ring.position.set(entrance.door.x, 0.05, entrance.door.z);
+        ring.position.set(entrance.door.x, y + 0.05, entrance.door.z);
       }
       // lucchetto che fluttua sopra l'ingresso (con il faro c'è già l'icona grande)
       if (!e.beacon) {
@@ -452,9 +495,9 @@ export class Hub {
    */
   _beacon(en, st, halfW, halfD) {
     const col = st === 'locked' ? 0xff5a6e : 0x43e0b0;
-    const x = en.x, z = en.z;
+    const x = en.x, z = en.z, y0 = en.y || 0;
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 60, 14, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-    beam.position.set(x, 30, z);
+    beam.position.set(x, y0 + 30, z);
     this.scene.add(beam);
     const c = document.createElement('canvas');
     c.width = c.height = 128;
@@ -482,14 +525,21 @@ export class Hub {
     tex.colorSpace = THREE.SRGBColorSpace;
     const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true }));
     icon.renderOrder = 20;
-    const y = Math.max(halfW, halfD) + en.height + 3.5;
+    const y = y0 + Math.max(halfW, halfD) + en.height + 3.5;
     icon.position.set(x, y, z);
+    // scritta sotto l'icona (es. "Sali al promontorio")
+    if (en.label) {
+      const lbl = labelSprite(en.label, st === 'locked' ? '#ff5a6e' : '#43e0b0');
+      lbl.position.set(x, y - 2.1, z);
+      this.scene.add(lbl);
+      this.dynamic.push((t) => { lbl.position.y = y - 2.1 + Math.sin(t * 2) * 0.3; });
+    }
     icon.scale.setScalar(2.8);
     this.scene.add(icon);
     // anello a terra intorno all'autovettore
     const ring = new THREE.Mesh(new THREE.RingGeometry(Math.max(halfW, halfD) + 0.6, Math.max(halfW, halfD) + 1.1, 48), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(x, 0.04, z);
+    ring.position.set(x, y0 + 0.04, z);
     this.scene.add(ring);
     this.dynamic.push((t) => {
       icon.position.y = y + Math.sin(t * 2) * 0.3;
@@ -547,15 +597,20 @@ export class Hub {
   _spawn() {
     const w = this.world;
     const e = this.spawnAt && this.entrances.find((x) => x.id === this.spawnAt);
-    if (e) {
+    const pt = this.spawnAt && w.points && w.points[this.spawnAt];
+    if (pt) {
+      this.pos = new THREE.Vector3(pt.x, pt.y || 0, pt.z);
+      this.heading = pt.heading;
+    } else if (e) {
       // appena usciti dall'ingresso, rivolti verso la piazza
-      this.pos = new THREE.Vector3(e.door.x + e.toCenter.x * 3.5, 0, e.door.z + e.toCenter.z * 3.5);
+      this.pos = new THREE.Vector3(e.door.x + e.toCenter.x * 3.5, e.y || 0, e.door.z + e.toCenter.z * 3.5);
       this.heading = Math.atan2(e.toCenter.x, e.toCenter.z);
       e.armed = false;
     } else {
-      this.pos = new THREE.Vector3(w.spawn.x, 0, w.spawn.z);
+      this.pos = new THREE.Vector3(w.spawn.x, w.spawn.y || 0, w.spawn.z);
       this.heading = w.spawn.heading;
     }
+    this.terrainY = this.pos.y;
     this.vel = new THREE.Vector3();
     this.vy = 0;
     this.onGround = true;
@@ -601,12 +656,24 @@ export class Hub {
     this.vy -= GRAV * dt;
 
     // ---- spostamento e collisioni ----
-    const prevY = this.pos.y;
+    const prevY = this.pos.y, prevX = this.pos.x, prevZ = this.pos.z;
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.z * dt;
     this.pos.y += this.vy * dt;
     this._collide();
-    const ground = this._groundAt(this.pos.x, this.pos.z, Math.max(prevY, this.pos.y));
+    // terreno a più quote (Canair): si resta dove si può camminare, e la quota segue rampa e piazzale
+    if (this.terrain) {
+      const ok = (x, z) => { const h = this._terrainHeight(x, z, this.terrainY); return h !== null && Math.abs(h - this.terrainY) <= 1.8 ? h : null; };
+      let h = ok(this.pos.x, this.pos.z);
+      if (h === null) {
+        // contro un bordo: si scivola lungo il margine (solo x o solo z), altrimenti ci si ferma
+        if ((h = ok(this.pos.x, prevZ)) !== null) { this.pos.z = prevZ; this.vel.z = 0; }
+        else if ((h = ok(prevX, this.pos.z)) !== null) { this.pos.x = prevX; this.vel.x = 0; }
+        else { this.pos.x = prevX; this.pos.z = prevZ; this.vel.x = this.vel.z = 0; h = this.terrainY; }
+      }
+      this.terrainY = h;
+    }
+    const ground = Math.max(this.terrain ? this.terrainY : 0, this._groundAt(this.pos.x, this.pos.z, Math.max(prevY, this.pos.y)));
     const wasGround = this.onGround;
     if (this.pos.y <= ground) {
       this.pos.y = ground;
@@ -639,10 +706,31 @@ export class Hub {
     }
     // piattaforme: di fianco sono ostacoli, da sopra ci si sta
     for (const pl of this.platforms) if (p.y < pl.top - STEP) push(pl.x, pl.z, pl.r);
-    // bordo della piazza
+    // bordo della piazza (nei mondi a più quote lo decide il terreno)
     const d = Math.hypot(p.x, p.z), max = this.world.radius + 1.2;
-    if (d > max) { p.x *= max / d; p.z *= max / d; }
+    if (!this.terrain && d > max) { p.x *= max / d; p.z *= max / d; }
     if (this.world.lake && p.x > this.world.lake.x - 1) p.x = this.world.lake.x - 1; // riva del lago
+  }
+
+  /**
+   * Quota del terreno in (x, z): piazza del paese, piazzale in cima, rampe (interpolate lungo il percorso).
+   * Se più zone si sovrappongono vale quella più vicina alla quota attuale; null = lì non si cammina.
+   */
+  _terrainHeight(x, z, near) {
+    const T = this.terrain;
+    const hs = [];
+    if (Math.hypot(x - T.plaza.x, z - T.plaza.z) < T.plaza.r) hs.push(0);
+    for (const P of T.plateaus) if (x > P.x0 && x < P.x1 && z > P.z0 && z < P.z1) hs.push(P.y);
+    for (const R of T.ramps) {
+      for (let i = 0; i < R.pts.length - 1; i++) {
+        const [ax, az, ay] = R.pts[i], [bx, bz, by] = R.pts[i + 1];
+        const vx = bx - ax, vz = bz - az;
+        const t = THREE.MathUtils.clamp(((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz), 0, 1);
+        if (Math.hypot(x - (ax + vx * t), z - (az + vz * t)) < R.w / 2) hs.push(ay + (by - ay) * t);
+      }
+    }
+    if (!hs.length) return null;
+    return hs.reduce((a, b) => (Math.abs(b - near) < Math.abs(a - near) ? b : a));
   }
 
   _groundAt(x, z, y) {
@@ -655,6 +743,7 @@ export class Hub {
   _doors() {
     let near = null, nearD = Infinity;
     for (const e of this.entrances) {
+      if (Math.abs(this.pos.y - (e.y || 0)) > 3) continue; // un ingresso in cima non si attiva dal paese (e viceversa)
       const d = Math.hypot(this.pos.x - e.door.x, this.pos.z - e.door.z);
       if (d < nearD) { nearD = d; near = e; }
       if (!e.armed) { if (d > e.door.r + 1.5) e.armed = true; continue; }
@@ -669,12 +758,19 @@ export class Hub {
         this.say(`${e.name}…`, 1.5);
         this.entering = { e, t: 0.7 };
         this.vel.set(0, 0, 0);
+      } else if (e.kind === 'view') {
+        // punto panoramico: il gioco mostra lo scorcio (main.js), poi si torna a camminare
+        this.audio.sfx('select');
+        this.vel.set(0, 0, 0);
+        this.onEnter && this.onEnter(e);
+      } else if (e.kind === 'passage') {
+        // passaggio aperto: si cammina e basta
       } else {
         this.audio.sfx(st === 'locked' ? 'back' : 'select');
         this.say(st === 'locked' ? e.locked : e.soon, 3.5);
       }
     }
-    this.prompt = near && nearD < near.door.r + 6 ? { name: near.name, state: this.state(near) } : null;
+    this.prompt = near && nearD < near.door.r + 6 && !(near.kind === 'passage' && this.state(near) === 'open') ? { name: near.name, state: this.state(near) } : null;
   }
 
   _animate(dt, speed) {
@@ -703,8 +799,9 @@ export class Hub {
 
   hud() {
     // obiettivo corrente: il primo del pianeta non ancora completato
+    const up = this.terrain && this.pos.y > 10; // in cima al promontorio
     const next = (this.world.objectives || []).find((o) => !this.completed[o.until]);
-    const objective = next ? next.text : this.world.objectivesDone || null;
+    const objective = next ? (up && next.textUp) || next.text : (up && this.world.objectivesDoneUp) || this.world.objectivesDone || null;
     return { world: this.world.name, subtitle: this.world.subtitle, prompt: this.prompt, notice: this.notice, objective };
   }
 

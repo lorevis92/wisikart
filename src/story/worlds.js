@@ -17,7 +17,7 @@ import { ESIBIZIONE } from './esibizione.js';
 // requires: id dell'ingresso da completare prima (salvato in save.story); finché manca, lucchetto e `locked`.
 // Un pianeta alla volta (save.storyWorld): il Portale (nextWorld) porta da Niaboc a Retah.
 // L'ordine è obbligato: stadio → deposito → portale, poi su Retah rissa → inseguimento, poi su Canair
-// negozio → salita → piazzale. Vicoli e biblioteca si apriranno quando Whiskey
+// negozio → salita (dalla parete, si sbuca in cima) → piazzale in cima → sentiero di discesa → paese. Vicoli e biblioteca si apriranno quando Whiskey
 // tornerà a Niaboc, più avanti nella storia ('ritorno-niaboc' non è ancora raggiungibile).
 
 export const WORLDS = [
@@ -114,45 +114,72 @@ export const WORLDS = [
     ]
   },
   {
-    // Canair: si atterra qui dopo lo spazio vettore dell'inseguimento. Piazza piccola: il negozio di chitarre, il
-    // sentiero che sale al promontorio Utgenra (la falesia sullo sfondo) e il piazzale delle statue in cima.
+    // Canair, un unico mondo su due quote (story/canair-world.js): il paese in basso (piazza, casette,
+    // Infinity Guitars, il cartello del sentiero sotto la parete) e, 28 m più su, il promontorio Utgenra (statue
+    // di Oremo e fontana della pista Canair, palco, belvedere). Si sale dalla parete (livello 7, con i pericoli)
+    // e si sbuca in cima (points.vetta); si scende a piedi dal sentiero con le lanterne, che dal basso resta
+    // chiuso da un cancello finché la salita non è fatta. Poi il sentiero si percorre anche in salita.
     id: 'canair',
     name: 'Canair',
-    subtitle: 'La casa dei senza patria: il fiume, il promontorio e le statue di Oremo',
-    theme: 'desert', // stessa costruzione di Retah (terreno aperto al tramonto), con i colori di Canair
+    subtitle: 'La casa dei senza patria: il paese, il promontorio e le statue di Oremo',
+    theme: 'desert', // terreno aperto al tramonto, come Retah, con i colori di Canair
     track: 'canair',
     ground: '#a39a5e',
     sky: 'assets/tracks/canair/sky.png',
     music: 'canair',
-    radius: 32,
-    spawn: { x: 0, z: 20, heading: Math.PI },
+    radius: 26,
+    canair: { paese: 'assets/story/canair/paese.png', discesa: 'assets/story/canair/discesa.png' },
+    shadowExtent: 110,
+    shadowCenter: { x: 0, z: -35 },
+    spawn: { x: 0, z: 18, heading: Math.PI }, // guarda verso la parete
+    points: {
+      vetta: { x: 0, y: 28, z: -47.5, heading: Math.PI } // dove sbuca la salita, in cima alla parete
+    },
+    // obiettivo in alto a sinistra: textUp vale quando si è in cima al promontorio
     objectives: [
       { until: 'chitarre', text: 'Entra da Infinity Guitars' },
-      { until: 'salita', text: 'Sali al promontorio Utgenra' },
-      { until: 'esibizione', text: 'Suona al piazzale delle statue' }
+      { until: 'salita', text: 'Sali al promontorio: il sentiero parte dal cartello sotto la parete' },
+      { until: 'esibizione', text: 'Torna in cima dal sentiero con le lanterne e suona al piazzale', textUp: 'Suona al piazzale, tra le statue di Oremo' }
     ],
     objectivesDone: 'Fine della prima parte della Storia',
+    objectivesDoneUp: 'Fine della prima parte · il sentiero con le lanterne riporta in paese',
     decor: [
-      { shape: 'cliff', h: 34, x: 0, z: -52 },
-      { shape: 'cliff', h: 22, x: -26, z: -44 },
-      { shape: 'cliff', h: 18, x: 24, z: -46 },
-      { model: 'assets/props/autovettore.glb', h: 2.2, x: 9, z: 16, rot: -60, r: 2.4 } // Emma, parcheggiata
+      { model: 'assets/props/autovettore.glb', h: 2.2, x: 10, z: 15, rot: -60, r: 2.4 } // Emma, parcheggiata in paese
     ],
     entrances: [
       {
-        id: 'chitarre', kind: 'level', level: CHITARRE, angle: 295, dist: 17, height: 7, procedural: 'shop',
+        id: 'chitarre', kind: 'level', level: CHITARRE, angle: 265, dist: 17, height: 7, procedural: 'shop',
         name: 'Infinity Guitars', desc: 'Chitarre vere, da guadagnarsi nota per nota.'
       },
       {
-        id: 'salita', kind: 'level', level: SALITA, requires: 'chitarre', angle: 0, dist: 26, height: 9, arch: true, procedural: 'path', beacon: true,
-        name: 'Sentiero del promontorio', desc: 'Su per la roccia fino alle statue di Oremo.',
+        // il cartello sotto la parete: da qui parte la salita (livello 7)
+        id: 'salita', kind: 'level', level: SALITA, requires: 'chitarre', pos: { x: 0, z: -22, face: 180 }, height: 2.6, beacon: true,
+        model: 'assets/story/canair/cartello.glb', label: '↑ Sali al promontorio',
+        name: 'Sentiero del promontorio', desc: 'Su per la parete fino alle statue di Oremo.',
         locked: 'Lassù si sale solo con una chitarra sulla schiena. Prima Infinity Guitars.'
       },
       {
-        id: 'esibizione', kind: 'level', level: ESIBIZIONE, requires: 'salita', angle: 60, dist: 19, height: 7, beacon: true,
-        model: 'assets/props/oremo-anziano.glb',
-        name: 'Piazzale delle statue', desc: 'In cima al promontorio, al tramonto a tripla stella.',
-        locked: 'Il piazzale è in cima al promontorio: prima la salita.'
+        // in cima: il palco dell'esibizione davanti alle statue (livello 8)
+        id: 'esibizione', kind: 'level', level: ESIBIZIONE, requires: 'salita', pos: { x: 0, z: -64, y: 28, face: 180 }, height: 3, beacon: true,
+        procedural: 'stage', label: '♪ Esibizione',
+        name: 'Palco del piazzale', desc: 'Tra le statue, al tramonto a tripla stella.',
+        locked: 'Il palco è pronto, ma il pubblico aspetta chi è salito dalla parete.'
+      },
+      {
+        // in cima, sul bordo sud: lo scorcio sul paese
+        id: 'belvedere', kind: 'view', pos: { x: -16, z: -46.2, y: 28, face: 0 }, height: 1.5, procedural: 'railing',
+        name: 'Belvedere', desc: 'Il paese visto dal promontorio.',
+        view: {
+          image: 'assets/story/canair/belvedere.png',
+          title: 'Belvedere del promontorio Utgenra',
+          text: 'Laggiù c’è il paese: le casette, la piazza, Infinity Guitars. Da quassù sembra tutto più piccolo, anche la paura di suonare.'
+        }
+      },
+      {
+        // cancello a metà del sentiero di discesa: dal basso resta chiuso finché la salita non è fatta
+        id: 'cancello', kind: 'passage', requires: 'salita', pos: { x: 33, z: -16, y: 8.2, face: 180 }, height: 6, arch: true, procedural: 'path',
+        name: 'Cancello del sentiero',
+        locked: 'Il cancello si apre dall’alto. La prima volta si sale dalla parete: il cartello è sotto la roccia.'
       }
     ]
   }

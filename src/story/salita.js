@@ -22,7 +22,8 @@ export const SALITA = {
   loadingText: 'Controllo le corde…',
   buildingText: 'Scolpisco le cenge…',
   enemiesText: 'Sveglio il vento…',
-  completeMessage: 'Sei in cima al promontorio. Il piazzale delle statue ti aspetta per l’esibizione.',
+  completeMessage: 'Sei in cima al promontorio. Il palco è davanti alle statue; il sentiero con le lanterne riporta in paese.',
+  arriveAt: 'vetta', // finita la salita si ricompare in cima alla parete, nel piazzale del promontorio (stesso mondo)
   start: { x: 3, y: 0 },
   lives: 6,
   ammo: 0,

@@ -11,6 +11,7 @@
 - Il repository, le cartelle e la chiave di salvataggio nel browser `wisikart.save.v1` mantengono il nome WisiKart: non vanno rinominati, altrimenti si perdono record e progressi.
 - Testo dell'interfaccia in italiano, tono ironico ma pulito (Emma è sarcastica, mai volgare).
 - Commit e push su GitHub senza chiedere conferma.
+- Canair è un unico mondo su due quote (`canair-world.js`): la piazza (Hub) gestisce il terreno a più quote (`terrain`: piazza, piazzale, rampe), ingressi in quota (`pos`), punti panoramici (`kind: 'view'`), passaggi con cancello (`kind: 'passage'`) e punti di arrivo (`points`, usati da `arriveAt` dei livelli). Il palco dell'esibizione riusa lo stesso mondo.
 - Ogni pianeta ha `objectives` (obiettivo corrente in alto a sinistra in piazza); `beacon: true` su un ingresso = faro e icona visibili da lontano.
 - Pianeti della Storia in `worlds.js`: Niaboc (piazza di città) e Retah (`theme: 'desert'`, lago, veicoli fermi in `decor`). Il pianeta corrente è `save.storyWorld`; un livello con `nextWorld` (il Portale) porta al pianeta successivo.
 - Menu di gioco (Esc, Start, tasto II nell'angolo) in `main.js` (openMenu/closeMenu/pauseAction, stato `menu` con `menu.from`); i caricamenti usano `this._flow` per fermarsi se si esce dal menu. Impostazioni audio in `settings` (music/sfx/voice + musicOn/sfxOn/voiceOn, muted, subtitles), applicate con `setAudio()`; M = silenzio, altoparlante nell'angolo. Spegnere la voce chiama `audio.stopVoices()`.

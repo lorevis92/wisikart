@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { Assets } from '../core/AssetLoader.js';
-import { Track } from '../track/Track.js';
 import { trackById } from '../config/tracks.js';
 import { buildSong } from '../audio/AudioEngine.js';
 import { loadRigged, riggedUrl, locomotionPose } from './Rig.js';
 import { attachGuitar } from './hero.js';
 import { EmmaVoice } from './emma.js';
+import { buildCanair, PROMONTORY, TOP } from './canair-world.js';
 
 // Livelli ritmici della Storia (Canair): Infinity Guitars (story/chitarre.js, tre brani di prova nel negozio)
-// e l'esibizione al piazzale delle statue (story/esibizione.js, un brano lungo in tre sezioni con la barra del
+// e l'esibizione al piazzale delle statue in cima al promontorio (story/esibizione.js, stesso mondo della piazza, un brano lungo in tre sezioni con la barra del
 // pubblico). Quattro corsie: le note scendono verso la linea di giudizio; si premono al momento giusto
 // (perfetto / buono / mancato), quelle lunghe si tengono premute. Le note vengono dal brano stesso
 // (buildSong in AudioEngine.js): quello che si sente è quello che cade. La corsia si disegna nell'HUD (UI.js).
@@ -136,77 +136,86 @@ export class RhythmMode {
     this.camBase = { pos: new THREE.Vector3(0, 2.0, 8.2), look: new THREE.Vector3(0, 1.4, 0), bgZ: -7 };
   }
 
-  /** Il piazzale delle statue di Oremo sul circuito di Canair, al tramonto a tripla stella, con il pubblico. */
+  /**
+   * Il palco è nel piazzale in cima al promontorio Utgenra: lo stesso mondo della piazza di Canair (paese sotto,
+   * parete, statue di Oremo e fontana, sentiero con le lanterne; story/canair-world.js), al tramonto a tripla
+   * stella, con il pubblico davanti al palco.
+   */
   async _buildStage(progress) {
     const L = this.level;
     progress('Monto il palco tra le statue…');
-    const def = trackById[L.track];
-    const trackDef = { ...def, itemBoxes: [], boostPads: [], props: (def.props || []).filter((p) => ['oremo-giovane', 'oremo-anziano', 'fontana'].includes(p.model)) };
-    this.track = new Track(trackDef, this.scene, null);
-    await this.track.build();
-    const tr = this.track;
-    const s = tr.samples[tr.idxFromT(L.stageT)];
-    const right = s.right.clone(), fwd = s.tangent.clone().setY(0).normalize();
-    const base = s.pos.clone();
-    // palco: una pedana tra la strada e le statue, rivolta verso la strada (dove sta il pubblico)
-    const stagePos = base.clone().addScaledVector(right, L.stageSide);
+    const pal = trackById[L.track].palette;
+    let sky = await Assets.texture('assets/tracks/canair/sky.png', { equirect: true });
+    if (sky) { this.scene.background = sky; this.scene.environment = sky; this.scene.environmentIntensity = 0.55; }
+    else this.scene.background = new THREE.Color(pal.fog);
+    this.scene.fog = new THREE.Fog(pal.fog, 110, 420);
+    this.scene.add(new THREE.HemisphereLight(new THREE.Color(pal.ambient), new THREE.Color('#8a6a4a'), 0.95));
+    const sunL = new THREE.DirectionalLight(new THREE.Color(pal.sun), 2.0);
+    sunL.position.set(-40, TOP + 30, -120);
+    sunL.target.position.set(0, TOP, -60);
+    sunL.castShadow = true;
+    sunL.shadow.mapSize.set(2048, 2048);
+    const sc = sunL.shadow.camera;
+    sc.left = sc.bottom = -40; sc.right = sc.top = 40; sc.near = 10; sc.far = 260;
+    this.scene.add(sunL, sunL.target);
+    // sabbia sotto e tutto il mondo di Canair (come nella piazza)
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(600, 48), std('#a39a5e', { roughness: 0.97 }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
+    this.dynamicFx = [];
+    await buildCanair({ scene: this.scene, pal, circles: [], dynamic: this.dynamicFx }, { paese: 'assets/story/canair/paese.png', discesa: 'assets/story/canair/discesa.png' });
+    // palco: pedana tonda davanti alle statue, rivolta a sud (verso il pubblico e il bordo del promontorio)
+    const S = PROMONTORY.stage;
+    const stagePos = new THREE.Vector3(S.x, TOP, S.z);
     const deck = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, 0.6, 32), std('#5a3a2a', { roughness: 0.8 }));
-    deck.position.copy(stagePos).setY(stagePos.y + 0.3);
+    deck.position.copy(stagePos).setY(TOP + 0.3);
     deck.receiveShadow = deck.castShadow = true;
     this.scene.add(deck);
     const lights = [];
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
-      const b = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshBasicMaterial({ color: [0xff5a6e, 0xf5b942, 0x43e0b0][i % 3] }));
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: [0xff5a6e, 0xf5b942, 0x43e0b0][i % 3] }));
       b.position.copy(deck.position).add(new THREE.Vector3(Math.cos(a) * 3.3, 0.35, Math.sin(a) * 3.3));
       this.scene.add(b);
       lights.push(b);
     }
     this.stageLights = lights;
-    const toCrowd = right.clone(); // il palco guarda verso la strada
-    this.heroSpot = { pos: stagePos.clone().setY(stagePos.y + 0.6), yaw: Math.atan2(toCrowd.x, toCrowd.z) };
+    this.heroSpot = { pos: stagePos.clone().setY(TOP + 0.6), yaw: 0 }; // guarda a sud, verso il pubblico
     // tre soli al tramonto, bassi dietro le statue
     for (let i = 0; i < 3; i++) {
       const sun = new THREE.Mesh(new THREE.SphereGeometry(14 - i * 3, 24, 16), new THREE.MeshBasicMaterial({ color: [0xffc86a, 0xff8a5a, 0xffe8b0][i], fog: false }));
-      sun.position.copy(stagePos).addScaledVector(right, -520).addScaledVector(fwd, (i - 1) * 90).setY(stagePos.y + 40 + i * 18);
+      sun.position.set((i - 1) * 110, TOP + 40 + i * 18, -560);
       this.scene.add(sun);
       const halo = new THREE.Mesh(new THREE.CircleGeometry(40 - i * 8, 32), new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0.18, fog: false, depthWrite: false }));
       halo.position.copy(sun.position);
       halo.lookAt(stagePos);
       this.scene.add(halo);
     }
-    const warm = new THREE.DirectionalLight(0xff9a60, 1.2);
-    warm.position.copy(stagePos).addScaledVector(right, -60).setY(stagePos.y + 30);
-    warm.target.position.copy(stagePos);
-    this.scene.add(warm, warm.target);
     const spot = new THREE.SpotLight(0xfff0d0, 90, 30, 0.45, 0.5, 1.2);
-    spot.position.copy(stagePos).addScaledVector(right, 8).setY(stagePos.y + 9);
+    spot.position.set(S.x + 3, TOP + 9, S.z + 8);
     spot.target.position.copy(stagePos);
     this.scene.add(spot, spot.target);
-    // il pubblico: figure semplici davanti al palco, ne compaiono tante quante dice la barra
+    // il pubblico: figure semplici tra il palco e il bordo del piazzale, tante quante dice la barra
     const N = 90;
-    const bodyG = new THREE.CapsuleGeometry(0.28, 0.7, 4, 8);
-    this.crowd = new THREE.InstancedMesh(bodyG, new THREE.MeshStandardMaterial({ roughness: 0.8 }), N);
+    this.crowd = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.28, 0.7, 4, 8), new THREE.MeshStandardMaterial({ roughness: 0.8 }), N);
     this.crowdSeats = [];
     const col = new THREE.Color();
     for (let i = 0; i < N; i++) {
       const row = Math.floor(i / 15), k = i % 15;
-      const p = stagePos.clone().addScaledVector(right, 5 + row * 1.5 + ((i * 7) % 3) * 0.3).addScaledVector(fwd, (k - 7) * 1.1 + (row % 2) * 0.5);
-      p.y = tr.project ? tr.project(p, tr.idxFromT(L.stageT)).height + 0.65 : stagePos.y + 0.65;
-      this.crowdSeats.push({ p, phase: (i * 1.7) % (Math.PI * 2) });
+      const pos = new THREE.Vector3(S.x + (k - 7) * 1.15 + (row % 2) * 0.5, TOP + 0.65, S.z + 5.5 + row * 1.4 + ((i * 7) % 3) * 0.25);
+      this.crowdSeats.push({ p: pos, phase: (i * 1.7) % (Math.PI * 2) });
       this.crowd.setColorAt(i, col.setHSL(((i * 37) % 100) / 100, 0.6, 0.5));
     }
     this.crowd.count = 0;
     this.crowd.castShadow = true;
     this.scene.add(this.crowd);
     this.camBase = {
-      // Whiskey di lato nell'inquadratura: al centro c'è la corsia delle note
-      pos: stagePos.clone().addScaledVector(right, 15).setY(stagePos.y + 5.5),
-      look: stagePos.clone().addScaledVector(fwd, -5).setY(stagePos.y + 2.6)
+      // Whiskey di lato nell'inquadratura (al centro c'è la corsia delle note); dietro, le statue
+      pos: new THREE.Vector3(S.x + 5, TOP + 5.5, S.z + 16),
+      look: new THREE.Vector3(S.x - 5, TOP + 2.6, S.z)
     };
     this.stagePos = stagePos;
-    this.rightV = right;
-    this.fwdV = fwd;
   }
 
   // ---------- gioco ----------
@@ -563,7 +572,6 @@ export class RhythmMode {
 
   dispose() {
     this.audio.stopSong();
-    if (this.track) this.track.dispose();
     this.scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());

@@ -516,6 +516,17 @@ export class UI {
     return this._waitPanel('briefing');
   }
 
+  /** Scorcio da un punto panoramico (belvedere): immagine grande, titolo, due righe. */
+  view(v) {
+    $('#view-title').textContent = v.title;
+    $('#view-text').textContent = v.text || '';
+    const img = $('#view-img');
+    img.style.backgroundImage = '';
+    Assets.exists(v.image).then((ok) => { if (ok) img.style.backgroundImage = `url(${v.image})`; });
+    this.overlay('view', true);
+    return this._waitPanel('view');
+  }
+
   /** Fine della prima parte della Storia: applausi, testo e un accenno al produttore (immagine fissa). */
   finale(f) {
     $('#finale-title').textContent = f.title;

@@ -23,7 +23,7 @@ import { RhythmMode } from './story/RhythmMode.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 // stati da cui si apre il menu di gioco (Esc, Start, tasto II): piazza, livelli, gare, caricamenti, video
-const MENU_FROM = ['race', 'loading', 'story', 'storyload', 'briefing', 'storyhelp', 'hub', 'hubload', 'cinematic', 'medals', 'finale'];
+const MENU_FROM = ['race', 'loading', 'story', 'storyload', 'briefing', 'storyhelp', 'hub', 'hubload', 'cinematic', 'medals', 'finale', 'view'];
 // stati di gioco in cui le frecce non navigano un menu
 const GAMEPLAY = ['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'];
 // motore di ogni tipo di livello della Storia
@@ -446,7 +446,10 @@ class Game {
       completed: this.save.story,
       medals: this.save.storyMedals || {},
       spawnAt,
-      onEnter: (e) => { if (e.kind === 'level') this.startStory(e.level); }
+      onEnter: (e) => {
+        if (e.kind === 'level') this.startStory(e.level);
+        else if (e.kind === 'view') this.showView(e.view); // punto panoramico (belvedere)
+      }
     });
     await hub.load((t) => this.ui.loadingStatus(t));
     if (flow !== this._flow) { hub.dispose(); return; }
@@ -457,6 +460,16 @@ class Game {
     this._setState('hub');
     this.ui.hubStart(message);
     this.audio.playTheme(world.music);
+  }
+
+  /** Punto panoramico della piazza: l'immagine a tutto schermo, poi si torna a camminare. */
+  async showView(view) {
+    if (this.state !== 'hub') return;
+    this.state = 'view';
+    await this.ui.view(view);
+    if (this.state !== 'view') return;
+    this.input.releaseAll();
+    this.state = 'hub';
   }
 
   _endHub() {
@@ -554,7 +567,8 @@ class Game {
     const next = result && result.next ? this._levelById(result.next) : null;
     if (next) { this.startStory(next); return; }
     // si ricompare in piazza davanti all'ingresso del livello appena finito (o all'arrivo, su un pianeta nuovo)
-    this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.nextWorld ? null : level.id);
+    // (arriveAt: un punto del mondo, come la cima della parete dopo la salita)
+    this.openStory(level.completeMessage || `Livello completato: ${level.name}.`, level.arriveAt || (level.nextWorld ? null : level.id));
   }
 
   /** Un livello della Storia dal suo id (quello dell'ingresso in piazza). */
@@ -629,7 +643,7 @@ class Game {
       else for (const e of ev) { if (e === 'back') this.menuBack(); else if (e === 'ok') this.ui.activateFocus(); else this.ui.moveFocus(e); }
     } else if (pause && this.openMenu()) {
       // aperto: gli altri tasti di questo frame non contano
-    } else if (['briefing', 'storyhelp', 'medals', 'finale'].includes(this.state)) {
+    } else if (['briefing', 'storyhelp', 'medals', 'finale', 'view'].includes(this.state)) {
       // istruzioni e medaglie: qualsiasi tasto (anche del gamepad) le chiude
       if (ev.length && this.ui.closePanel) this.ui.closePanel();
     } else if (!GAMEPLAY.includes(this.state)) {
@@ -658,7 +672,7 @@ class Game {
       this.race.update(dt);
       if (this.race.state !== 'done') this.ui.hud(this.race.hud());
       if (this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera);
-    } else if (view === 'hub' && this.hub) {
+    } else if ((view === 'hub' || view === 'view') && this.hub) {
       this.renderer.render(this.hub.scene, this.hub.camera);
     } else if (['story', 'briefing', 'storyhelp'].includes(view) && this.story) {
       this.renderer.render(this.story.scene, this.story.camera);
