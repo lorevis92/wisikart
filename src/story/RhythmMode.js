@@ -51,6 +51,7 @@ export class RhythmMode {
     const [hero] = await Promise.all([loadRigged(riggedUrl(this.character), 1.8)]);
     this.hero = hero ? hero : null;
     if (L.scene === 'shop') await this._buildShop(progress);
+    else if (L.scene === 'club') await this._buildClub(progress);
     else await this._buildStage(progress);
     // Whiskey con la chitarra imbracciata
     this.heroRoot = new THREE.Group();
@@ -72,68 +73,207 @@ export class RhythmMode {
     progress('Pronti.');
   }
 
-  /** Il negozio: l'illustrazione di sfondo, il proprietario fermo che parla, le tre chitarre in prova. */
+  /** Stanza 3D con pavimento in legno, parete di fondo e pareti laterali tagliate (negozio, Lube Tone). */
+  _room({ floor = '#6a4428', plank = '#58361e', wall = '#7a4a32', trim = '#3a2418', width = 18, back = -3.4 } = {}) {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = floor; g.fillRect(0, 0, 128, 128);
+    g.fillStyle = plank; for (let y = 0; y < 128; y += 16) g.fillRect(0, y, 128, 2);
+    for (let i = 0; i < 12; i++) g.fillRect((i * 37) % 128, Math.floor(i / 2) * 32 + 2, 2, 14);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(width / 2, 6);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(width, 14), std('#ffffff', { map: tex, roughness: 0.55 }));
+    fl.rotation.x = -Math.PI / 2;
+    fl.position.set(0, 0, back + 7);
+    fl.receiveShadow = true;
+    this.scene.add(fl);
+    const box = (w, h, d, color, x, y, z) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), std(color, { roughness: 0.85 }));
+      m.position.set(x, y, z);
+      m.castShadow = m.receiveShadow = true;
+      this.scene.add(m);
+      return m;
+    };
+    box(width, 4.4, 0.3, wall, 0, 2.2, back - 0.15); // parete di fondo
+    box(width, 0.25, 0.32, trim, 0, 0.12, back); // battiscopa
+    box(0.3, 1.6, 9, wall, -width / 2, 0.8, back + 4.5); // parete sinistra, tagliata bassa
+    box(0.3, 3.2, 6, wall, width / 2, 1.6, back + 3); // parete destra, tagliata a metà
+  }
+
+  /** Il negozio Infinity Guitars, come stanza 3D: parete di chitarre, bancone col proprietario, amplificatore. */
   async _buildShop(progress) {
-    const L = this.level;
-    const [bg, owner, guitar] = await Promise.all([
-      Assets.texture(L.background),
+    const L = this.level, M = L.models;
+    const [owner, guitar, wall, counter, amp] = await Promise.all([
       loadRigged(L.owner.url, L.owner.h),
-      Assets.model(L.guitar.url, { targetHeight: 1.0 })
+      Assets.model(L.guitar.url, { targetHeight: 1.0 }),
+      Assets.model(M.wall.url, { targetHeight: M.wall.h }),
+      Assets.model(M.counter.url, { targetHeight: M.counter.h }),
+      Assets.model(M.amp.url, { targetHeight: M.amp.h })
     ]);
     this.scene.background = new THREE.Color('#1c1410');
-    this.scene.add(new THREE.HemisphereLight(0xffe6c8, 0x3a2418, 1.3));
-    const key = new THREE.DirectionalLight(0xfff0d8, 1.6);
-    key.position.set(2, 8, 6);
+    this.scene.add(new THREE.HemisphereLight(0xffe6c8, 0x3a2418, 0.9));
+    const key = new THREE.DirectionalLight(0xfff0d8, 1.4);
+    key.position.set(2, 9, 7);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
+    const sc = key.shadow.camera; sc.left = sc.bottom = -10; sc.right = sc.top = 10;
     this.scene.add(key);
-    // sfondo: l'illustrazione del negozio a riempire l'inquadratura
-    let tex = bg;
-    if (!tex) {
-      const c = document.createElement('canvas'); c.width = 16; c.height = 256;
-      const g = c.getContext('2d'), grd = g.createLinearGradient(0, 0, 0, 256);
-      grd.addColorStop(0, '#3a2418'); grd.addColorStop(1, '#8a5a3a');
-      g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
-      tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    for (const [x, z, col] of [[-4, 0.5, 0xffb060], [4, 0.5, 0xffc880], [0, -1.5, 0xff9a50]]) {
+      const l = new THREE.PointLight(col, 10, 9, 1.6);
+      l.position.set(x, 3.2, z);
+      this.scene.add(l);
     }
-    const aspect = tex.image && tex.image.width ? tex.image.width / tex.image.height : 1.78;
-    this.bg = new THREE.Mesh(new THREE.PlaneGeometry(aspect, 1), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, depthWrite: false }));
-    this.bg.renderOrder = -10;
-    this.bgAspect = aspect;
-    this.scene.add(this.bg);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 12), new THREE.ShadowMaterial({ opacity: 0.35 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    this.scene.add(floor);
-    // il proprietario, a sinistra, girato verso Whiskey
+    this._room({ wall: '#8a4a36', trim: '#3a2418' });
+    const place = (m, fb, x, y, z, yaw = 0) => {
+      const g = new THREE.Group();
+      if (m) g.add(m);
+      else { const b = new THREE.Mesh(new THREE.BoxGeometry(...fb), std('#5a3a22')); b.position.y = fb[1] / 2; g.add(b); }
+      g.position.set(x, y, z);
+      g.rotation.y = yaw;
+      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.scene.add(g);
+      return g;
+    };
+    // la parete di chitarre esposte, dietro a Whiskey; il bancone a sinistra; l'amplificatore accanto a Whiskey
+    place(wall, [4.6, 2.6, 0.5], 3.2, 0.5, -3.0);
+    place(counter, [1.8, 1.15, 0.7], -4.0, 0, -1.6, 0.35);
+    place(amp, [1, 1.2, 0.6], 5.4, 0, -1.0, -0.45);
+    // il proprietario, vicino al bancone, girato verso Whiskey
     this.owner = owner;
     if (owner) {
-      owner.root.position.set(-3.6, 0, -0.4);
-      owner.root.rotation.y = 0.55;
+      owner.root.position.set(-2.7, 0, -1.1);
+      owner.root.rotation.y = 0.6;
       this.scene.add(owner.root);
     }
-    // le tre chitarre in prova, su un espositore a destra; quella in prova è illuminata
+    // le tre chitarre in prova, appoggiate al muro tra il bancone e la parete di chitarre: quella in prova è illuminata
     this.stand = [];
     for (let i = 0; i < 3; i++) {
       const g = new THREE.Group();
       if (guitar) g.add(guitar.clone(true));
       else g.add(new THREE.Mesh(new THREE.BoxGeometry(0.35, 1, 0.1), std('#c0392b')));
-      g.position.set(5.0 + i * 0.75, 0.35, -1.6);
-      g.rotation.y = -0.4;
+      g.position.set(-0.4 + i * 0.7, 0.05, -2.9);
+      g.rotation.set(-0.12, 0, 0);
       g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
       this.scene.add(g);
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 24), new THREE.MeshBasicMaterial({ color: 0xf5b942, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
       ring.rotation.x = -Math.PI / 2;
-      ring.position.set(g.position.x, 0.02, g.position.z);
+      ring.position.set(g.position.x, 0.02, g.position.z + 0.4);
       this.scene.add(ring);
       this.stand.push({ g, ring });
     }
     const spot = new THREE.SpotLight(0xfff0c0, 40, 12, 0.35, 0.5, 1.2);
-    spot.position.set(5.5, 5, 1);
+    spot.position.set(0.3, 5, 1.5);
     this.scene.add(spot, spot.target);
     this.standSpot = spot;
-    this.heroSpot = { pos: new THREE.Vector3(3.4, 0, -0.2), yaw: -0.5 };
-    this.camBase = { pos: new THREE.Vector3(0, 2.0, 8.2), look: new THREE.Vector3(0, 1.4, 0), bgZ: -7 };
+    const heroLight = new THREE.SpotLight(0xffe8c0, 60, 14, 0.4, 0.5, 1.2);
+    heroLight.position.set(3.2, 6, 2.5);
+    heroLight.target.position.set(3.2, 1, -0.6);
+    this.scene.add(heroLight, heroLight.target);
+    this.heroSpot = { pos: new THREE.Vector3(3.2, 0, -0.7), yaw: -0.35 };
+    this.camBase = { pos: new THREE.Vector3(0, 2.3, 7.8), look: new THREE.Vector3(0, 1.3, -0.8) };
+  }
+
+  /**
+   * Il Lube Tone: locale elegante, luci soffuse, un piccolo palco; l'illustrazione del locale come quadro sulla
+   * parete di fondo; Rioma e l'amico dell'etichetta seduti a un tavolino (tavolo e divanetto davanti alle gambe).
+   */
+  async _buildClub(progress) {
+    const L = this.level, M = L.models;
+    progress('Abbasso le luci…');
+    const [mural, table, sofa, lamp, rioma, friend] = await Promise.all([
+      Assets.texture(L.background),
+      Assets.model(M.table.url, { targetHeight: M.table.h }),
+      Assets.model(M.sofa.url, { targetHeight: M.sofa.h }),
+      Assets.model(M.lamp.url, { targetHeight: M.lamp.h }),
+      Assets.model(M.rioma.url, { targetHeight: M.rioma.h }),
+      Assets.model(M.friend.url, { targetHeight: M.friend.h })
+    ]);
+    this.scene.background = new THREE.Color('#120a14');
+    this.scene.add(new THREE.HemisphereLight(0xd8b8ff, 0x2a1418, 0.55));
+    const key = new THREE.DirectionalLight(0xffd8b0, 0.9);
+    key.position.set(-3, 9, 8);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    const sc = key.shadow.camera; sc.left = sc.bottom = -10; sc.right = sc.top = 10;
+    this.scene.add(key);
+    this._room({ floor: '#3a2220', plank: '#2a1614', wall: '#3a1e34', trim: '#c9a040', back: -4 });
+    // l'illustrazione del Lube Tone come grande quadro illuminato sulla parete di fondo
+    if (mural) {
+      const aspect = mural.image && mural.image.width ? mural.image.width / mural.image.height : 1.79;
+      const h = 3.3;
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(h * aspect, h), new THREE.MeshBasicMaterial({ map: mural, toneMapped: false }));
+      pic.position.set(-1.6, 2.35, -3.98);
+      this.scene.add(pic);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(h * aspect + 0.3, h + 0.3, 0.06), std('#c9a040', { metalness: 0.7, roughness: 0.3 }));
+      frame.position.set(-1.6, 2.35, -4.02);
+      this.scene.add(frame);
+    }
+    // insegna al neon
+    const neon = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x110818, emissive: 0xff5fb0, emissiveIntensity: 2.6 }));
+    neon.position.set(3.4, 3.9, -3.9);
+    this.scene.add(neon);
+    // il piccolo palco, a destra, con le luci colorate
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 3), std('#2a1a14', { roughness: 0.6 }));
+    deck.position.set(3.4, 0.25, -2.4);
+    deck.castShadow = deck.receiveShadow = true;
+    this.scene.add(deck);
+    this.stageLights = [];
+    for (let i = 0; i < 7; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: [0xff5fb0, 0x7fa4ff, 0xf5b942][i % 3] }));
+      b.position.set(1.1 + i * 0.75, 0.52, -0.88);
+      this.scene.add(b);
+      this.stageLights.push(b);
+    }
+    for (const [x, col] of [[2.2, 0xff5fb0], [4.6, 0x7fa4ff]]) {
+      const sp = new THREE.SpotLight(col, 70, 14, 0.4, 0.6, 1.2);
+      sp.position.set(x, 5.5, 1.5);
+      sp.target.position.set(3.4, 0.5, -2.4);
+      this.scene.add(sp, sp.target);
+    }
+    this.heroSpot = { pos: new THREE.Vector3(3.4, 0.5, -2.3), yaw: -0.3 };
+    // tavolini e divanetti
+    const put = (m, fb, x, z, yaw = 0) => {
+      const g = new THREE.Group();
+      if (m) g.add(m.clone(true));
+      else { const b = new THREE.Mesh(new THREE.BoxGeometry(...fb), std('#5a2a3a')); b.position.y = fb[1] / 2; g.add(b); }
+      g.position.set(x, 0, z);
+      g.rotation.y = yaw;
+      g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.scene.add(g);
+      return g;
+    };
+    // il tavolino di Rioma e dell'amico dell'etichetta, davanti a sinistra, girato verso il palco
+    put(table, [0.9, 0.85, 0.9], -3.4, 0.9);
+    put(sofa, [2, 1.1, 1.2], -3.4, -0.45, 0);
+    // altri tavoli sul fondo
+    put(table, [0.9, 0.85, 0.9], -6.2, -2.6);
+    put(sofa, [2, 1.1, 1.2], -6.2, -3.4, 0);
+    put(table, [0.9, 0.85, 0.9], 7.2, 0.4);
+    for (const [x, z] of [[-3.4, 0.9], [-6.2, -2.6], [7.2, 0.4]]) {
+      const g = new THREE.Group();
+      if (lamp) g.add(lamp.clone(true));
+      else g.add(new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.3, 12, 1, true), std('#c9a040')));
+      g.position.set(x, 2.7, z);
+      this.scene.add(g);
+      const l = new THREE.PointLight(0xffc070, 7, 6, 1.7);
+      l.position.set(x, 2.5, z);
+      this.scene.add(l);
+    }
+    // Rioma e l'amico dell'etichetta: "seduti" (abbassati dietro il tavolino), rivolti al palco
+    this.guests = [];
+    for (const [m, x, z, yaw] of [[rioma, -4.0, 0.15, 0.9], [friend, -2.8, 0.15, 0.7]]) {
+      const g = new THREE.Group();
+      if (m) g.add(m);
+      else { const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 6, 10), std('#7a5a8a')); b.position.y = 0.9; g.add(b); }
+      g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      g.position.set(x, -0.55, z);
+      g.rotation.y = yaw;
+      this.scene.add(g);
+      this.guests.push({ g, x, z, yaw, phase: x });
+    }
+    this.camBase = { pos: new THREE.Vector3(0.4, 2.4, 8.2), look: new THREE.Vector3(0.4, 1.3, -1.2) };
+    // inquadratura del tavolo per la scena del contratto
+    this.camTable = { pos: new THREE.Vector3(-1.2, 1.9, 4.4), look: new THREE.Vector3(-3.3, 1.1, 0.2) };
   }
 
   /**
@@ -262,9 +402,10 @@ export class RhythmMode {
     const L = this.level;
 
     if (this.state === 'intro') {
-      if (!this.saidIntro) { this.saidIntro = true; this.emma.say('arrivo', { important: true }); }
+      if (!this.saidIntro) { this.saidIntro = true; this.emma.seq(L.introLines || ['arrivo']); }
       this.stateTimer -= dt;
-      if (this.stateTimer <= 0 && this.t > 1) this._startUnit();
+      const quiet = !L.introLines || (this.emma.t >= this.emma.busyUntil && !this.emma.queue.length);
+      if (this.stateTimer <= 0 && this.t > 1 && quiet) this._startUnit();
       return this._clearInput(input);
     }
     if (this.state === 'play') {
@@ -273,12 +414,18 @@ export class RhythmMode {
       if (this.state === 'play' && time > this.song.duration) this._finishUnit();
       return;
     }
+    if (this.state === 'contract') {
+      const pressed = input.lanePressed.some(Boolean) || input.jumpPressed || input.attackPressed || input.itemPressed;
+      this._clearInput(input);
+      return this._dialogueTick(dt, pressed);
+    }
     this._clearInput(input);
     this.stateTimer -= dt;
+    if (this.state === 'applause' && this.stateTimer <= 0) return this._startContract();
     if (this.state === 'result' && this.stateTimer <= 0) {
       if (this.lastPassed) {
         this.unitIndex++;
-        if (this.unitIndex >= this.units.length) this._reward();
+        if (this.unitIndex >= this.units.length) this._afterAll();
         else this._startUnit();
       } else this._startUnit(); // riprova lo stesso brano
     } else if (this.state === 'interlude' && this.stateTimer <= 0 && this.emma.t >= this.emma.busyUntil) this._startUnit();
@@ -287,7 +434,8 @@ export class RhythmMode {
       const finale = this.state === 'finale';
       this.state = 'ended';
       this.audio.stopSong();
-      this.onComplete && this.onComplete(finale ? { finale: true } : null);
+      // dopo l'esibizione si prosegue nel livello dopo (next: il Lube Tone), altrimenti la schermata finale
+      this.onComplete && this.onComplete(finale ? (L.next ? { next: L.next } : L.finale ? { finale: true } : null) : null);
     }
   }
 
@@ -429,6 +577,53 @@ export class RhythmMode {
     this.say(`Prossima: ${nextSec.title}`, 3);
   }
 
+  /** Superati i brani: la chitarra in regalo (negozio) o gli applausi e il contratto (Lube Tone). */
+  _afterAll() {
+    if (this.level.contract) this._applause();
+    else this._reward();
+  }
+
+  /** Lube Tone: applauso vero, Rioma e l'amico dell'etichetta battono le mani. */
+  _applause() {
+    this.state = 'applause';
+    this.stateTimer = 5;
+    this.emma.clear();
+    this.emma.say('applauso', { important: true });
+    this.audio.sfx('applause');
+    this.audio.sfx('finish');
+    this.say('Applausi!', 3);
+  }
+
+  /** La scena del contratto: battute a schermo con i personaggi fermi; con un tasto (o da sole) si va avanti. */
+  _startContract() {
+    this.state = 'contract';
+    this.dlg = { i: -1, t: 0 };
+    this._nextLine();
+  }
+
+  _nextLine() {
+    const lines = this.level.contract.lines;
+    this.dlg.i++;
+    this.dlg.t = 0;
+    if (this.dlg.i >= lines.length) {
+      this.state = 'ended';
+      this.dialogue = null;
+      this.onComplete && this.onComplete({ finale: true });
+      return;
+    }
+    const ln = lines[this.dlg.i];
+    this.dialogue = { name: ln.who, text: ln.text };
+    if (ln.voice) { this.emma.clear(); this.emma.say(ln.voice, { important: true }); }
+    this.audio.sfx('move');
+  }
+
+  _dialogueTick(dt, pressed) {
+    this.dlg.t += dt;
+    const ln = this.level.contract.lines[this.dlg.i];
+    const auto = Math.max(3.5, ln.text.length / 14) + (ln.voice ? 1 : 0);
+    if ((pressed && this.dlg.t > 0.6) || this.dlg.t > auto) this._nextLine();
+  }
+
   /** Superati i tre brani: il proprietario regala la chitarra. */
   _reward() {
     this.state = 'reward';
@@ -470,6 +665,24 @@ export class RhythmMode {
         foreArmR: talking ? { x: -0.8 } : { x: -0.2 },
         head: { x: Math.sin(this.t * 0.8) * 0.05, y: talking ? Math.sin(this.t * 3) * 0.1 : 0 }
       });
+    }
+    // Lube Tone: Rioma e l'amico ondeggiano col brano, applaudono alla fine, stanno fermi durante il contratto
+    if (this.guests) {
+      for (const gs of this.guests) {
+        const clap = this.state === 'applause';
+        const sway = playing ? Math.sin(ph / 2 + gs.phase) * 0.06 : 0;
+        gs.g.position.y = -0.55 + (clap ? Math.abs(Math.sin(this.t * 9 + gs.phase)) * 0.08 : 0);
+        gs.g.rotation.z = sway;
+        gs.g.rotation.x = clap ? Math.sin(this.t * 9 + gs.phase) * 0.06 : 0;
+      }
+      this.stageLights.forEach((b, i) => { b.visible = !playing || Math.sin(ph + i) > -0.3; });
+      const toTable = this.state === 'contract' ? 1 : 0;
+      this.camK = THREE.MathUtils.damp(this.camK || 0, toTable, 2.5, dt);
+      if (this.camK > 0.001) {
+        const B = this.camBase, T = this.camTable, k = this.camK;
+        this.camera.position.lerpVectors(B.pos, T.pos, k);
+        this.camera.lookAt(new THREE.Vector3().lerpVectors(B.look, T.look, k));
+      }
     }
     // la chitarra regalata vola davanti alla telecamera girando
     if (this.rewardGuitar) {
@@ -566,7 +779,8 @@ export class RhythmMode {
       coins: L.coinsEvery ? this.coins : null,
       callout: this._callout || null,
       notice: this.notice,
-      subtitle: this.emma.subtitle
+      subtitle: this.emma.subtitle,
+      dialogue: this.state === 'contract' ? this.dialogue : null
     };
   }
 

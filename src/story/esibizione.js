@@ -3,7 +3,7 @@
 // esibizione), l'ultima è "Love u mamma" (Emma la presenta prima che parta). Al posto delle vite c'è la barra
 // del pubblico: parte quasi vuota, sale con le note buone e perfette, scende con quelle mancate; a zero la
 // sezione riparte da capo. Le combo alte fanno piovere monete (contano per il totale della Storia).
-// Finale: applausi e la chiusura della prima parte della Storia (finale: schermata in main.js / UI.js).
+// Finale: applausi, e si prosegue direttamente al Lube Tone (lubetone.js), dove si chiude la prima parte.
 // Il palco sta nel piazzale in cima al promontorio, lo stesso della piazza di Canair (canair-world.js): statue e
 // fontana della pista Canair di WisiKart, paese sotto, sentiero con le lanterne. Motore: RhythmMode.js.
 
@@ -17,7 +17,7 @@ export const ESIBIZIONE = {
   preview: 'assets/tracks/canair/preview.png',
   music: 'canair',
   loadingText: 'Monto il palco tra le statue…',
-  completeMessage: 'Fine della prima parte della Storia. Canair ti ha sentito suonare.',
+  completeMessage: 'Canair ti ha sentito suonare. Al Lube Tone qualcuno vuole conoscerti.',
 
   scene: 'stage',
   track: 'canair', // solo per i colori (palette del circuito di Canair)
@@ -28,12 +28,7 @@ export const ESIBIZIONE = {
   coinsEvery: 20, // ogni 20 note di fila, una pioggia di monete
   coinsPerRain: 5,
 
-  finale: {
-    title: 'Fine della prima parte',
-    text: 'Il piazzale è in piedi. Le statue di Oremo sembrano applaudire anche loro, e i tre soli scendono dietro il promontorio.',
-    producer: 'In fondo alla folla, qualcuno non applaude: prende appunti. Quando la musica finisce, lascia un biglietto da visita sul bordo del palco. Sopra c’è scritto solo: «Produzioni. Chiamami.»',
-    image: 'assets/tracks/canair/preview.png'
-  },
+  next: 'lubetone', // finita l'esibizione si prosegue al Lube Tone (che chiude la prima parte)
 
   briefing: {
     goal: 'Conquista il pubblico del piazzale',

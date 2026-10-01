@@ -101,6 +101,17 @@
     "canair/paese.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260930_211855_deb49f4c-9157-4cf4-a74b-65eb82fb6ecd.png",
     "canair/cartello.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260930_211955_7a9612a9-3604-4305-98a2-b39d6db7e59c.glb",
     "canair/discesa.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260930_211856_0588416c-0f85-4497-8d16-bb0d894bba4f.png",
-    "canair/belvedere.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260930_211855_7b518958-c00f-496e-aeb0-f14f5ffaef77.png"
+    "canair/belvedere.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20260930_211855_7b518958-c00f-496e-aeb0-f14f5ffaef77.png",
+    "canair/negozio-facciata.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015002_84ca94aa-0266-48fd-9ae2-093e6ebb6729.glb",
+    "canair/parete-chitarre.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015010_8272059f-637a-49fa-9509-c40f9940b259.glb",
+    "canair/bancone-negozio.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015016_5f20910e-d7cf-4b37-b105-531308273806.glb",
+    "canair/amplificatore.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015022_0f3d99dd-3530-4fcf-b949-c665696079db.glb",
+    "canair/lube-tone.png": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015036_d2a253ac-b794-479b-81a0-002ae96c4cad.png",
+    "canair/rioma.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015133_e837db7c-df1b-4a1f-af81-a68027311d73.glb",
+    "canair/amico-etichetta.glb": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_015143_b7e49f20-5667-4e88-9ac5-7aabc6c61dc6.glb",
+    "voce/lubetone-arrivo.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_021048_14b26d0d-ca62-47ca-8aa7-b03d7f48d67e.wav",
+    "voce/lubetone-tre-canzoni.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_021048_50ba1ade-b8be-401d-814c-84de0ac0f8b8.wav",
+    "voce/lubetone-applauso.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_021048_3cc3b467-e70c-48e5-83a2-a15fb2c19f31.wav",
+    "voce/lubetone-contratto.wav": "https://d8j0ntlcm91z4.cloudfront.net/user_2zb5ZV54tVZaEciJhttK2hXzX6g/hf_20261001_021048_828d3c71-99ea-43bf-8282-807f51c0db42.wav"
   }
 }

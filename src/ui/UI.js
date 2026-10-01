@@ -683,6 +683,8 @@ export class UI {
     if (type === 'rhythm') $('#story-touch').classList.remove('on');
     $('#rhythm').classList.add('hidden');
     $('#audience').classList.add('hidden');
+    $('#dialogue').classList.add('hidden');
+    this._dlgKey = null;
     for (const id of ['#story-mirror', '#story-pursuit', '#story-radio', '#story-lookback']) $(id).classList.add('hidden');
     this._radioKey = null;
     this._storyNotice = null;
@@ -796,6 +798,17 @@ export class UI {
       $('#story-radio').classList.toggle('hidden', !h.radio);
     }
     $('#story-lookback').classList.toggle('hidden', !h.lookBack);
+    // dialoghi a schermo (scena del contratto al Lube Tone)
+    const dlgKey = h.dialogue ? h.dialogue.name + h.dialogue.text : null;
+    if (dlgKey !== this._dlgKey) {
+      this._dlgKey = dlgKey;
+      $('#dialogue').classList.toggle('hidden', !h.dialogue);
+      if (h.dialogue) {
+        $('#dialogue-name').textContent = h.dialogue.name;
+        $('#dialogue-name').classList.toggle('hidden', !h.dialogue.name);
+        $('#dialogue-text').textContent = h.dialogue.text;
+      }
+    }
     // livelli ritmici: corsie, punteggio; esibizione: barra del pubblico
     $('#rhythm').classList.toggle('hidden', !h.rhythm);
     if (h.rhythm) this._drawRhythm(h.rhythm);

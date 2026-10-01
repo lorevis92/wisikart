@@ -45,6 +45,11 @@ export const SONGS = {
     title: 'Prova 3 · Accordi tenuti', bpm: 110, root: 52, seed: 2,
     sections: [{ name: 'Accordi tenuti', bars: 16, chords: [[0, 3, 7, 12], [-4, 0, 3, 8], [3, 7, 10, 15], [-2, 2, 5, 10]], density: 2.6, hold: 0.32, drums: 'drive' }]
   },
+  // il Lube Tone: un brano breve, da locale elegante (accordi di settima, passo morbido)
+  lubetone: {
+    title: 'Emorazionale', bpm: 98, root: 53, seed: 44,
+    sections: [{ name: 'Emorazionale', bars: 14, chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [2, 5, 9, 12], [7, 11, 14, 17]], density: 2.2, hold: 0.16, drums: 'bounce' }]
+  },
   // l'esibizione al piazzale: tre sezioni in crescendo, l'ultima è "Love u mamma" (pop-rock, I–V–vi–IV)
   esibizione: {
     title: 'Tramonto a tripla stella', bpm: 116, root: 50, seed: 1,

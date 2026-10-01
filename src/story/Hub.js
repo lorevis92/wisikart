@@ -404,9 +404,9 @@ export class Hub {
       pole.position.set(0, 0.8, -1);
       group.add(rail, scope, pole);
       halfW = 1.2; halfD = 0.6;
-    } else if (e.procedural === 'shop') {
-      // Infinity Guitars: negozio con vetrina e una chitarra gigante sull'insegna
-      const s = this._shop(e.height);
+    } else if (e.procedural === 'shop' || e.procedural === 'club') {
+      // senza modello: negozio con vetrina e insegna (Infinity Guitars con la chitarra gigante, Lube Tone al neon)
+      const s = this._shop(e.height, e.procedural === 'club' ? { sign: 'LUBE TONE', wall: '#3a1e34', ink: '#ffd45a', guitar: false } : {});
       group.add(s);
       halfW = e.height * 0.7; halfD = e.height * 0.5;
     } else {
@@ -549,10 +549,10 @@ export class Hub {
   }
 
   /** Il negozio Infinity Guitars (procedurale): muri, vetrina illuminata, insegna e chitarra gigante. */
-  _shop(h) {
+  _shop(h, { sign = 'INFINITY GUITARS', wall = '#b8563a', ink = '#ff5fb0', guitar = true } = {}) {
     const g = new THREE.Group();
     const w = h * 1.4, d = h;
-    const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h * 0.75, d), std('#b8563a', { roughness: 0.8 }));
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h * 0.75, d), std(wall, { roughness: 0.8 }));
     walls.position.y = h * 0.375;
     const roof = new THREE.Mesh(new THREE.BoxGeometry(w * 1.08, 0.4, d * 1.1), std('#3a2a22'));
     roof.position.y = h * 0.75 + 0.2;
@@ -562,11 +562,11 @@ export class Hub {
     const c = document.createElement('canvas'); c.width = 512; c.height = 96;
     const x = c.getContext('2d');
     x.fillStyle = '#1b1030'; x.fillRect(0, 0, 512, 96);
-    x.fillStyle = '#ff5fb0'; x.font = 'bold 52px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.fillText('INFINITY GUITARS', 256, 50);
+    x.fillStyle = ink; x.font = 'bold 52px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(sign, 256, 50);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.85, w * 0.16), new THREE.MeshBasicMaterial({ map: tex }));
-    sign.position.set(0, h * 0.62, d / 2 + 0.05);
+    const signM = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.85, w * 0.16), new THREE.MeshBasicMaterial({ map: tex }));
+    signM.position.set(0, h * 0.62, d / 2 + 0.05);
     // chitarra gigante sul tetto
     const gt = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.18, h * 0.22, 0.4, 20), std('#e84c5a', { roughness: 0.4 }));
@@ -576,7 +576,8 @@ export class Hub {
     gt.add(body, neck);
     gt.position.set(w * 0.25, h * 0.75 + h * 0.3, 0);
     gt.rotation.z = -0.5;
-    g.add(walls, roof, shop, sign, gt);
+    g.add(walls, roof, shop, signM);
+    if (guitar) g.add(gt);
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     this.dynamic.push((t) => { gt.rotation.z = -0.5 + Math.sin(t * 1.5) * 0.08; shop.material.emissiveIntensity = 0.8 + Math.sin(t * 3) * 0.15; });
     return g;

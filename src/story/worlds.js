@@ -6,6 +6,7 @@ import { INSEGUIMENTO } from './inseguimento.js';
 import { CHITARRE } from './chitarre.js';
 import { SALITA } from './salita.js';
 import { ESIBIZIONE } from './esibizione.js';
+import { LUBETONE } from './lubetone.js';
 
 // Piazze 3D dei pianeti della Storia (una per pianeta), da attraversare a piedi come in un mini Super Mario 64.
 // Ogni ingresso: angle = direzione dal centro della piazza in gradi (0 = nord, cioè davanti alla partenza,
@@ -139,16 +140,17 @@ export const WORLDS = [
     objectives: [
       { until: 'chitarre', text: 'Entra da Infinity Guitars' },
       { until: 'salita', text: 'Sali al promontorio: il sentiero parte dal cartello sotto la parete' },
-      { until: 'esibizione', text: 'Torna in cima dal sentiero con le lanterne e suona al piazzale', textUp: 'Suona al piazzale, tra le statue di Oremo' }
+      { until: 'esibizione', text: 'Torna in cima dal sentiero con le lanterne e suona al piazzale', textUp: 'Suona al piazzale, tra le statue di Oremo' },
+      { until: 'lubetone', text: 'Entra al Lube Tone, in paese', textUp: 'Scendi in paese: il Lube Tone ti aspetta' }
     ],
-    objectivesDone: 'Fine della prima parte della Storia',
+    objectivesDone: 'Fine della prima parte · il contratto è firmato',
     objectivesDoneUp: 'Fine della prima parte · il sentiero con le lanterne riporta in paese',
     decor: [
       { model: 'assets/props/autovettore.glb', h: 2.2, x: 10, z: 15, rot: -60, r: 2.4 } // Emma, parcheggiata in paese
     ],
     entrances: [
       {
-        id: 'chitarre', kind: 'level', level: CHITARRE, angle: 265, dist: 17, height: 7, procedural: 'shop',
+        id: 'chitarre', kind: 'level', level: CHITARRE, angle: 265, dist: 18, height: 6.5, model: 'assets/story/canair/negozio-facciata.glb', procedural: 'shop',
         name: 'Infinity Guitars', desc: 'Chitarre vere, da guadagnarsi nota per nota.'
       },
       {
@@ -164,6 +166,13 @@ export const WORLDS = [
         procedural: 'stage', label: '♪ Esibizione',
         name: 'Palco del piazzale', desc: 'Tra le statue, al tramonto a tripla stella.',
         locked: 'Il palco è pronto, ma il pubblico aspetta chi è salito dalla parete.'
+      },
+      {
+        // in paese: il Lube Tone, il locale elegante (si apre dopo l'esibizione al piazzale)
+        id: 'lubetone', kind: 'level', level: LUBETONE, requires: 'esibizione', angle: 140, dist: 18, height: 6, procedural: 'club', beacon: true,
+        label: '♪ Lube Tone',
+        name: 'Lube Tone', desc: 'Luci soffuse, gente elegante e un piccolo palco.',
+        locked: 'Il Lube Tone fa suonare solo chi si è già fatto sentire: prima l’esibizione al piazzale.'
       },
       {
         // in cima, sul bordo sud: lo scorcio sul paese

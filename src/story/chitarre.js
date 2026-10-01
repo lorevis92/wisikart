@@ -1,4 +1,5 @@
-// Livello 6 della Storia: Infinity Guitars (Canair). Nel negozio (negozio.png di sfondo) il proprietario
+// Livello 6 della Storia: Infinity Guitars (Canair). Nel negozio (una stanza 3D con la parete di chitarre esposte,
+// il bancone e l'amplificatore) il proprietario
 // mette alla prova Whiskey su tre chitarre: tre brani ritmici uno dopo l'altro, sempre più difficili
 // (note rade → fitte → con accordi tenuti; brani generati da AudioEngine.js: prova1, prova2, prova3).
 // Per passare un brano basta una precisione minima (pass), non serve il massimo; se non basta si riprova.
@@ -19,8 +20,12 @@ export const CHITARRE = {
   completeMessage: 'La chitarra è tua: da adesso la porti sempre sulla schiena. Il sentiero per il promontorio è aperto.',
   unlock: 'guitar',
 
-  scene: 'shop',
-  background: C + 'negozio.png',
+  scene: 'shop', // stanza 3D (RhythmMode._buildShop): parete di chitarre, bancone, amplificatore
+  models: {
+    wall: { url: C + 'parete-chitarre.glb', h: 2.6 },
+    counter: { url: C + 'bancone-negozio.glb', h: 1.15 },
+    amp: { url: C + 'amplificatore.glb', h: 1.2 }
+  },
   owner: { url: C + 'proprietario.glb', h: 1.8 },
   guitar: { url: C + 'chitarra.glb' },
   songs: ['prova1', 'prova2', 'prova3'],

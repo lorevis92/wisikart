@@ -55,6 +55,8 @@ export const ICONS = {
   wind: svg('<path d="M4 16h26a5 5 0 1 0-5-5M4 26h34a5 5 0 1 1-5 5M4 36h20" stroke="#e8f4ff" stroke-width="3" fill="none" stroke-linecap="round"/>'),
   boulder: svg('<path d="M20 4h8v34h-8z" fill="#3a2818" opacity=".6"/><circle cx="24" cy="22" r="8" fill="#6a5038"/><path d="M24 34v8M20 38l4 5 4-5" stroke="#ff5a6e" stroke-width="2.5" fill="none"/>'),
   bench: svg('<rect x="8" y="24" width="32" height="5" rx="2" fill="#b8a080"/><rect x="8" y="14" width="32" height="6" rx="2" fill="#b8a080"/><rect x="11" y="29" width="4" height="10" fill="#9a8468"/><rect x="33" y="29" width="4" height="10" fill="#9a8468"/><path d="M24 4v6" stroke="#43e0b0" stroke-width="2.5"/>'),
+  table: svg('<ellipse cx="24" cy="26" rx="14" ry="4" fill="#c9a040"/><path d="M24 30v12M17 42h14" stroke="#8a6a2a" stroke-width="3"/><circle cx="10" cy="18" r="5" fill="#d88ab8"/><circle cx="38" cy="18" r="5" fill="#7fa4ff"/><path d="M5 30c0-6 10-6 10 0M33 30c0-6 10-6 10 0" fill="#5a3a5a"/>'),
+  contract: svg('<rect x="10" y="6" width="26" height="34" rx="2" fill="#fff6e5"/><path d="M15 14h16M15 19h16M15 24h10" stroke="#8a96b0" stroke-width="2"/><path d="M16 33c4-4 6 3 10-1" stroke="#2b62d9" stroke-width="2" fill="none"/><path d="M34 26l8-8 3 3-8 8-4 1z" fill="#f5b942"/>'),
   vortex: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#7fa4ff" stroke-width="3"/><path d="M24 12a12 12 0 1 1-12 12 8 8 0 1 1 8 8 4 4 0 1 1 4-4" fill="none" stroke="#c9d6ff" stroke-width="2.5"/>')
 };
 
