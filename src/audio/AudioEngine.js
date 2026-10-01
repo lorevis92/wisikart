@@ -45,6 +45,16 @@ export const SONGS = {
     title: 'Prova 3 · Accordi tenuti', bpm: 110, root: 52, seed: 2,
     sections: [{ name: 'Accordi tenuti', bars: 16, chords: [[0, 3, 7, 12], [-4, 0, 3, 8], [3, 7, 10, 15], [-2, 2, 5, 10]], density: 2.6, hold: 0.32, drums: 'drive' }]
   },
+  // il Red Fox: Hes canta (momento d'ascolto, senza note da premere): lento, minore, fumoso
+  redfox: {
+    title: 'La volpe rossa', bpm: 84, root: 52, seed: 7,
+    sections: [{ name: 'La volpe rossa', bars: 8, chords: [[0, 3, 7, 10], [-4, 0, 3, 7], [-7, -3, 0, 5], [-5, -1, 2, 7]], density: 1.6, hold: 0.3, drums: 'light' }]
+  },
+  // il locale da ballo: cassa dritta e regolare (ci si muove sul battito), lungo abbastanza per arrivare al centro
+  ballo: {
+    title: 'Sotto le stelle', bpm: 104, root: 55, seed: 9,
+    sections: [{ name: 'Sotto le stelle', bars: 48, chords: [[0, 4, 7, 12], [9, 12, 16, 21], [5, 9, 12, 17], [7, 11, 14, 19]], density: 1.4, hold: 0.1, drums: 'drive' }]
+  },
   // il Lube Tone: un brano breve, da locale elegante (accordi di settima, passo morbido)
   lubetone: {
     title: 'Emorazionale', bpm: 98, root: 53, seed: 44,

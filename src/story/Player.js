@@ -195,6 +195,9 @@ export class Player {
    */
   update(dt, ctl, level) {
     const events = [];
+    // livelli onirici: gravità ridotta (gravityScale), passo lento (speedScale), niente salto (noJump)
+    const G = GRAV * (level.gravityScale || 1), RUNS = RUN * (level.speedScale || 1);
+    if (level.noJump) { ctl = { ...ctl, jumpPressed: false, upPressed: false, jumpHeld: false }; }
     this.invuln = Math.max(0, this.invuln - dt);
     this.throwAnim = Math.max(0, this.throwAnim - dt);
     if (ctl.jumpPressed) this.jumpBuffer = BUFFER;
@@ -287,7 +290,7 @@ export class Player {
       if (Math.abs(this.vx) > 0.5) this.facing = Math.sign(this.vx);
     } else {
       // ---- corsa ----
-      const target = ctl.ax * RUN;
+      const target = ctl.ax * RUNS;
       const acc = this.onGround ? ACC_GROUND : ACC_AIR;
       if (this.vx < target) this.vx = Math.min(target, this.vx + acc * dt);
       else if (this.vx > target) this.vx = Math.max(target, this.vx - acc * dt);
@@ -306,8 +309,8 @@ export class Player {
     }
     // salto più corto se si lascia il tasto (non per le spinte del vapore)
     if (this.vy <= 0) this.boosted = false;
-    if (!ctl.jumpHeld && this.vy > 0 && !this.boosted) this.vy -= GRAV * 1.4 * dt;
-    this.vy = Math.max(-28, this.vy - GRAV * dt);
+    if (!ctl.jumpHeld && this.vy > 0 && !this.boosted) this.vy -= G * 1.4 * dt;
+    this.vy = Math.max(level.gravityScale ? -28 * level.gravityScale : -28, this.vy - G * dt);
 
     // ---- movimento con collisioni separate sui due assi ----
     const b = {};

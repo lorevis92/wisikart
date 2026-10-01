@@ -7,6 +7,9 @@ import { CHITARRE } from './chitarre.js';
 import { SALITA } from './salita.js';
 import { ESIBIZIONE } from './esibizione.js';
 import { LUBETONE } from './lubetone.js';
+import { REDFOX } from './redfox.js';
+import { BALLO } from './ballo.js';
+import { SOGNO } from './sogno.js';
 
 // Piazze 3D dei pianeti della Storia (una per pianeta), da attraversare a piedi come in un mini Super Mario 64.
 // Ogni ingresso: angle = direzione dal centro della piazza in gradi (0 = nord, cioè davanti alla partenza,
@@ -138,6 +141,9 @@ export const WORLDS = [
     },
     // obiettivo in alto a sinistra: textUp vale quando si è in cima al promontorio
     objectives: [
+      { until: 'redfox', text: 'Entra al Red Fox', textUp: 'Scendi in paese: il Red Fox è aperto' },
+      { until: 'ballo', text: 'Segui Hes al locale da ballo' },
+      { until: 'sogno', text: 'Torna nella tua camera alla locanda' },
       { until: 'chitarre', text: 'Entra da Infinity Guitars' },
       { until: 'salita', text: 'Sali al promontorio: il sentiero parte dal cartello sotto la parete' },
       { until: 'esibizione', text: 'Torna in cima dal sentiero con le lanterne e suona al piazzale', textUp: 'Suona al piazzale, tra le statue di Oremo' },
@@ -150,8 +156,27 @@ export const WORLDS = [
     ],
     entrances: [
       {
-        id: 'chitarre', kind: 'level', level: CHITARRE, angle: 265, dist: 18, height: 6.5, model: 'assets/story/canair/negozio-facciata.glb', procedural: 'shop',
-        name: 'Infinity Guitars', desc: 'Chitarre vere, da guadagnarsi nota per nota.'
+        id: 'chitarre', kind: 'level', level: CHITARRE, requires: 'sogno', angle: 265, dist: 18, height: 6.5, model: 'assets/story/canair/negozio-facciata.glb', procedural: 'shop',
+        name: 'Infinity Guitars', desc: 'Chitarre vere, da guadagnarsi nota per nota.',
+        locked: 'Saracinesca abbassata: Infinity Guitars apre domani. Prima c’è una notte da passare.'
+      },
+      {
+        // la notte di Canair: Red Fox → locale da ballo → la camera alla locanda (il giorno dopo)
+        id: 'redfox', kind: 'level', level: REDFOX, angle: 180, dist: 18, height: 6, procedural: 'club', beacon: true,
+        sign: 'RED FOX', wall: '#5a1418', ink: '#ff5a4a', label: '♪ Red Fox',
+        name: 'Red Fox', desc: 'Un locale rosso. Sul palco canta Hes.'
+      },
+      {
+        id: 'ballo', kind: 'level', level: BALLO, requires: 'redfox', angle: 220, dist: 18, height: 6, procedural: 'club',
+        sign: 'BALLO', wall: '#2a1a4a', ink: '#c8a8ff',
+        name: 'Il locale da ballo', desc: 'Soffitto a stelle e una pista che gira.',
+        locked: 'Chiuso. Si apre solo dopo mezzanotte, e solo per chi esce dal Red Fox.'
+      },
+      {
+        id: 'sogno', kind: 'level', level: SOGNO, requires: 'ballo', angle: 310, dist: 18, height: 6, procedural: 'club',
+        sign: 'LOCANDA', wall: '#4a5a6a', ink: '#f2e6c8',
+        name: 'La locanda (la tua camera)', desc: 'Una camera buia, e una Lommy sul comodino.',
+        locked: 'La tua camera è alla locanda: prima la notte, poi il riposo.'
       },
       {
         // il cartello sotto la parete: da qui parte la salita (livello 7)

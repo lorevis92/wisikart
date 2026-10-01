@@ -50,9 +50,21 @@ export class FlightMode {
     progress('Scaldo i motori…');
     // il circuito di WisiKart, senza scatole, pad e senza il portale a metà giro (qui il portale è l'arrivo)
     const def = trackById[L.track];
-    const trackDef = { ...def, itemBoxes: [], boostPads: [], props: (def.props || []).filter((p) => p.model !== 'portale-niaboc') };
+    const trackDef = {
+      ...def, itemBoxes: [], boostPads: [], props: (def.props || []).filter((p) => p.model !== 'portale-niaboc'),
+      // un livello può ridipingere la pista (la visione eterea del giorno dopo): palette e scenario
+      palette: { ...def.palette, ...(L.palette || {}) }, world: { ...(def.world || {}), ...(L.world || {}) }
+    };
     this.track = new Track(trackDef, this.scene, null);
     await this.track.build();
+    if (L.ethereal) {
+      // visione: cielo chiaro e lattiginoso, nebbia bianco-violacea, luce morbida dappertutto
+      const E = L.ethereal;
+      this.scene.background = new THREE.Color(E.sky);
+      this.scene.environment = null;
+      this.scene.fog = new THREE.Fog(E.fog, E.near || 60, E.far || 520);
+      this.scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8ff, E.light || 1.3));
+    }
     const tr = this.track;
     this.N = tr.N;
     this.step = tr.length / tr.N;
@@ -886,14 +898,14 @@ export class FlightMode {
     return {
       flight: true,
       coins: this.coins,
-      timer: Math.max(0, this.timer),
+      timer: this.level.noTimer ? null : Math.max(0, this.timer),
       timerLabel: 'Gong',
       timerGain: this.gain,
       rings: { taken: this.ringsTaken, total: this.rings.length },
       chain: this.chain,
       speed: Math.round(this.speed * 3.6),
       speedLines: Math.max(0, Math.min(1, (k - 0.7) * 2.5 + (this.turbo > 0 ? 0.5 : 0))),
-      alarm: this.state === 'play' && this.timer < 10 && this._lastStretch(),
+      alarm: !this.level.noTimer && this.state === 'play' && this.timer < 10 && this._lastStretch(),
       callout: this.callout,
       flash: this.flashAt || 0,
       notice: this.notice,

@@ -20,6 +20,9 @@ import { FlightMode } from './story/FlightMode.js';
 import { BrawlMode } from './story/BrawlMode.js';
 import { ChaseMode } from './story/ChaseMode.js';
 import { RhythmMode } from './story/RhythmMode.js';
+import { SceneMode } from './story/SceneMode.js';
+import { DanceMode } from './story/DanceMode.js';
+import { DreamMode } from './story/DreamMode.js';
 
 const SAVE_KEY = 'wisikart.save.v1';
 // stati da cui si apre il menu di gioco (Esc, Start, tasto II): piazza, livelli, gare, caricamenti, video
@@ -27,7 +30,7 @@ const MENU_FROM = ['race', 'loading', 'story', 'storyload', 'briefing', 'storyhe
 // stati di gioco in cui le frecce non navigano un menu
 const GAMEPLAY = ['race', 'loading', 'story', 'storyload', 'hub', 'hubload', 'cinematic'];
 // motore di ogni tipo di livello della Storia
-const MODES = { flight: FlightMode, chase: ChaseMode, brawl: BrawlMode, rhythm: RhythmMode };
+const MODES = { flight: FlightMode, chase: ChaseMode, brawl: BrawlMode, rhythm: RhythmMode, scene: SceneMode, dance: DanceMode, dream: DreamMode };
 
 class Game {
   constructor() {
@@ -428,6 +431,8 @@ class Game {
   _storyWorld() {
     // salvataggi di prima di Retah: Portale già finito = si è già atterrati su Retah
     if (!this.save.storyWorld && this.save.story?.portale) this.save.storyWorld = 'retah';
+    // salvataggi di prima del Red Fox: chi aveva già Infinity Guitars ha già passato anche quella notte
+    if (this.save.story?.chitarre && !this.save.story.sogno) this.save.story = { ...this.save.story, redfox: true, ballo: true, sogno: true };
     return WORLDS.find((w) => w.id === this.save.storyWorld) || WORLDS[0];
   }
 
@@ -486,7 +491,7 @@ class Game {
     // Nella Storia si gioca con Whiskey basic; le sei forme si sbloccheranno più avanti (vedi story/hero.js).
     // Le monete sono un totale unico della Storia, salvato a ogni raccolta (ogni 100, una vita in più).
     const Mode = MODES[level.type] || StoryMode;
-    const flight = level.type === 'flight' || level.type === 'chase' || level.type === 'rhythm'; // livelli senza vite
+    const flight = ['flight', 'chase', 'rhythm', 'scene', 'dance', 'dream'].includes(level.type); // livelli senza vite
     // vite guadagnate con le monete durante un volo (dove le vite non ci sono): valgono nel livello a piedi dopo
     const bonusLives = flight ? 0 : this.save.storyBonusLives || 0;
     if (!flight && bonusLives) { this.save.storyBonusLives = 0; this._persist(); }
@@ -564,7 +569,8 @@ class Game {
       if (flow !== this._flow) return;
     }
     // livello che prosegue direttamente nel successivo (rissa → inseguimento: si è appena saliti su Emma)
-    const next = result && result.next ? this._levelById(result.next) : null;
+    const nextId = (result && result.next) || level.next; // anche un livello che porta sempre al successivo (Retah → Red Fox)
+    const next = nextId ? this._levelById(nextId) : null;
     if (next) { this.startStory(next); return; }
     // si ricompare in piazza davanti all'ingresso del livello appena finito (o all'arrivo, su un pianeta nuovo)
     // (arriveAt: un punto del mondo, come la cima della parete dopo la salita)

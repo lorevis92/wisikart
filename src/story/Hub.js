@@ -406,7 +406,7 @@ export class Hub {
       halfW = 1.2; halfD = 0.6;
     } else if (e.procedural === 'shop' || e.procedural === 'club') {
       // senza modello: negozio con vetrina e insegna (Infinity Guitars con la chitarra gigante, Lube Tone al neon)
-      const s = this._shop(e.height, e.procedural === 'club' ? { sign: 'LUBE TONE', wall: '#3a1e34', ink: '#ffd45a', guitar: false } : {});
+      const s = this._shop(e.height, e.procedural === 'club' ? { sign: e.sign || 'LUBE TONE', wall: e.wall || '#3a1e34', ink: e.ink || '#ffd45a', guitar: false } : {});
       group.add(s);
       halfW = e.height * 0.7; halfD = e.height * 0.5;
     } else {

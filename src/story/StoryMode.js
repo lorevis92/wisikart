@@ -187,7 +187,9 @@ export class StoryMode {
       metal: std('#4a5068', { metalness: 0.7, roughness: 0.4 }), concrete: std('#565a66', { roughness: 0.95 }),
       crate: std('#8a5a32', { roughness: 0.85 }),
       // promontorio: roccia e cenge
-      rock: std('#8a6a4a', { roughness: 0.95, flatShading: true }), ledge: std('#a3845a', { roughness: 0.9 }), plaza: std('#c9b08a', { roughness: 0.85 })
+      rock: std('#8a6a4a', { roughness: 0.95, flatShading: true }), ledge: std('#a3845a', { roughness: 0.9 }), plaza: std('#c9b08a', { roughness: 0.85 }),
+      // il giorno dopo: nuvole, prato, molo, la camera buia
+      cloud: std('#ffffff', { emissive: 0xdfe8ff, emissiveIntensity: 0.35, roughness: 1 }), meadow: std('#7ab05a', { roughness: 1 }), pier: std('#8a6a4a', { roughness: 0.9 }), dark: std('#2a2630', { roughness: 0.9 })
     };
     for (const s of this.solids) {
       const w = s.x1 - s.x0, h = s.y1 - s.y0;
@@ -335,6 +337,8 @@ export class StoryMode {
 
   /** Riparte dall'ultimo checkpoint perdendo una vita (cadute, trappole). */
   fail(message) {
+    // livelli senza game over: si riparte dall'ultimo punto, senza perdere niente
+    if (this.level.noDeath) { if (message) this.say(message); this._respawn(); return; }
     this.lives--;
     this.sfx('hit');
     if (this.lives <= 0) return this._gameOver();
@@ -344,7 +348,7 @@ export class StoryMode {
 
   _hurt(fromX) {
     const p = this.player;
-    if (p.invuln > 0 || this.state !== 'play') return;
+    if (p.invuln > 0 || this.state !== 'play' || this.level.noDeath) return;
     this.lives--;
     this.sfx('hit');
     if (this.lives <= 0) return this._gameOver();
@@ -388,6 +392,8 @@ export class StoryMode {
     if (this.state !== 'play') return;
 
     const p = this.player;
+    // un tasto d'azione (per le interazioni, es. prendere la Lommy nel giorno dopo): Lancia, Su, Pugno o Salta
+    this.actionPressed = !!(input.itemPressed || input.attackPressed || input.upPressed || input.jumpPressed);
     const ctl = { ax: input.axisX, ay: input.axisY, jumpPressed: input.jumpPressed, jumpHeld: input.jumpHeld, upPressed: input.upPressed };
     input.jumpPressed = input.upPressed = false;
     const ev = p.update(dt, ctl, this);
@@ -537,7 +543,7 @@ export class StoryMode {
 
   hud() {
     return {
-      lives: this.lives,
+      lives: this.level.noDeath ? undefined : this.lives,
       maxLives: Math.max(this.level.lives, this.lives), // le vite extra delle monete si aggiungono ai cuori
       lifeUp: this.t - this.lifeUpAt < 1.5,
       ammo: this.maxAmmo ? this.ammo : undefined, // livelli senza bottiglie (scalata): niente contatore

@@ -36,6 +36,8 @@ export class UI {
   }
 
   show(name) {
+    const canvas = document.getElementById('game');
+    if (canvas && canvas.style.filter) canvas.style.filter = ''; // niente distorsioni rimaste da un livello onirico
     // il menu di gioco e il pannello audio restano sopra (un caricamento può finire mentre sono aperti)
     const keep = ['screen-pause', 'screen-audio'].filter((id) => $(`#${id}`).classList.contains('active'));
     document.querySelectorAll('.screen').forEach((s) => { if (!keep.includes(s.id)) s.classList.remove('active'); });
@@ -685,6 +687,10 @@ export class UI {
     $('#audience').classList.add('hidden');
     $('#dialogue').classList.add('hidden');
     this._dlgKey = null;
+    $('#beat').classList.add('hidden');
+    $('#story-fade').style.opacity = '0';
+    $('#story-caption').classList.remove('show');
+    if (type === 'dance' || type === 'scene') $('#story-touch').classList.toggle('on', this.game.input.isTouch && type === 'dance');
     for (const id of ['#story-mirror', '#story-pursuit', '#story-radio', '#story-lookback']) $(id).classList.add('hidden');
     this._radioKey = null;
     this._storyNotice = null;
@@ -798,6 +804,37 @@ export class UI {
       $('#story-radio').classList.toggle('hidden', !h.radio);
     }
     $('#story-lookback').classList.toggle('hidden', !h.lookBack);
+    // distorsione dello schermo (la Lommy al Red Fox, la notte che si deforma al locale da ballo)
+    const canvas = document.getElementById('game');
+    let filter = '';
+    if (h.fx && h.fx.kind === 'lommy') {
+      const k = h.fx.k, w = performance.now() / 1000;
+      filter = `hue-rotate(${Math.round(Math.sin(w * 6) * 140 * k)}deg) saturate(${1 + k * 2.5}) blur(${(k * 4).toFixed(1)}px) contrast(${1 + k * 0.4})`;
+    } else if (h.distort) {
+      const p = h.distort, w = performance.now() / 1000;
+      filter = `hue-rotate(${Math.round(Math.sin(w * 0.7) * 50 * p)}deg) saturate(${(1 + p * 1.3).toFixed(2)}) blur(${(p * 0.9).toFixed(2)}px)`;
+    }
+    if (canvas.style.filter !== filter) canvas.style.filter = filter;
+    // dissolvenza (bianco o colore) e didascalia grande
+    const fade = $('#story-fade');
+    fade.style.opacity = h.fade ? String(Math.max(0, Math.min(1, h.fade.k))) : '0';
+    if (h.fade) fade.style.background = h.fade.color || '#ffffff';
+    const cap = $('#story-caption');
+    if ((h.caption || '') !== cap.textContent) cap.textContent = h.caption || '';
+    cap.classList.toggle('show', !!h.caption);
+    // battito (locale da ballo): cerchio che pulsa, finestra di tolleranza, esito del passo, note raccolte
+    $('#beat').classList.toggle('hidden', !h.beat);
+    if (h.beat) {
+      const ph = h.beat.phase;
+      const near = Math.min(ph, 1 - ph); // distanza dal battito, in frazioni di battito
+      $('#beat-pulse').style.transform = `scale(${(1.25 - ph * 0.6).toFixed(3)})`;
+      $('#beat-pulse').classList.toggle('on', near <= h.beat.window);
+      $('#beat-window').style.borderWidth = `${Math.max(2, Math.round(h.beat.window * 40))}px`;
+      const fb = h.beat.feedback;
+      $('#beat-text').textContent = h.beat.count ? String(h.beat.count) : fb ? fb.text : '';
+      $('#beat-text').className = fb && !h.beat.count ? (fb.ok ? 'ok' : 'bad') : '';
+      $('#beat-notes').textContent = h.notes ? `Note ${h.notes.taken}/${h.notes.total}` : '';
+    }
     // dialoghi a schermo (scena del contratto al Lube Tone)
     const dlgKey = h.dialogue ? h.dialogue.name + h.dialogue.text : null;
     if (dlgKey !== this._dlgKey) {

@@ -57,6 +57,14 @@ export const ICONS = {
   bench: svg('<rect x="8" y="24" width="32" height="5" rx="2" fill="#b8a080"/><rect x="8" y="14" width="32" height="6" rx="2" fill="#b8a080"/><rect x="11" y="29" width="4" height="10" fill="#9a8468"/><rect x="33" y="29" width="4" height="10" fill="#9a8468"/><path d="M24 4v6" stroke="#43e0b0" stroke-width="2.5"/>'),
   table: svg('<ellipse cx="24" cy="26" rx="14" ry="4" fill="#c9a040"/><path d="M24 30v12M17 42h14" stroke="#8a6a2a" stroke-width="3"/><circle cx="10" cy="18" r="5" fill="#d88ab8"/><circle cx="38" cy="18" r="5" fill="#7fa4ff"/><path d="M5 30c0-6 10-6 10 0M33 30c0-6 10-6 10 0" fill="#5a3a5a"/>'),
   contract: svg('<rect x="10" y="6" width="26" height="34" rx="2" fill="#fff6e5"/><path d="M15 14h16M15 19h16M15 24h10" stroke="#8a96b0" stroke-width="2"/><path d="M16 33c4-4 6 3 10-1" stroke="#2b62d9" stroke-width="2" fill="none"/><path d="M34 26l8-8 3 3-8 8-4 1z" fill="#f5b942"/>'),
+  mic: svg('<circle cx="24" cy="14" r="8" fill="#c9cfdc"/><path d="M24 22v14M17 42h14" stroke="#8a96b0" stroke-width="3"/><path d="M34 10a12 12 0 0 1 0 12M38 6a18 18 0 0 1 0 20" stroke="#ff5a4a" stroke-width="2" fill="none"/>'),
+  lommy: svg('<rect x="19" y="10" width="10" height="28" rx="4" fill="#ff7ae0" opacity=".85"/><rect x="20" y="6" width="8" height="5" rx="1" fill="#8a96b0"/><circle cx="24" cy="26" r="12" fill="none" stroke="#c040ff" stroke-width="2" stroke-dasharray="3 3"/>'),
+  beat: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#fff" stroke-width="2.5" opacity=".6"/><circle cx="24" cy="24" r="10" fill="#ff8ae0"/><path d="M38 38l5 5M10 38l-5 5" stroke="#43e0b0" stroke-width="3" stroke-linecap="round"/>'),
+  offbeat: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#fff" stroke-width="2.5" opacity=".4"/><circle cx="24" cy="24" r="6" fill="#8a7aaa"/><path d="M14 14l20 20M34 14L14 34" stroke="#ff5a6e" stroke-width="3"/>'),
+  narrow: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#c8a8ff" stroke-width="8" opacity=".5"/><circle cx="24" cy="24" r="17" fill="none" stroke="#c8a8ff" stroke-width="2"/><path d="M6 24h8M42 24h-8" stroke="#fff" stroke-width="2.5"/><path d="M11 20l4 4-4 4M37 20l-4 4 4 4" fill="none" stroke="#fff" stroke-width="2"/>'),
+  hes: svg('<circle cx="24" cy="14" r="7" fill="#c0392b"/><path d="M14 42c0-12 4-20 10-20s10 8 10 20z" fill="#c0392b"/><path d="M24 4v4" stroke="#ffd45a" stroke-width="2"/><circle cx="38" cy="38" r="4" fill="#fff2a8"/>'),
+  sunday: svg('<circle cx="16" cy="16" r="6" fill="#f2d0a0"/><circle cx="32" cy="16" r="6" fill="#5b8cf0"/><path d="M10 42c0-10 3-16 6-16s6 6 6 16zM26 42c0-10 3-16 6-16s6 6 6 16z" fill="#fff6e5" opacity=".9"/><path d="M20 30h8" stroke="#ffd45a" stroke-width="3" stroke-linecap="round"/>'),
+  candle: svg('<rect x="20" y="20" width="8" height="22" rx="2" fill="#e8e0d0"/><path d="M24 8c4 5 3 9 0 11-3-2-4-6 0-11z" fill="#ffc070"/>'),
   vortex: svg('<circle cx="24" cy="24" r="17" fill="none" stroke="#7fa4ff" stroke-width="3"/><path d="M24 12a12 12 0 1 1-12 12 8 8 0 1 1 8 8 4 4 0 1 1 4-4" fill="none" stroke="#c9d6ff" stroke-width="2.5"/>')
 };
 
@@ -139,6 +147,22 @@ export const CONTROLS = {
     ]
   }
 };
+// livelli di scena (Red Fox): si guarda e si ascolta; un tasto manda avanti il dialogo
+CONTROLS.scene = {
+  keyboard: [['Dialoghi: avanti', [K('Spazio')], [K('Maiusc')]], ['Menu di gioco · silenzio', [K('Esc')], [K('M')]]],
+  touch: [['Dialoghi: avanti', [T('tocca un tasto')]], ['Menu di gioco', [T('II')]]],
+  gamepad: [['Dialoghi: avanti', [P('A')]], ['Menu di gioco', [P('Start')]]]
+};
+// locale da ballo: un passo per battito
+CONTROLS.dance = {
+  keyboard: [
+    ['Un passo sulla pista, sul battito', [K('←'), K('→'), K('↑'), K('↓')], [K('W'), K('A'), K('S'), K('D')]],
+    ['Menu di gioco (la musica si ferma) · silenzio', [K('Esc')], [K('M')]]
+  ],
+  touch: [['Un passo, sul battito', [T('◀'), T('▶'), T('▲'), T('▼')]], ['Menu di gioco', [T('II')]]],
+  gamepad: [['Un passo, sul battito', [P('croce')], [P('levetta')]], ['Menu di gioco', [P('Start')]]]
+};
+
 // livelli ritmici: quattro corsie
 CONTROLS.rhythm = {
   keyboard: [
